@@ -299,10 +299,10 @@ export function TrialCard({
         </AnimatePresence>
       </div>
 
-      {/* Progress bar — indicator layered on top, not clipped */}
-      <div className="px-5 pb-6 pt-3">
-        <div className="relative h-3 mt-4 mb-2">
-          <div className="absolute inset-0 rounded-full bg-muted border border-border overflow-hidden">
+      {/* Progress bar — flush to bottom of card */}
+      <div className="relative mt-3">
+        <div className="relative h-5">
+          <div className="absolute inset-0 bg-muted border-t border-border overflow-hidden">
             <motion.div
               className={cn(
                 "absolute inset-y-0 left-0",
@@ -313,9 +313,9 @@ export function TrialCard({
             />
           </div>
 
-          {/* Status text inside bar */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="text-[10px] font-medium text-foreground/75 px-10 text-center leading-none">
+          {/* Status text inside bar — single line */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-12">
+            <span className="text-[10px] font-medium text-foreground/75 leading-none whitespace-nowrap">
               {isComplete
                 ? isMaxReached
                   ? "Maximum trials reached! Congrats!"
@@ -351,6 +351,7 @@ export function TrialCard({
           </motion.div>
         </div>
       </div>
+
     </article>
   );
 }
