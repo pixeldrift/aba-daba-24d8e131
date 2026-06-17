@@ -82,10 +82,14 @@ export function TrialCard({
   };
 
   const stepWidth = BUBBLE + GAP;
-  const trackOffset = useMemo(() => -current * stepWidth, [current, stepWidth]);
+  const trackOffset = useMemo(
+    () => -(current * stepWidth + BUBBLE_CENTER / 2),
+    [current, stepWidth],
+  );
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
-    const targetIdx = Math.round(-(trackOffset + info.offset.x) / stepWidth);
+    const finalOffset = trackOffset + info.offset.x;
+    const targetIdx = Math.round(-(finalOffset + BUBBLE_CENTER / 2) / stepWidth);
     const max = maxTrials ? maxTrials - 1 : trials.length - 1;
     const clamped = Math.max(0, Math.min(targetIdx, max));
     setCurrent(clamped);
@@ -148,12 +152,12 @@ export function TrialCard({
       </header>
 
       {/* Trial title (no number) */}
-      <div className="px-5 pt-2 text-center">
-        <span className="font-display text-3xl tracking-tight">Trial</span>
+      <div className="px-5 pt-1 text-center">
+        <span className="font-display text-xl tracking-tight">Trial</span>
       </div>
 
       {/* Bubble row */}
-      <div className="relative mt-4 px-2">
+      <div className="relative mt-1 px-2">
         {/* Triangle nav buttons */}
         <TriangleNav
           direction="left"
@@ -192,13 +196,12 @@ export function TrialCard({
           >
             {trials.map((t, i) => {
               const isCenter = i === current;
-              const isRequired = i < minTrials;
               const bg =
                 t === "correct"
                   ? "bg-green-300 border-green-400"
                   : t === "incorrect"
                     ? "bg-red-300 border-red-400"
-                    : "bg-muted border-border";
+                    : "bg-foreground/5 border-foreground/10";
               const centerBg =
                 lastAction.value === "correct" && i === current - 1
                   ? "bg-green-400 border-green-500 text-white"
@@ -213,8 +216,6 @@ export function TrialCard({
                   animate={{
                     width: isCenter ? BUBBLE_CENTER : BUBBLE,
                     height: isCenter ? BUBBLE_CENTER : BUBBLE,
-                    marginLeft: isCenter ? (BUBBLE_CENTER - BUBBLE) / 2 : 0,
-                    marginRight: isCenter ? (BUBBLE_CENTER - BUBBLE) / 2 : 0,
                   }}
                   transition={{ type: "spring", stiffness: 360, damping: 28 }}
                 >
@@ -244,10 +245,9 @@ export function TrialCard({
                         </motion.span>
                       </AnimatePresence>
                     ) : (
-                      isRequired &&
-                      t === null && (
-                        <span className="size-1 rounded-full bg-foreground/30" />
-                      )
+                      <span className="text-[7px] leading-none font-medium text-foreground/35">
+                        {i + 1}
+                      </span>
                     )}
                   </motion.div>
                 </motion.button>
@@ -268,6 +268,7 @@ export function TrialCard({
           of {target} {maxTrials ? "max" : "required"}
         </div>
       </div>
+
 
       {/* Action buttons row with slide animation */}
       <div className="relative mt-4 px-5 h-24 overflow-hidden">
@@ -298,10 +299,10 @@ export function TrialCard({
         </AnimatePresence>
       </div>
 
-      {/* Progress bar — indicator layered on top, not clipped */}
-      <div className="px-5 pb-6 pt-3">
-        <div className="relative h-3 mt-4 mb-2">
-          <div className="absolute inset-0 rounded-full bg-muted border border-border overflow-hidden">
+      {/* Progress bar — flush to bottom of card */}
+      <div className="relative mt-3">
+        <div className="relative h-5">
+          <div className="absolute inset-0 bg-muted border-t border-border overflow-hidden">
             <motion.div
               className={cn(
                 "absolute inset-y-0 left-0",
@@ -312,9 +313,9 @@ export function TrialCard({
             />
           </div>
 
-          {/* Status text inside bar */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="text-[10px] font-medium text-foreground/75 px-10 text-center leading-none">
+          {/* Status text inside bar — single line */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-12">
+            <span className="text-[10px] font-medium text-foreground/75 leading-none whitespace-nowrap">
               {isComplete
                 ? isMaxReached
                   ? "Maximum trials reached! Congrats!"
@@ -323,10 +324,9 @@ export function TrialCard({
             </span>
           </div>
 
-          {/* Progress bubble — layered on top of bar (not clipped) */}
+          {/* Progress bubble — anchored to bar bottom so it sits on top without clipping */}
           <motion.div
-            className="absolute top-1/2 z-10"
-            style={{ translateY: "-50%" }}
+            className="absolute bottom-0 z-10"
             animate={{ left: `calc(${progress}% - 18px)` }}
             transition={{ type: "spring", stiffness: 180, damping: 26 }}
           >
@@ -350,6 +350,7 @@ export function TrialCard({
           </motion.div>
         </div>
       </div>
+
     </article>
   );
 }
@@ -365,16 +366,19 @@ function TriangleNav({
 }) {
   const isLeft = direction === "left";
   return (
-    <button
+    <motion.button
       aria-label={isLeft ? "Previous trial" : "Next trial"}
       onClick={onClick}
       disabled={disabled}
+      whileTap={{ scale: 0.82 }}
+      whileHover={{ scale: 1.08 }}
+      transition={{ type: "spring", stiffness: 500, damping: 22 }}
       className={cn(
-        "absolute top-1/2 -translate-y-1/2 z-20 grid place-items-center size-9 text-foreground/80 hover:text-foreground transition disabled:opacity-25",
-        isLeft ? "left-1" : "right-1",
+        "absolute top-1/2 -translate-y-1/2 z-20 grid place-items-center size-12 rounded-full text-foreground/85 hover:text-foreground hover:bg-foreground/5 active:bg-foreground/10 transition-colors disabled:opacity-25 disabled:pointer-events-none",
+        isLeft ? "left-0" : "right-0",
       )}
     >
-      <svg viewBox="0 0 24 24" className="size-7" fill="currentColor" aria-hidden>
+      <svg viewBox="0 0 24 24" className="size-9" fill="currentColor" aria-hidden>
         {isLeft ? (
           <path
             d="M15.5 4.2c1.1-.7 2.5.1 2.5 1.4v12.8c0 1.3-1.4 2.1-2.5 1.4L6.9 13.6a1.9 1.9 0 0 1 0-3.2L15.5 4.2z"
@@ -387,7 +391,7 @@ function TriangleNav({
           />
         )}
       </svg>
-    </button>
+    </motion.button>
   );
 }
 
