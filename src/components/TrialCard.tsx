@@ -62,22 +62,25 @@ export function TrialCard({
   const remaining = Math.max(0, minTrials - completedCount);
 
   const setResult = (value: Exclude<TrialResult, null>) => {
-    if (isMaxReached) return;
+    if (isMaxReached && trials[current] === null) return;
+    const isToggleOff = trials[current] === value;
     setTrials((prev) => {
       const next = [...prev];
-      if (current >= next.length - 2 && maxTrials === undefined) {
+      if (!isToggleOff && current >= next.length - 2 && maxTrials === undefined) {
         next.push(null, null, null);
       }
-      next[current] = value;
+      next[current] = isToggleOff ? null : value;
       return next;
     });
-    setLastAction({ id: Date.now(), value });
-    setTimeout(() => {
-      setCurrent((c) => {
-        const max = maxTrials ? maxTrials - 1 : Number.POSITIVE_INFINITY;
-        return Math.min(c + 1, max);
-      });
-    }, 280);
+    setLastAction({ id: Date.now(), value: isToggleOff ? null : value });
+    if (!isToggleOff) {
+      setTimeout(() => {
+        setCurrent((c) => {
+          const max = maxTrials ? maxTrials - 1 : Number.POSITIVE_INFINITY;
+          return Math.min(c + 1, max);
+        });
+      }, 280);
+    }
   };
 
   const goTo = (idx: number) => {
@@ -111,7 +114,7 @@ export function TrialCard({
       )}
     >
       {/* Header */}
-      <header className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
+      <header className="flex items-start justify-between gap-3 px-5 pt-3 pb-3">
         <h2 className="font-display text-xl leading-tight flex-1">{title}</h2>
         <div className="flex items-start gap-2">
           <div className="text-right leading-tight">
@@ -253,6 +256,12 @@ export function TrialCard({
                             {i + 1}
                           </motion.span>
                         </AnimatePresence>
+                      ) : t ? (
+                        <span className="text-[7px] leading-none font-medium text-foreground/35">
+                          {i + 1}
+                        </span>
+                      ) : i < minTrials ? (
+                        <span className="size-1 rounded-full bg-foreground/30" aria-hidden />
                       ) : (
                         <span className="text-[7px] leading-none font-medium text-foreground/35">
                           {i + 1}
@@ -282,8 +291,6 @@ export function TrialCard({
 
       {/* Action buttons row with slide animation */}
       <div className="relative mt-4 px-5 h-16 overflow-hidden">
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-card to-transparent z-10" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-card to-transparent z-10" />
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={current}
@@ -295,15 +302,15 @@ export function TrialCard({
           >
             <ActionButton
               variant="incorrect"
-              selected={lastAction.value === "incorrect" && lastAction.id !== 0}
+              selected={trials[current] === "incorrect"}
               onClick={() => setResult("incorrect")}
-              disabled={isMaxReached}
+              disabled={isMaxReached && trials[current] === null}
             />
             <ActionButton
               variant="correct"
-              selected={lastAction.value === "correct" && lastAction.id !== 0}
+              selected={trials[current] === "correct"}
               onClick={() => setResult("correct")}
-              disabled={isMaxReached}
+              disabled={isMaxReached && trials[current] === null}
             />
           </motion.div>
         </AnimatePresence>
@@ -316,7 +323,7 @@ export function TrialCard({
             <motion.div
               className={cn(
                 "absolute inset-y-0 left-0",
-                isComplete ? "bg-green-300" : "bg-accent/70",
+                isComplete ? "bg-green-500" : "bg-blue-500",
               )}
               animate={{ width: `${progress}%` }}
               transition={{ type: "spring", stiffness: 180, damping: 26 }}
@@ -334,10 +341,10 @@ export function TrialCard({
             </span>
           </div>
 
-          {/* Progress bubble — anchored to bar bottom so it sits on top without clipping */}
+          {/* Progress indicator — sized to fit within bar */}
           <motion.div
-            className="absolute bottom-0 z-10"
-            animate={{ left: `calc(${progress}% - 18px)` }}
+            className="absolute top-1/2 -translate-y-1/2 z-10"
+            animate={{ left: `calc(${progress}% - 14px)` }}
             transition={{ type: "spring", stiffness: 180, damping: 26 }}
           >
             <motion.div
@@ -348,13 +355,13 @@ export function TrialCard({
               }
               transition={{ duration: 0.7, repeat: isComplete ? 1 : 0 }}
               className={cn(
-                "relative grid place-items-center size-9 rounded-full border-2 shadow-soft text-xs font-semibold",
+                "relative grid place-items-center h-[18px] min-w-[28px] px-1.5 rounded-full border shadow-soft text-[10px] font-semibold leading-none",
                 isComplete
                   ? "bg-green-500 border-green-600 text-white"
-                  : "bg-card border-foreground/40 text-foreground",
+                  : "bg-white border-blue-600 text-blue-700",
               )}
             >
-              {isComplete ? <Check className="size-4" /> : `${progress}%`}
+              {isComplete ? <Check className="size-3" strokeWidth={3} /> : `${progress}%`}
               {isComplete && <Starburst />}
             </motion.div>
           </motion.div>
