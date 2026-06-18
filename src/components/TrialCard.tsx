@@ -351,8 +351,9 @@ export function TrialCard({
 
           {/* Progress indicator — sized to fit within bar */}
           <motion.div
-            className="absolute top-1/2 -translate-y-1/2 z-10"
-            animate={{ left: `${progress}%`, x: `-${progress}%` }}
+            className="absolute top-1/2 z-10"
+            style={{ translateY: "-50%" }}
+            animate={{ left: `${progress}%`, translateX: `-${progress}%` }}
             transition={{ type: "spring", stiffness: 180, damping: 26 }}
           >
             <motion.div
