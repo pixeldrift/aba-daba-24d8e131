@@ -341,10 +341,10 @@ export function TrialCard({
             </span>
           </div>
 
-          {/* Progress bubble — anchored to bar bottom so it sits on top without clipping */}
+          {/* Progress indicator — sized to fit within bar */}
           <motion.div
-            className="absolute bottom-0 z-10"
-            animate={{ left: `calc(${progress}% - 18px)` }}
+            className="absolute top-1/2 -translate-y-1/2 z-10"
+            animate={{ left: `calc(${progress}% - 14px)` }}
             transition={{ type: "spring", stiffness: 180, damping: 26 }}
           >
             <motion.div
@@ -355,13 +355,13 @@ export function TrialCard({
               }
               transition={{ duration: 0.7, repeat: isComplete ? 1 : 0 }}
               className={cn(
-                "relative grid place-items-center size-9 rounded-full border-2 shadow-soft text-xs font-semibold",
+                "relative grid place-items-center h-[18px] min-w-[28px] px-1.5 rounded-full border shadow-soft text-[10px] font-semibold leading-none",
                 isComplete
                   ? "bg-green-500 border-green-600 text-white"
-                  : "bg-card border-foreground/40 text-foreground",
+                  : "bg-white border-blue-600 text-blue-700",
               )}
             >
-              {isComplete ? <Check className="size-4" /> : `${progress}%`}
+              {isComplete ? <Check className="size-3" strokeWidth={3} /> : `${progress}%`}
               {isComplete && <Starburst />}
             </motion.div>
           </motion.div>
