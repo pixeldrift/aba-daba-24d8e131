@@ -114,7 +114,7 @@ export function TrialCard({
       )}
     >
       {/* Header */}
-      <header className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
+      <header className="flex items-start justify-between gap-3 px-5 pt-3 pb-3">
         <h2 className="font-display text-xl leading-tight flex-1">{title}</h2>
         <div className="flex items-start gap-2">
           <div className="text-right leading-tight">
