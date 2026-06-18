@@ -122,7 +122,7 @@ export function TrialCard({
       )}
     >
       {/* Header */}
-      <header className="flex items-start gap-3 pl-5 pr-3 pt-3 pb-1">
+      <header className="flex items-start gap-3 pl-5 pr-3 pt-3 pb-0">
         <h2 className="font-display text-xl leading-tight flex-1 mr-auto">{title}</h2>
         <div className="flex items-start gap-2">
           <div className="text-right leading-tight">
