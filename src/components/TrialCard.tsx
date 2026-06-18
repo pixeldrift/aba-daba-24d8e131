@@ -270,11 +270,11 @@ export function TrialCard({
                         </span>
                       ) : i < minTrials ? (
                         <span className="size-1 rounded-full bg-foreground/30" aria-hidden />
-                      ) : (
+                      ) : i < current ? (
                         <span className="text-[7px] leading-none font-medium text-foreground/35">
                           {i + 1}
                         </span>
-                      )}
+                      ) : null}
                     </motion.div>
                   </motion.button>
                 );
