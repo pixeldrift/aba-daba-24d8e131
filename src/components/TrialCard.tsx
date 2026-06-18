@@ -115,9 +115,9 @@ export function TrialCard({
     <article
       onClick={onActivate}
       className={cn(
-        "relative w-full max-w-md rounded-xl bg-card text-card-foreground overflow-hidden transition-all duration-200",
+        "relative w-full max-w-md rounded-xl bg-card text-card-foreground transition-all duration-200",
         isActive
-          ? "border-2 border-blue-400/80 shadow-[0_0_0_4px_rgba(96,165,250,0.30)]"
+          ? "border-2 border-blue-400/80 shadow-[0_10px_30px_-4px_rgba(0,0,0,0.25)]"
           : "border border-stone-200 opacity-80 hover:opacity-95",
       )}
     >
@@ -126,7 +126,7 @@ export function TrialCard({
         <h2 className="font-display text-xl leading-tight flex-1 mr-auto">{title}</h2>
         <div className="flex items-start gap-2">
           <div className="text-right leading-tight">
-            <div className="text-xs font-medium text-foreground/80">{phase}</div>
+            <div className="text-xs font-medium text-blue-400">{phase}</div>
             <div className="text-[11px] text-muted-foreground">{dataType}</div>
           </div>
           <Sheet>
