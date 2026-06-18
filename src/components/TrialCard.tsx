@@ -291,8 +291,6 @@ export function TrialCard({
 
       {/* Action buttons row with slide animation */}
       <div className="relative mt-4 px-5 h-16 overflow-hidden">
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-card to-transparent z-10" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-card to-transparent z-10" />
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={current}
@@ -304,15 +302,15 @@ export function TrialCard({
           >
             <ActionButton
               variant="incorrect"
-              selected={lastAction.value === "incorrect" && lastAction.id !== 0}
+              selected={trials[current] === "incorrect"}
               onClick={() => setResult("incorrect")}
-              disabled={isMaxReached}
+              disabled={isMaxReached && trials[current] === null}
             />
             <ActionButton
               variant="correct"
-              selected={lastAction.value === "correct" && lastAction.id !== 0}
+              selected={trials[current] === "correct"}
               onClick={() => setResult("correct")}
-              disabled={isMaxReached}
+              disabled={isMaxReached && trials[current] === null}
             />
           </motion.div>
         </AnimatePresence>
@@ -325,7 +323,7 @@ export function TrialCard({
             <motion.div
               className={cn(
                 "absolute inset-y-0 left-0",
-                isComplete ? "bg-green-300" : "bg-accent/70",
+                isComplete ? "bg-green-500" : "bg-blue-500",
               )}
               animate={{ width: `${progress}%` }}
               transition={{ type: "spring", stiffness: 180, damping: 26 }}
