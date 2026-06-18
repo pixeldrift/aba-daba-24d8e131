@@ -299,12 +299,13 @@ export function TrialCard({
 
       {/* Action buttons row with slide animation */}
       <div className="relative mt-4 px-5 h-16 overflow-hidden">
-        <AnimatePresence mode="popLayout" initial={false}>
+        <AnimatePresence mode="popLayout" initial={false} custom={direction}>
           <motion.div
             key={current}
-            initial={{ x: "60%", opacity: 0 }}
+            custom={direction}
+            initial={(d: number) => ({ x: d > 0 ? "60%" : "-60%", opacity: 0 })}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ x: "-60%", opacity: 0 }}
+            exit={(d: number) => ({ x: d > 0 ? "-60%" : "60%", opacity: 0 })}
             transition={{ type: "spring", stiffness: 280, damping: 30 }}
             className="absolute inset-0 px-5 flex items-center gap-3"
           >
