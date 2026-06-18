@@ -37,6 +37,8 @@ export function TrialCard({
   minTrials = 10,
   maxTrials,
   initialTrialCount = 20,
+  isActive = true,
+  onActivate,
 }: TrialCardProps) {
   const initial = maxTrials ?? Math.max(initialTrialCount, minTrials + 5);
   const [trials, setTrials] = useState<TrialResult[]>(() =>
