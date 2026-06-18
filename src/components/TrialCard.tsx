@@ -115,7 +115,7 @@ export function TrialCard({
     <article
       onClick={onActivate}
       className={cn(
-        "relative w-full max-w-md rounded-xl bg-card text-card-foreground transition-all duration-200",
+        "relative w-full max-w-md rounded-xl bg-card text-card-foreground transition-all duration-200 overflow-hidden",
         isActive
           ? "border-2 border-blue-400/80 shadow-[0_10px_30px_-4px_rgba(0,0,0,0.25)]"
           : "border border-stone-200 opacity-80 hover:opacity-95",
@@ -260,9 +260,14 @@ export function TrialCard({
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -6 }}
                             transition={{ duration: 0.25 }}
-                            className="font-display text-3xl text-foreground"
+                            className="flex flex-col items-center justify-center"
                           >
-                            {i + 1}
+                            <span className="font-display text-3xl text-foreground leading-none">
+                              {i + 1}
+                            </span>
+                            {i < minTrials && (
+                              <span className="mt-[2px] size-[3px] rounded-full bg-foreground/40" aria-hidden />
+                            )}
                           </motion.span>
                         </AnimatePresence>
                       ) : (
@@ -328,8 +333,8 @@ export function TrialCard({
       {/* Progress bar — flush to bottom of card */}
       {minTrials > 0 && (
         <div className="relative mt-3">
-          <div className="relative h-7">
-            <div className="absolute inset-0 bg-muted rounded-b-[10px] overflow-hidden">
+          <div className="relative h-5">
+            <div className="absolute inset-0 bg-muted overflow-hidden">
               <motion.div
                 className={cn(
                   "absolute inset-y-0 left-0",
@@ -354,7 +359,7 @@ export function TrialCard({
               )}
             </div>
 
-            {/* Progress indicator — label above bar, arrow tail overlaps into bar */}
+            {/* Progress indicator — floats above bar */}
             <motion.div
               className="absolute bottom-0 left-0 z-30 pointer-events-none"
               animate={{ left: `${progress}%` }}
@@ -376,7 +381,7 @@ export function TrialCard({
                 </div>
                 <div
                   className={cn(
-                    "w-0 h-0 border-l-[6px] border-r-[6px] border-t-[28px] border-l-transparent border-r-transparent -mt-[1px]",
+                    "w-0 h-0 border-l-[4px] border-r-[4px] border-t-[5px] border-l-transparent border-r-transparent",
                     isComplete ? "border-t-green-500" : "border-t-blue-500",
                   )}
                   aria-hidden
