@@ -45,6 +45,14 @@ export function TrialCard({
     Array.from({ length: initial }, () => null),
   );
   const [current, setCurrent] = useState(0);
+  const [direction, setDirection] = useState<1 | -1>(1);
+  const setCurrentDir = (next: number | ((c: number) => number)) => {
+    setCurrent((c) => {
+      const n = typeof next === "function" ? (next as (c: number) => number)(c) : next;
+      setDirection(n >= c ? 1 : -1);
+      return n;
+    });
+  };
   const [lastAction, setLastAction] = useState<{ id: number; value: TrialResult }>({
     id: 0,
     value: null,
@@ -75,7 +83,7 @@ export function TrialCard({
     setLastAction({ id: Date.now(), value: isToggleOff ? null : value });
     if (!isToggleOff) {
       setTimeout(() => {
-        setCurrent((c) => {
+        setCurrentDir((c) => {
           const max = maxTrials ? maxTrials - 1 : Number.POSITIVE_INFINITY;
           return Math.min(c + 1, max);
         });
@@ -85,7 +93,7 @@ export function TrialCard({
 
   const goTo = (idx: number) => {
     const max = maxTrials ? maxTrials - 1 : trials.length - 1;
-    setCurrent(Math.max(0, Math.min(idx, max)));
+    setCurrentDir(Math.max(0, Math.min(idx, max)));
   };
 
   const stepWidth = BUBBLE + GAP;
@@ -99,7 +107,7 @@ export function TrialCard({
     const targetIdx = Math.round(-(finalOffset + BUBBLE_CENTER / 2) / stepWidth);
     const max = maxTrials ? maxTrials - 1 : trials.length - 1;
     const clamped = Math.max(0, Math.min(targetIdx, max));
-    setCurrent(clamped);
+    setCurrentDir(clamped);
     animate(dragX, 0, { type: "spring", stiffness: 320, damping: 32 });
   };
 
@@ -107,15 +115,15 @@ export function TrialCard({
     <article
       onClick={onActivate}
       className={cn(
-        "relative w-full max-w-md rounded-3xl bg-card text-card-foreground shadow-lift overflow-hidden border-2 transition-all duration-200",
+        "relative w-full max-w-md rounded-xl bg-card text-card-foreground overflow-hidden transition-all duration-200",
         isActive
-          ? "border-blue-400/80 shadow-[0_0_0_4px_rgba(96,165,250,0.15)]"
-          : "border-border/40 opacity-70 hover:opacity-90",
+          ? "border-2 border-blue-400/80 shadow-lift shadow-[0_0_0_4px_rgba(96,165,250,0.15)]"
+          : "border border-stone-200 opacity-80 hover:opacity-95",
       )}
     >
       {/* Header */}
-      <header className="flex items-start justify-between gap-3 px-5 pt-3 pb-3">
-        <h2 className="font-display text-xl leading-tight flex-1">{title}</h2>
+      <header className="flex items-start gap-3 pl-5 pr-3 pt-3 pb-1">
+        <h2 className="font-display text-xl leading-tight flex-1 mr-auto">{title}</h2>
         <div className="flex items-start gap-2">
           <div className="text-right leading-tight">
             <div className="text-xs font-medium text-foreground/80">{phase}</div>
@@ -262,11 +270,11 @@ export function TrialCard({
                         </span>
                       ) : i < minTrials ? (
                         <span className="size-1 rounded-full bg-foreground/30" aria-hidden />
-                      ) : (
+                      ) : i < current ? (
                         <span className="text-[7px] leading-none font-medium text-foreground/35">
                           {i + 1}
                         </span>
-                      )}
+                      ) : null}
                     </motion.div>
                   </motion.button>
                 );
@@ -294,9 +302,9 @@ export function TrialCard({
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={current}
-            initial={{ x: "60%", opacity: 0 }}
+            initial={{ x: direction > 0 ? "60%" : "-60%", opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ x: "-60%", opacity: 0 }}
+            exit={{ x: direction > 0 ? "-60%" : "60%", opacity: 0 }}
             transition={{ type: "spring", stiffness: 280, damping: 30 }}
             className="absolute inset-0 px-5 flex items-center gap-3"
           >
@@ -323,7 +331,7 @@ export function TrialCard({
             <motion.div
               className={cn(
                 "absolute inset-y-0 left-0",
-                isComplete ? "bg-green-500" : "bg-blue-500",
+                isComplete ? "bg-green-500" : "bg-blue-400/80",
               )}
               animate={{ width: `${progress}%` }}
               transition={{ type: "spring", stiffness: 180, damping: 26 }}
@@ -343,8 +351,9 @@ export function TrialCard({
 
           {/* Progress indicator — sized to fit within bar */}
           <motion.div
-            className="absolute top-1/2 -translate-y-1/2 z-10"
-            animate={{ left: `calc(${progress}% - 14px)` }}
+            className="absolute top-1/2 z-10"
+            style={{ translateY: "-50%" }}
+            animate={{ left: `${progress}%`, translateX: `-${progress}%` }}
             transition={{ type: "spring", stiffness: 180, damping: 26 }}
           >
             <motion.div
@@ -432,7 +441,7 @@ function ActionButton({
       animate={selected ? { scale: [1, 1.06, 1] } : { scale: 1 }}
       transition={{ duration: 0.35 }}
       className={cn(
-        "flex-1 h-14 rounded-2xl border-2 flex items-center justify-center gap-2 transition-colors disabled:opacity-40",
+        "flex-1 h-14 rounded-lg border-2 flex items-center justify-center gap-2 transition-colors disabled:opacity-40",
         isCorrect
           ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
           : "border-red-300 bg-red-50 text-red-700 hover:bg-red-100",
