@@ -175,6 +175,7 @@ function Index() {
                   phase={card.phase}
                   description={card.description}
                   minDurationSec={card.minDurationSec}
+                  locked={card.locked}
                   {...common}
                 />
               );
