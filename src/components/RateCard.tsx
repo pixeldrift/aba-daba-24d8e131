@@ -163,39 +163,58 @@ export function RateCard({
               >
                 <span>Times in</span>
                 <span className="inline-flex items-center">
-                  <TimeKeypad
-                    valueMs={elapsed}
-                    onReplace={(ms) => setElapsedMs(ms)}
-                    onAdd={(ms) => setElapsedMs(elapsed + ms)}
-                  >
-                    {({ open: openTime }) => (
+                  {locked ? (
+                    <>
+                      <span
+                        aria-label="Elapsed time (linked to session)"
+                        className="inline-flex items-center border border-stone-300 bg-stone-100 pl-1.5 pr-1 py-0.5 h-5 font-mono text-[11px] font-bold tabular-nums normal-case tracking-normal rounded-l-full text-muted-foreground"
+                      >
+                        {formatTime(elapsed)}
+                      </span>
+                      <span
+                        aria-label="Timer is linked to session"
+                        className="grid size-5 place-items-center rounded-r-full bg-stone-300 text-stone-600"
+                      >
+                        <Lock className="size-3" strokeWidth={2.5} />
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <TimeKeypad
+                        valueMs={elapsed}
+                        onReplace={(ms) => setElapsedMs(ms)}
+                        onAdd={(ms) => setElapsedMs(elapsed + ms)}
+                      >
+                        {({ open: openTime }) => (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openTime();
+                            }}
+                            aria-label="Edit elapsed time"
+                            className={cn(
+                              "inline-flex items-center border border-blue-500 bg-white pl-1.5 pr-1 py-0.5 h-5 font-mono text-[11px] font-bold tabular-nums normal-case tracking-normal rounded-l-full cursor-text hover:bg-blue-50 transition-colors",
+                              running ? "text-foreground" : "text-muted-foreground",
+                            )}
+                          >
+                            {formatTime(elapsed)}
+                          </button>
+                        )}
+                      </TimeKeypad>
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          openTime();
+                          toggle();
                         }}
-                        aria-label="Edit elapsed time"
-                        className={cn(
-                          "inline-flex items-center border border-blue-500 bg-white pl-1.5 pr-1 py-0.5 h-5 font-mono text-[11px] font-bold tabular-nums normal-case tracking-normal rounded-l-full cursor-text hover:bg-blue-50 transition-colors",
-                          running ? "text-foreground" : "text-muted-foreground",
-                        )}
+                        aria-label={running ? "Pause timer" : "Resume timer"}
+                        className="grid size-5 place-items-center rounded-r-full bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700 transition-colors"
                       >
-                        {formatTime(elapsed)}
+                        {running ? <Pause className="size-3" fill="currentColor" /> : <Play className="size-3" fill="currentColor" />}
                       </button>
-                    )}
-                  </TimeKeypad>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggle();
-                    }}
-                    aria-label={running ? "Pause timer" : "Resume timer"}
-                    className="grid size-5 place-items-center rounded-r-full bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700 transition-colors"
-                  >
-                    {running ? <Pause className="size-3" fill="currentColor" /> : <Play className="size-3" fill="currentColor" />}
-                  </button>
+                    </>
+                  )}
                 </span>
               </div>
             </div>
