@@ -223,15 +223,27 @@ export function TrialCard({
                 const isCenter = i === current;
                 const bg =
                   t === "correct"
-                    ? "bg-green-300 border-green-400"
+                    ? "bg-green-50 border-green-300"
                     : t === "incorrect"
-                      ? "bg-red-300 border-red-400"
+                      ? "bg-red-50 border-red-300"
                       : "bg-foreground/5 border-foreground/10";
+                const textColor =
+                  t === "correct"
+                    ? "text-green-700"
+                    : t === "incorrect"
+                      ? "text-red-700"
+                      : "text-foreground/40";
+                const centerTextColor =
+                  t === "correct"
+                    ? "text-green-700"
+                    : t === "incorrect"
+                      ? "text-red-700"
+                      : "text-foreground";
                 const centerBg =
                   lastAction.value === "correct" && i === current - 1
-                    ? "bg-green-400 border-green-500 text-white"
+                    ? "bg-green-100 border-green-400"
                     : lastAction.value === "incorrect" && i === current - 1
-                      ? "bg-red-400 border-red-500 text-white"
+                      ? "bg-red-100 border-red-400"
                       : "";
                 return (
                   <motion.button
