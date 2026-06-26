@@ -151,10 +151,9 @@ export function DurationCard({
               {hasInstances ? (
                 <motion.div
                   key={viewIdx}
-                  custom={direction}
-                  initial={(d: 1 | -1) => ({ x: d > 0 ? "110%" : "-110%", opacity: 0, scale: 0.9 })}
+                  initial={{ x: direction > 0 ? "110%" : "-110%", opacity: 0, scale: 0.9 }}
                   animate={{ x: 0, opacity: 1, scale: 1 }}
-                  exit={(d: 1 | -1) => ({ x: d > 0 ? "-110%" : "110%", opacity: 0, scale: 0.85 })}
+                  exit={{ x: direction > 0 ? "-110%" : "110%", opacity: 0, scale: 0.85 }}
                   transition={{ type: "spring", stiffness: 320, damping: 32 }}
                   className="absolute inset-0 flex items-stretch justify-center"
                 >
