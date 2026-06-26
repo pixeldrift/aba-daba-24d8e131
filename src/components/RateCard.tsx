@@ -95,6 +95,7 @@ export function RateCard({
   };
 
   return (
+    <div ref={cardRef} className="w-full max-w-md scroll-mt-32">
     <CardShell
       title={title}
       phase={phase}
@@ -238,6 +239,7 @@ export function RateCard({
         </motion.button>
       </div>
     </CardShell>
+    </div>
   );
 }
 
