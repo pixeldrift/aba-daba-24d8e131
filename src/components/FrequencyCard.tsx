@@ -103,26 +103,28 @@ export function FrequencyCard({
               className="flex flex-col items-center justify-center min-w-[6rem] cursor-text rounded-lg px-3 py-1 transition-colors"
               aria-label={`Current count is ${count}. Tap to edit.`}
             >
-              <AnimatePresence mode="popLayout" initial={false}>
-                <motion.span
-                  key={bumpKey}
-                  initial={{ scale: 0.7, opacity: 0, y: 8 }}
-                  animate={{
-                    scale: 1,
-                    opacity: 1,
-                    y: 0,
-                  }}
-                  exit={{ opacity: 0 }}
-                  transition={{ type: "spring", stiffness: 360, damping: 22 }}
-                  className={cn(
-                    "font-display text-5xl leading-none tabular-nums transition-colors rounded-lg px-2 py-0.5",
-                    isEditing ? "border-2 border-blue-400/80 text-blue-600" : "text-foreground",
-                    flash && "text-blue-600",
-                  )}
-                >
-                  {count}
-                </motion.span>
-              </AnimatePresence>
+              <div className="relative overflow-hidden rounded-lg px-2 py-0.5">
+                <AnimatePresence mode="popLayout" initial={false} custom={dir}>
+                  <motion.span
+                    key={bumpKey}
+                    custom={dir}
+                    initial={{ y: dir > 0 ? "100%" : "-100%", opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={(d: 1 | -1) => ({ y: d > 0 ? "-100%" : "100%", opacity: 0 })}
+                    transition={{ type: "spring", stiffness: 520, damping: 24, mass: 0.7 }}
+                    className={cn(
+                      "block font-display text-5xl leading-none tabular-nums transition-colors",
+                      isEditing ? "text-blue-600" : "text-foreground",
+                      flash && "text-blue-600",
+                    )}
+                  >
+                    {count}
+                  </motion.span>
+                </AnimatePresence>
+                {isEditing && (
+                  <span className="pointer-events-none absolute inset-0 rounded-lg border-2 border-blue-400/80" aria-hidden />
+                )}
+              </div>
               <span
                 className={cn(
                   "mt-1 text-[11px] uppercase tracking-wider transition-colors",
