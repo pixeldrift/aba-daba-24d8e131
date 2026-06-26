@@ -196,7 +196,8 @@ function Row({ label, value }: { label: string; value: string }) {
 
 function formatTime(ms: number) {
   const total = Math.floor(ms / 1000);
-  const m = Math.floor(total / 60);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
