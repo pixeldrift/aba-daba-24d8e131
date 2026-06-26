@@ -127,15 +127,21 @@ export function DurationCard({
       onActivate={onActivate}
       progress={null}
       isComplete={isComplete}
-      helperText={
-        isComplete ? (
-          "Minimum duration reached. This data can now be graphed."
-        ) : (
+      helperText={(() => {
+        const countedInstances = instances.filter((v, i) => v > 0 || (running && runningIdxRef.current === i)).length;
+        return (
           <span>
-            Record at least <strong className="font-semibold">{remaining}s more</strong>.
+            Instance{" "}
+            <span className="font-mono normal-case tracking-normal tabular-nums text-foreground">
+              {viewIdx + 1}
+            </span>{" "}
+            of{" "}
+            <span className="font-mono normal-case tracking-normal tabular-nums text-foreground">
+              {countedInstances}
+            </span>
           </span>
-        )
-      }
+        );
+      })()}
       details={
         <dl className="space-y-3">
           <Row label="Phase" value={phase} />
@@ -215,17 +221,6 @@ export function DurationCard({
 
         <div className="mt-1 flex items-center justify-center gap-3 text-[11px] uppercase tracking-wider text-muted-foreground h-4">
           <span>
-            Instance{" "}
-            <span className="font-mono normal-case tracking-normal tabular-nums text-foreground">
-              {viewIdx + 1}
-            </span>{" "}
-            of{" "}
-            <span className="font-mono normal-case tracking-normal tabular-nums text-foreground">
-              {instances.length}
-            </span>
-          </span>
-          <span className="size-1 rounded-full bg-stone-300" aria-hidden />
-          <span>
             Total{" "}
             <span className="font-mono normal-case tracking-normal tabular-nums text-foreground">
               {formatTime(totalMs)}
@@ -257,7 +252,7 @@ function CenterPill({
     <div
       className={cn(
         "absolute inset-0 flex items-stretch rounded-full overflow-hidden border-2 bg-white transition-colors",
-        running ? "border-blue-500" : "border-stone-300",
+        accent ? "border-blue-500" : "border-stone-300",
       )}
     >
       <div className="flex-1 flex items-center gap-2 pl-2 pr-2">
@@ -317,12 +312,7 @@ function CenterPill({
           onToggle();
         }}
         aria-label={running ? "Pause this instance" : "Start this instance"}
-        className={cn(
-          "grid w-12 place-items-center text-white transition-colors",
-          running
-            ? "bg-blue-500 hover:bg-blue-600 active:bg-blue-700"
-            : "bg-stone-400 hover:bg-stone-500 active:bg-stone-600",
-        )}
+        className="grid w-12 place-items-center text-white transition-colors bg-blue-500 hover:bg-blue-600 active:bg-blue-700"
       >
         {running ? (
           <Pause className="size-5" fill="currentColor" strokeWidth={0} />
