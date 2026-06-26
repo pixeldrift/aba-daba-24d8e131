@@ -25,6 +25,7 @@ export function FrequencyCard({
   const [count, setCount] = useState(0);
   const [bumpKey, setBumpKey] = useState(0);
   const [flash, setFlash] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const isComplete = count >= minCount;
   const remaining = Math.max(0, minCount - count);
@@ -54,6 +55,7 @@ export function FrequencyCard({
       isActive={isActive}
       onActivate={onActivate}
       progress={null}
+      editing={editing}
       isComplete={isComplete}
       helperText={
         isComplete ? (
@@ -88,12 +90,16 @@ export function FrequencyCard({
           value={count}
           onReplace={(v) => commit(v)}
           onAdd={(delta) => commit(count + delta)}
+          onOpenChange={setEditing}
         >
           {({ isEditing, open }) => (
             <button
               type="button"
               onClick={open}
-              className="flex flex-col items-center justify-center min-w-[6rem] cursor-text rounded-lg px-3 py-1 transition-colors"
+              className={cn(
+                "flex flex-col items-center justify-center min-w-[6rem] cursor-text rounded-lg px-3 py-1 transition-colors",
+                isEditing && "border-2 border-blue-400/80",
+              )}
               aria-label={`Current count is ${count}. Tap to edit.`}
             >
               <AnimatePresence mode="popLayout" initial={false}>
@@ -101,7 +107,7 @@ export function FrequencyCard({
                   key={bumpKey}
                   initial={{ scale: 0.7, opacity: 0, y: 8 }}
                   animate={{
-                    scale: flash ? [1, 1.18, 1] : 1,
+                    scale: 1,
                     opacity: 1,
                     y: 0,
                   }}
