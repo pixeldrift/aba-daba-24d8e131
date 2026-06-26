@@ -104,13 +104,12 @@ export function FrequencyCard({
               aria-label={`Current count is ${count}. Tap to edit.`}
             >
               <div className="relative overflow-hidden rounded-lg px-2 py-0.5">
-                <AnimatePresence mode="popLayout" initial={false} custom={dir}>
+                <AnimatePresence mode="popLayout" initial={false}>
                   <motion.span
                     key={bumpKey}
-                    custom={dir}
                     initial={{ y: dir > 0 ? "100%" : "-100%", opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    exit={(d: 1 | -1) => ({ y: d > 0 ? "-100%" : "100%", opacity: 0 })}
+                    exit={{ y: dir > 0 ? "-100%" : "100%", opacity: 0 }}
                     transition={{ type: "spring", stiffness: 520, damping: 24, mass: 0.7 }}
                     className={cn(
                       "block font-display text-5xl leading-none tabular-nums transition-colors",
