@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { Delete, Plus, Check, X } from "lucide-react";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -8,12 +7,14 @@ import { cn } from "@/lib/utils";
 export interface NumberKeypadProps {
   /** Current committed value shown on the card. */
   value: number;
-  /** Called when user commits via "Update Total". */
+  /** Called when user commits via "Update". */
   onReplace: (next: number) => void;
-  /** Called when user commits via "Add to Total". */
+  /** Called when user commits via "Add". */
   onAdd: (delta: number) => void;
   /** Maximum digits allowed in the pending entry. */
   maxDigits?: number;
+  /** Optional callback when open state changes. */
+  onOpenChange?: (open: boolean) => void;
   /** Renders the trigger (the on-card number). Receives editing state. */
   children: (state: {
     isEditing: boolean;
@@ -26,20 +27,29 @@ export function NumberKeypad({
   onReplace,
   onAdd,
   maxDigits = 6,
+  onOpenChange,
   children,
 }: NumberKeypadProps) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState("");
   const hiddenInputRef = useRef<HTMLInputElement>(null);
 
+  const setOpenWithCallback = useCallback(
+    (next: boolean) => {
+      if (!next) setPending("");
+      setOpen(next);
+      onOpenChange?.(next);
+    },
+    [onOpenChange],
+  );
+
   const openKeypad = useCallback(() => {
     setPending("");
-    setOpen(true);
-  }, []);
+    setOpenWithCallback(true);
+  }, [setOpenWithCallback]);
 
   const handleOpenChange = (next: boolean) => {
-    if (!next) setPending("");
-    setOpen(next);
+    setOpenWithCallback(next);
   };
 
   const applyDigit = useCallback(
@@ -64,12 +74,12 @@ export function NumberKeypad({
   const commitReplace = () => {
     if (!hasPending) return;
     onReplace(pendingNum);
-    setOpen(false);
+    setOpenWithCallback(false);
   };
   const commitAdd = () => {
     if (!hasPending) return;
     onAdd(pendingNum);
-    setOpen(false);
+    setOpenWithCallback(false);
   };
 
   // Focus hidden input on open so the mobile keyboard appears.
@@ -87,19 +97,12 @@ export function NumberKeypad({
       </PopoverAnchor>
       <PopoverContent
         side="top"
-        sideOffset={12}
+        sideOffset={8}
         align="center"
-        className="w-auto p-0 rounded-2xl border-2 border-blue-400/80 bg-card text-card-foreground shadow-[0_10px_30px_-4px_rgba(0,0,0,0.25)]"
+        className="w-auto border-none bg-transparent p-0 shadow-none"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <PopoverPrimitive.Arrow
-          width={16}
-          height={8}
-          className="fill-card"
-        />
-        {/* Render arrow border with a stacked path workaround: shadow on the arrow */}
-
-        <div className="w-[268px] p-3">
+        <div className="relative w-[200px] rounded-2xl border-2 border-blue-400/80 bg-card p-2.5 shadow-[0_10px_30px_-4px_rgba(0,0,0,0.25)]">
           {/* Hidden input — catches native + physical keyboard */}
           <input
             ref={hiddenInputRef}
@@ -130,32 +133,26 @@ export function NumberKeypad({
           />
 
           {/* Display */}
-          <div className="rounded-lg bg-muted/60 border border-stone-200 px-4 py-3 mb-3">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-              <span>Entry</span>
-              <span>Current: {value}</span>
-            </div>
-            <div className="h-12 flex items-center justify-end overflow-hidden">
-              <AnimatePresence mode="popLayout" initial={false}>
-                <motion.span
-                  key={pending || "empty"}
-                  initial={{ y: 12, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: -12, opacity: 0 }}
-                  transition={{ type: "spring", stiffness: 420, damping: 28 }}
-                  className={cn(
-                    "font-display text-4xl leading-none tabular-nums",
-                    hasPending ? "text-blue-600" : "text-muted-foreground/40",
-                  )}
-                >
-                  {hasPending ? pending : "0"}
-                </motion.span>
-              </AnimatePresence>
-            </div>
+          <div className="mb-2 flex h-8 items-end justify-end overflow-hidden rounded-lg border border-stone-200 bg-muted/60 px-3 py-1">
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.span
+                key={pending || "empty"}
+                initial={{ y: 12, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -12, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 420, damping: 28 }}
+                className={cn(
+                  "font-display text-2xl leading-none tabular-nums",
+                  hasPending ? "text-blue-600" : "text-muted-foreground/40",
+                )}
+              >
+                {hasPending ? pending : "0"}
+              </motion.span>
+            </AnimatePresence>
           </div>
 
           {/* Keypad */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-1.5">
             {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
               <KeyButton key={d} onClick={() => applyDigit(d)}>
                 {d}
@@ -166,36 +163,39 @@ export function NumberKeypad({
             </KeyButton>
             <KeyButton onClick={() => applyDigit("0")}>0</KeyButton>
             <KeyButton onClick={backspace} variant="muted">
-              <Delete className="size-5" />
+              <Delete className="size-4" />
             </KeyButton>
           </div>
 
           {/* Actions */}
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-2 flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => handleOpenChange(false)}
-              className="h-10 px-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors flex items-center gap-1.5"
+              className="flex h-8 items-center gap-1 rounded-lg px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
-              <X className="size-4" /> Close
+              <X className="size-3.5" /> Close
             </button>
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex items-center gap-1.5">
               <ActionButton
                 onClick={commitAdd}
                 disabled={!hasPending}
                 tone="outline"
-                icon={<Plus className="size-4" strokeWidth={3} />}
-                label="Add to Total"
+                icon={<Plus className="size-3.5" strokeWidth={3} />}
+                label="Add"
               />
               <ActionButton
                 onClick={commitReplace}
                 disabled={!hasPending}
                 tone="solid"
-                icon={<Check className="size-4" strokeWidth={3} />}
-                label="Update Total"
+                icon={<Check className="size-3.5" strokeWidth={3} />}
+                label="Update"
               />
             </div>
           </div>
+
+          {/* Arrow — part of the bordered card shape */}
+          <div className="absolute -bottom-[7px] left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-r-2 border-b-2 border-blue-400/80 bg-card" />
         </div>
       </PopoverContent>
     </Popover>
@@ -217,9 +217,9 @@ function KeyButton({
       whileTap={{ scale: 0.92 }}
       onClick={onClick}
       className={cn(
-        "h-12 rounded-lg text-xl font-semibold font-display select-none transition-colors border",
+        "h-9 select-none rounded-lg border text-lg font-semibold font-display transition-colors",
         variant === "default"
-          ? "bg-background text-foreground border-stone-200 hover:bg-stone-50 active:bg-stone-100"
+          ? "bg-stone-100 text-foreground border-stone-200 hover:bg-stone-200 active:bg-stone-300"
           : "bg-muted/70 text-muted-foreground border-stone-200 hover:bg-muted active:bg-stone-200",
       )}
     >
@@ -248,7 +248,7 @@ function ActionButton({
       disabled={disabled}
       whileTap={disabled ? undefined : { scale: 0.95 }}
       className={cn(
-        "h-10 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-40 disabled:pointer-events-none",
+        "flex h-8 items-center gap-1 rounded-lg px-2 text-[11px] font-semibold transition-colors disabled:opacity-40 disabled:pointer-events-none",
         tone === "solid"
           ? "bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700"
           : "border-2 border-blue-500 text-blue-600 hover:bg-blue-50 active:bg-blue-100",

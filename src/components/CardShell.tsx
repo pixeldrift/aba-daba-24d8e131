@@ -23,6 +23,7 @@ export interface CardShellProps {
   isComplete?: boolean;
   helperText?: ReactNode;
   details?: ReactNode;
+  editing?: boolean;
   children: ReactNode;
 }
 
@@ -37,6 +38,7 @@ export function CardShell({
   isComplete = false,
   helperText,
   details,
+  editing = false,
   children,
 }: CardShellProps) {
   const showProgress = typeof progress === "number";
@@ -48,7 +50,9 @@ export function CardShell({
       className={cn(
         "relative w-full max-w-md rounded-xl bg-card text-card-foreground transition-all duration-200",
         isActive
-          ? "border-2 border-blue-400/80 shadow-[0_10px_30px_-4px_rgba(0,0,0,0.25)]"
+          ? editing
+            ? "border border-stone-200 shadow-[0_10px_30px_-4px_rgba(0,0,0,0.25)]"
+            : "border-2 border-blue-400/80 shadow-[0_10px_30px_-4px_rgba(0,0,0,0.25)]"
           : "border border-stone-200 opacity-80 hover:opacity-95",
       )}
     >
