@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Minus, Pause, Play, Plus, RotateCcw } from "lucide-react";
+import { Minus, Pause, Play, Plus } from "lucide-react";
 import { CardShell } from "./CardShell";
 import { NumberKeypad } from "./NumberKeypad";
 import { cn } from "@/lib/utils";
@@ -53,14 +53,6 @@ export function RateCard({
     }
   };
 
-  const reset = () => {
-    setRunning(false);
-    setCount(0);
-    setElapsed(0);
-    baseRef.current = 0;
-    startRef.current = null;
-    setBumpKey((k) => k + 1);
-  };
 
   const triggerFlash = () => {
     setFlash(true);
@@ -170,21 +162,8 @@ export function RateCard({
                   aria-label={running ? "Pause timer" : "Resume timer"}
                   className="grid size-5 place-items-center rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors"
                 >
-                  {running ? <Pause className="size-3" /> : <Play className="size-3" />}
+                  {running ? <Pause className="size-3" fill="currentColor" /> : <Play className="size-3" fill="currentColor" />}
                 </button>
-                {(count > 0 || elapsed > 0) && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      reset();
-                    }}
-                    aria-label="Reset"
-                    className="grid size-4 place-items-center rounded-full text-muted-foreground/60 hover:text-foreground transition-colors"
-                  >
-                    <RotateCcw className="size-3" />
-                  </button>
-                )}
               </div>
             </button>
           )}
@@ -217,7 +196,8 @@ function Row({ label, value }: { label: string; value: string }) {
 
 function formatTime(ms: number) {
   const total = Math.floor(ms / 1000);
-  const m = Math.floor(total / 60);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
