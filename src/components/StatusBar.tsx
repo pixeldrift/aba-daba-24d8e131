@@ -261,7 +261,7 @@ function SessionBox({
               className="flex items-center justify-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-[10px] px-1.5 py-1 rounded-md transition-colors"
             >
               <Trash2 className="size-3" />
-              Clear & discard
+              Clear & Discard
             </button>
           )}
         </div>
