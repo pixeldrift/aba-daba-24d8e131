@@ -165,6 +165,7 @@ export function RateCard({
                 )}
               >
                 <span>{count === 1 ? "Instance in" : "Instances in"}</span>
+                <span className="inline-flex items-center">
                   {locked ? (
                     <>
                       <span
