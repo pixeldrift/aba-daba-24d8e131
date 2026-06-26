@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Play } from "lucide-react";
+import { Play, Pause } from "lucide-react";
 import { CardShell } from "./CardShell";
+import { TimeKeypad } from "./TimeKeypad";
 import { cn } from "@/lib/utils";
 
 export interface DurationCardProps {
@@ -59,10 +60,8 @@ export function DurationCard({
   const remaining = Math.max(0, Math.ceil(minDurationSec - totalSec));
 
   const flushLive = () => {
-    let bankedIdx: number | null = null;
     if (running && runningIdxRef.current !== null) {
       const idx = runningIdxRef.current;
-      bankedIdx = idx;
       setInstances((arr) => {
         const next = arr.slice();
         next[idx] = (next[idx] ?? 0) + liveMs;
@@ -71,7 +70,6 @@ export function DurationCard({
     }
     setLiveMs(0);
     startRef.current = null;
-    return bankedIdx;
   };
 
   const togglePause = () => {
@@ -81,7 +79,6 @@ export function DurationCard({
       setRunning(false);
       runningIdxRef.current = null;
       if (wasLast) {
-        // Auto-add a new (paused) instance and navigate to it.
         setInstances((arr) => [...arr, 0]);
         setViewIdx(instances.length);
       }
@@ -90,6 +87,19 @@ export function DurationCard({
       runningIdxRef.current = viewIdx;
       setRunning(true);
     }
+  };
+
+  const setInstanceMs = (idx: number, ms: number) => {
+    if (running && runningIdxRef.current === idx) {
+      flushLive();
+      setRunning(false);
+      runningIdxRef.current = null;
+    }
+    setInstances((arr) => {
+      const next = arr.slice();
+      next[idx] = Math.max(0, ms);
+      return next;
+    });
   };
 
   const goTo = (idx: number) => {
@@ -170,9 +180,8 @@ export function DurationCard({
                 const itemRunning = isIdxRunning(i);
                 const activated = isActivated(i);
                 return (
-                  <motion.button
+                  <motion.div
                     key={i}
-                    onClick={() => (isCenter ? togglePause() : goTo(i))}
                     className="relative shrink-0 grid place-items-center select-none"
                     animate={{
                       width: isCenter ? CENTER_W : BUBBLE,
@@ -187,15 +196,17 @@ export function DurationCard({
                         running={centerRunning}
                         activated={activated}
                         onToggle={togglePause}
+                        onEditTime={(ms) => setInstanceMs(i, ms)}
                       />
                     ) : (
                       <SideBubble
                         index={i}
                         running={itemRunning}
                         activated={activated}
+                        onClick={() => goTo(i)}
                       />
                     )}
-                  </motion.button>
+                  </motion.div>
                 );
               })}
             </motion.div>
@@ -232,37 +243,71 @@ function CenterPill({
   running,
   activated,
   onToggle,
+  onEditTime,
 }: {
   index: number;
   ms: number;
   running: boolean;
   activated: boolean;
   onToggle: () => void;
+  onEditTime: (ms: number) => void;
 }) {
+  const accent = running || activated;
   return (
-    <div className="absolute inset-0 flex items-stretch rounded-full overflow-hidden border-2 border-blue-500 bg-white">
+    <div
+      className={cn(
+        "absolute inset-0 flex items-stretch rounded-full overflow-hidden border-2 bg-white transition-colors",
+        running ? "border-blue-500" : "border-stone-300",
+      )}
+    >
       <div className="flex-1 flex items-center gap-2 pl-2 pr-2">
-        <span
+        <motion.span
+          animate={running ? { scale: [1, 1.12, 1] } : { scale: 1 }}
+          transition={
+            running
+              ? { duration: 1, repeat: Infinity, ease: "easeInOut" }
+              : { duration: 0.2 }
+          }
           className={cn(
             "grid size-7 shrink-0 place-items-center rounded-full text-white text-xs font-semibold tabular-nums transition-colors",
-            activated ? "bg-blue-500" : "bg-stone-300",
+            accent ? "bg-blue-500" : "bg-stone-300",
           )}
         >
           {index + 1}
-        </span>
+        </motion.span>
         <div className="flex-1 grid place-items-center leading-none">
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={index}
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.2 }}
-              className="font-display text-2xl tabular-nums text-foreground"
-            >
-              <TimeText ms={ms} pulseColons={running} />
-            </motion.span>
-          </AnimatePresence>
+          <TimeKeypad
+            valueMs={ms}
+            onReplace={(next) => onEditTime(next)}
+            onAdd={(delta) => onEditTime(ms + delta)}
+          >
+            {({ open }) => (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  open();
+                }}
+                className={cn(
+                  "font-display text-2xl tabular-nums leading-none transition-colors",
+                  running ? "text-foreground" : activated ? "text-foreground" : "text-stone-400",
+                )}
+              >
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={index}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.2 }}
+                    className="inline-block"
+                  >
+                    {formatTime(ms)}
+                  </motion.span>
+                </AnimatePresence>
+              </button>
+            )}
+          </TimeKeypad>
         </div>
       </div>
       <button
@@ -272,48 +317,20 @@ function CenterPill({
           onToggle();
         }}
         aria-label={running ? "Pause this instance" : "Start this instance"}
-        className="grid w-12 place-items-center text-white transition-colors bg-blue-500 hover:bg-blue-600 active:bg-blue-700"
+        className={cn(
+          "grid w-12 place-items-center text-white transition-colors",
+          running
+            ? "bg-blue-500 hover:bg-blue-600 active:bg-blue-700"
+            : "bg-stone-400 hover:bg-stone-500 active:bg-stone-600",
+        )}
       >
-        {running ? <EqualsIcon /> : <Play className="size-5" fill="currentColor" />}
+        {running ? (
+          <Pause className="size-5" fill="currentColor" strokeWidth={0} />
+        ) : (
+          <Play className="size-5" fill="currentColor" strokeWidth={0} />
+        )}
       </button>
     </div>
-  );
-}
-
-function TimeText({ ms, pulseColons }: { ms: number; pulseColons: boolean }) {
-  const total = Math.floor(ms / 1000);
-  const h = Math.floor(total / 3600).toString().padStart(2, "0");
-  const m = Math.floor((total % 3600) / 60).toString().padStart(2, "0");
-  const s = (total % 60).toString().padStart(2, "0");
-  return (
-    <span className="inline-flex">
-      <span>{h}</span>
-      <Colon pulse={pulseColons} />
-      <span>{m}</span>
-      <Colon pulse={pulseColons} delay={0.6} />
-      <span>{s}</span>
-    </span>
-  );
-}
-
-function Colon({ pulse, delay = 0 }: { pulse: boolean; delay?: number }) {
-  if (!pulse) return <span>:</span>;
-  return (
-    <motion.span
-      animate={{ opacity: [1, 0.2, 1] }}
-      transition={{ duration: 1.2, repeat: Infinity, delay, ease: "easeInOut" }}
-    >
-      :
-    </motion.span>
-  );
-}
-
-function EqualsIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-5" aria-hidden>
-      <rect x="5" y="8.5" width="14" height="2.5" rx="1" fill="currentColor" />
-      <rect x="5" y="13" width="14" height="2.5" rx="1" fill="currentColor" />
-    </svg>
   );
 }
 
@@ -321,13 +338,19 @@ function SideBubble({
   index,
   running,
   activated,
+  onClick,
 }: {
   index: number;
   running: boolean;
   activated: boolean;
+  onClick: () => void;
 }) {
   return (
-    <span className="absolute inset-0 grid place-items-center">
+    <button
+      type="button"
+      onClick={onClick}
+      className="absolute inset-0 grid place-items-center"
+    >
       <span
         className={cn(
           "grid place-items-center size-full rounded-full border text-[9px] font-medium tabular-nums",
@@ -348,7 +371,7 @@ function SideBubble({
           aria-hidden
         />
       )}
-    </span>
+    </button>
   );
 }
 
