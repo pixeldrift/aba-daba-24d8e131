@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Play, Pause } from "lucide-react";
 import { CardShell } from "./CardShell";
 import { TimeKeypad } from "./TimeKeypad";
+import { useRegisterActiveTimer } from "./SessionContext";
 import { cn } from "@/lib/utils";
 
 export interface DurationCardProps {
@@ -34,6 +35,9 @@ export function DurationCard({
   const [running, setRunning] = useState(false);
   const startRef = useRef<number | null>(null);
   const runningIdxRef = useRef<number | null>(null);
+  const cardRef = useRef<HTMLElement | null>(null);
+  useRegisterActiveTimer({ id: `duration:${title}`, label: title, active: running, elementRef: cardRef });
+
 
   useEffect(() => {
     if (!running) return;
@@ -127,21 +131,14 @@ export function DurationCard({
       onActivate={onActivate}
       progress={null}
       isComplete={isComplete}
-      helperText={(() => {
-        const countedInstances = instances.filter((v, i) => v > 0 || (running && runningIdxRef.current === i)).length;
-        return (
-          <span>
-            Instance{" "}
-            <span className="font-mono normal-case tracking-normal tabular-nums text-foreground">
-              {viewIdx + 1}
-            </span>{" "}
-            of{" "}
-            <span className="font-mono normal-case tracking-normal tabular-nums text-foreground">
-              {countedInstances}
-            </span>
+      helperText={
+        <span>
+          Combined Total{" "}
+          <span className="font-mono normal-case tracking-normal tabular-nums text-foreground">
+            {formatTime(totalMs)}
           </span>
-        );
-      })()}
+        </span>
+      }
       details={
         <dl className="space-y-3">
           <Row label="Phase" value={phase} />
