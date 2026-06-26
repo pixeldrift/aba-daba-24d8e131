@@ -281,33 +281,30 @@ export function TrialCard({
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -6 }}
                             transition={{ duration: 0.25 }}
-                            className="flex flex-col items-center justify-center"
+                            className={cn("font-display text-3xl leading-none", centerTextColor)}
                           >
-                            <span className={cn("font-display text-3xl leading-none", centerTextColor)}>
-                              {i + 1}
-                            </span>
-                            {i < minTrials && (
-                              <span className={cn(
-                                "mt-[2px] size-[3px] rounded-full",
-                                t === "correct" ? "bg-green-700" : t === "incorrect" ? "bg-red-700" : "bg-foreground/40",
-                              )} aria-hidden />
-                            )}
+                            {i + 1}
                           </motion.span>
                         </AnimatePresence>
                       ) : (
-                        <span className="relative flex flex-col items-center justify-center leading-none">
-                          <span className={cn("text-[7px] font-medium", textColor)}>
-                            {i + 1}
-                          </span>
-                          {i < minTrials && (
-                            <span className={cn(
-                              "mt-[1px] size-[2px] rounded-full",
-                              t === "correct" ? "bg-green-700" : t === "incorrect" ? "bg-red-700" : "bg-foreground/40",
-                            )} aria-hidden />
-                          )}
+                        <span className={cn("text-[7px] font-medium leading-none", textColor)}>
+                          {i + 1}
                         </span>
                       )}
                     </motion.div>
+                    {i < minTrials && (
+                      <span
+                        className={cn(
+                          "absolute -bottom-1 left-1/2 -translate-x-1/2 size-1 rounded-full",
+                          t === "correct"
+                            ? "bg-green-500"
+                            : t === "incorrect"
+                              ? "bg-red-500"
+                              : "bg-foreground/35",
+                        )}
+                        aria-hidden
+                      />
+                    )}
                   </motion.button>
                 );
               })}
