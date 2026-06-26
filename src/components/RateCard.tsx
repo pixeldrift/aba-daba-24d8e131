@@ -158,6 +158,9 @@ export function RateCard({
                 )}
               >
                 <span>Times per</span>
+                <span className="inline-flex items-center rounded border border-stone-200 bg-white px-1.5 py-0.5 font-mono text-[11px] font-bold tabular-nums normal-case tracking-normal text-foreground">
+                  {formatTime(elapsed)}
+                </span>
                 <button
                   type="button"
                   onClick={(e) => {
@@ -165,13 +168,10 @@ export function RateCard({
                     toggle();
                   }}
                   aria-label={running ? "Pause timer" : "Resume timer"}
-                  className="grid size-4 place-items-center rounded-full text-muted-foreground hover:text-foreground transition-colors"
+                  className="grid size-5 place-items-center rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors"
                 >
                   {running ? <Pause className="size-3" /> : <Play className="size-3" />}
                 </button>
-                <span className="font-mono tabular-nums normal-case tracking-normal text-muted-foreground">
-                  {formatTime(elapsed)}
-                </span>
                 {(count > 0 || elapsed > 0) && (
                   <button
                     type="button"
