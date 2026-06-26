@@ -14,6 +14,8 @@ export interface RateCardProps {
   minDurationSec?: number;
   isActive?: boolean;
   onActivate?: () => void;
+  /** When true, the timer is linked to the session timer: no play/pause, lock icon, gray display. */
+  locked?: boolean;
 }
 
 export function RateCard({
@@ -23,6 +25,7 @@ export function RateCard({
   minDurationSec = 60,
   isActive = true,
   onActivate,
+  locked = false,
 }: RateCardProps) {
   const [count, setCount] = useState(0);
   const [bumpKey, setBumpKey] = useState(0);
