@@ -162,21 +162,8 @@ export function RateCard({
                   aria-label={running ? "Pause timer" : "Resume timer"}
                   className="grid size-5 place-items-center rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors"
                 >
-                  {running ? <Pause className="size-3" /> : <Play className="size-3" />}
+                  {running ? <Pause className="size-3" fill="currentColor" /> : <Play className="size-3" fill="currentColor" />}
                 </button>
-                {(count > 0 || elapsed > 0) && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      reset();
-                    }}
-                    aria-label="Reset"
-                    className="grid size-4 place-items-center rounded-full text-muted-foreground/60 hover:text-foreground transition-colors"
-                  >
-                    <RotateCcw className="size-3" />
-                  </button>
-                )}
               </div>
             </button>
           )}
