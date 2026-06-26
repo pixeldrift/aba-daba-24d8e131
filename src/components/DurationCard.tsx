@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Play, Pause } from "lucide-react";
 import { CardShell } from "./CardShell";
 import { TimeKeypad } from "./TimeKeypad";
+import { useRegisterActiveTimer } from "./SessionContext";
 import { cn } from "@/lib/utils";
 
 export interface DurationCardProps {
@@ -34,6 +35,9 @@ export function DurationCard({
   const [running, setRunning] = useState(false);
   const startRef = useRef<number | null>(null);
   const runningIdxRef = useRef<number | null>(null);
+  const cardRef = useRef<HTMLElement | null>(null);
+  useRegisterActiveTimer({ id: `duration:${title}`, label: title, active: running, elementRef: cardRef });
+
 
   useEffect(() => {
     if (!running) return;
@@ -118,6 +122,7 @@ export function DurationCard({
   const isActivated = (i: number) => instances[i] > 0 || isIdxRunning(i);
 
   return (
+    <div ref={cardRef as React.RefObject<HTMLDivElement>} className="w-full max-w-md scroll-mt-32">
     <CardShell
       title={title}
       phase={phase}
@@ -127,21 +132,14 @@ export function DurationCard({
       onActivate={onActivate}
       progress={null}
       isComplete={isComplete}
-      helperText={(() => {
-        const countedInstances = instances.filter((v, i) => v > 0 || (running && runningIdxRef.current === i)).length;
-        return (
-          <span>
-            Instance{" "}
-            <span className="font-mono normal-case tracking-normal tabular-nums text-foreground">
-              {viewIdx + 1}
-            </span>{" "}
-            of{" "}
-            <span className="font-mono normal-case tracking-normal tabular-nums text-foreground">
-              {countedInstances}
-            </span>
+      helperText={
+        <span>
+          Combined Total{" "}
+          <span className="font-mono normal-case tracking-normal tabular-nums text-foreground">
+            {formatTime(totalMs)}
           </span>
-        );
-      })()}
+        </span>
+      }
       details={
         <dl className="space-y-3">
           <Row label="Phase" value={phase} />
@@ -221,14 +219,19 @@ export function DurationCard({
 
         <div className="mt-1 flex items-center justify-center gap-3 text-[11px] uppercase tracking-wider text-muted-foreground h-4">
           <span>
-            Total{" "}
+            Instance{" "}
             <span className="font-mono normal-case tracking-normal tabular-nums text-foreground">
-              {formatTime(totalMs)}
+              {viewIdx + 1}
+            </span>{" "}
+            of{" "}
+            <span className="font-mono normal-case tracking-normal tabular-nums text-foreground">
+              {instances.filter((v, i) => v > 0 || (running && runningIdxRef.current === i)).length}
             </span>
           </span>
         </div>
       </div>
     </CardShell>
+    </div>
   );
 }
 

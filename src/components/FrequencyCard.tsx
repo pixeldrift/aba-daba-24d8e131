@@ -138,7 +138,7 @@ export function FrequencyCard({
                   isEditing ? "text-blue-500" : "text-muted-foreground",
                 )}
               >
-                occurrences
+                {count === 1 ? "Instance" : "Instances"}
               </span>
             </button>
           )}

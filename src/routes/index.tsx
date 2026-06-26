@@ -5,6 +5,8 @@ import { FrequencyCard } from "@/components/FrequencyCard";
 import { RateCard } from "@/components/RateCard";
 import { DurationCard } from "@/components/DurationCard";
 import { TaskAnalysisCard } from "@/components/TaskAnalysisCard";
+import { SessionProvider } from "@/components/SessionContext";
+import { StatusBar, type StatusTab } from "@/components/StatusBar";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -12,12 +14,6 @@ export const Route = createFileRoute("/")({
       { title: "Data collection — multi-format demo" },
       {
         name: "description",
-        content:
-          "Demo of consistent cards for collecting % correct, frequency, rate, duration, and task analysis data.",
-      },
-      { property: "og:title", content: "Data collection — multi-format demo" },
-      {
-        property: "og:description",
         content:
           "Demo of consistent cards for collecting % correct, frequency, rate, duration, and task analysis data.",
       },
@@ -35,35 +31,10 @@ type CardConfig =
       minTrials: number;
       maxTrials?: number;
     }
-  | {
-      kind: "frequency";
-      title: string;
-      phase: string;
-      description: string;
-      minCount: number;
-    }
-  | {
-      kind: "rate";
-      title: string;
-      phase: string;
-      description: string;
-      minDurationSec: number;
-      locked?: boolean;
-    }
-  | {
-      kind: "duration";
-      title: string;
-      phase: string;
-      description: string;
-      minDurationSec: number;
-    }
-  | {
-      kind: "task-analysis";
-      title: string;
-      phase: string;
-      description: string;
-      steps: string[];
-    };
+  | { kind: "frequency"; title: string; phase: string; description: string; minCount: number }
+  | { kind: "rate"; title: string; phase: string; description: string; minDurationSec: number; locked?: boolean }
+  | { kind: "duration"; title: string; phase: string; description: string; minDurationSec: number }
+  | { kind: "task-analysis"; title: string; phase: string; description: string; steps: string[] };
 
 const cards: CardConfig[] = [
   {
@@ -78,8 +49,7 @@ const cards: CardConfig[] = [
     kind: "frequency",
     title: "Giggles/laughs during therapist-led play",
     phase: "Intervention",
-    description:
-      "Tally each instance the learner giggles or laughs during therapist-led play.",
+    description: "Tally each instance the learner giggles or laughs during therapist-led play.",
     minCount: 5,
   },
   {
@@ -94,8 +64,7 @@ const cards: CardConfig[] = [
     kind: "rate",
     title: "Uses AAC to request",
     phase: "Intervention",
-    description:
-      "Tally each independent AAC request. This timer is linked to the session timer.",
+    description: "Tally each independent AAC request. This timer is linked to the session timer.",
     minDurationSec: 60,
     locked: true,
   },
@@ -111,8 +80,7 @@ const cards: CardConfig[] = [
     kind: "task-analysis",
     title: "Washing hands",
     phase: "Intervention",
-    description:
-      "Score each step as Independent (I), Prompted (P), or Error (E).",
+    description: "Score each step as Independent (I), Prompted (P), or Error (E).",
     steps: [
       "Turn on water",
       "Wet hands",
@@ -126,84 +94,106 @@ const cards: CardConfig[] = [
 ];
 
 function Index() {
+  return (
+    <SessionProvider>
+      <IndexInner />
+    </SessionProvider>
+  );
+}
+
+function IndexInner() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [tab, setTab] = useState<StatusTab>("data");
 
   return (
     <main className="min-h-screen bg-background">
-      <header className="px-5 pt-10 pb-4 max-w-md mx-auto">
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">
-          Session · today
-        </p>
-        <h1 className="font-display text-3xl mt-1">Data collection</h1>
-      </header>
-      <section className="px-5 pb-16 flex flex-col items-center gap-5">
-        {cards.map((card, i) => {
-          const common = {
-            isActive: i === activeIndex,
-            onActivate: () => setActiveIndex(i),
-          };
-          switch (card.kind) {
-            case "trial":
-              return (
-                <TrialCard
-                  key={i}
-                  title={card.title}
-                  phase={card.phase}
-                  dataType="% correct"
-                  description={card.description}
-                  minTrials={card.minTrials}
-                  maxTrials={card.maxTrials}
-                  {...common}
-                />
-              );
-            case "frequency":
-              return (
-                <FrequencyCard
-                  key={i}
-                  title={card.title}
-                  phase={card.phase}
-                  description={card.description}
-                  minCount={card.minCount}
-                  {...common}
-                />
-              );
-            case "rate":
-              return (
-                <RateCard
-                  key={i}
-                  title={card.title}
-                  phase={card.phase}
-                  description={card.description}
-                  minDurationSec={card.minDurationSec}
-                  locked={card.locked}
-                  {...common}
-                />
-              );
-            case "duration":
-              return (
-                <DurationCard
-                  key={i}
-                  title={card.title}
-                  phase={card.phase}
-                  description={card.description}
-                  minDurationSec={card.minDurationSec}
-                  {...common}
-                />
-              );
-            case "task-analysis":
-              return (
-                <TaskAnalysisCard
-                  key={i}
-                  title={card.title}
-                  phase={card.phase}
-                  description={card.description}
-                  steps={card.steps}
-                  {...common}
-                />
-              );
-          }
-        })}
+      <StatusBar activeTab={tab} onTabChange={setTab} />
+
+      <section className="px-5 pt-6 pb-16 max-w-5xl mx-auto">
+        {tab === "data" && (
+          <div className="flex flex-col items-center gap-5">
+            {cards.map((card, i) => {
+              const common = {
+                isActive: i === activeIndex,
+                onActivate: () => setActiveIndex(i),
+              };
+              switch (card.kind) {
+                case "trial":
+                  return (
+                    <TrialCard
+                      key={i}
+                      title={card.title}
+                      phase={card.phase}
+                      dataType="% correct"
+                      description={card.description}
+                      minTrials={card.minTrials}
+                      maxTrials={card.maxTrials}
+                      {...common}
+                    />
+                  );
+                case "frequency":
+                  return (
+                    <FrequencyCard
+                      key={i}
+                      title={card.title}
+                      phase={card.phase}
+                      description={card.description}
+                      minCount={card.minCount}
+                      {...common}
+                    />
+                  );
+                case "rate":
+                  return (
+                    <RateCard
+                      key={i}
+                      title={card.title}
+                      phase={card.phase}
+                      description={card.description}
+                      minDurationSec={card.minDurationSec}
+                      locked={card.locked}
+                      {...common}
+                    />
+                  );
+                case "duration":
+                  return (
+                    <DurationCard
+                      key={i}
+                      title={card.title}
+                      phase={card.phase}
+                      description={card.description}
+                      minDurationSec={card.minDurationSec}
+                      {...common}
+                    />
+                  );
+                case "task-analysis":
+                  return (
+                    <TaskAnalysisCard
+                      key={i}
+                      title={card.title}
+                      phase={card.phase}
+                      description={card.description}
+                      steps={card.steps}
+                      {...common}
+                    />
+                  );
+              }
+            })}
+          </div>
+        )}
+
+        {tab === "info" && <PlaceholderPane title="Session info" description="Goals, programs, and learner notes will live here." />}
+        {tab === "schedule" && <PlaceholderPane title="Schedule" description="Planned sessions, calendar, and reminders will live here." />}
+        {tab === "notifications" && <PlaceholderPane title="Alerts & announcements" description="Messages, reminders, and supervisor notes will appear here." />}
       </section>
     </main>
+  );
+}
+
+function PlaceholderPane({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="max-w-md mx-auto mt-12 rounded-xl border border-dashed border-stone-300 bg-white p-8 text-center">
+      <h2 className="font-display text-xl">{title}</h2>
+      <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+    </div>
   );
 }
