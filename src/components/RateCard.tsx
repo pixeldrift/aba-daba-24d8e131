@@ -4,6 +4,7 @@ import { Lock, Minus, Pause, Play, Plus } from "lucide-react";
 import { CardShell } from "./CardShell";
 import { NumberKeypad } from "./NumberKeypad";
 import { TimeKeypad } from "./TimeKeypad";
+import { useRegisterActiveTimer } from "./SessionContext";
 import { cn } from "@/lib/utils";
 
 export interface RateCardProps {
@@ -36,6 +37,8 @@ export function RateCard({
   const [running, setRunning] = useState(true);
   const startRef = useRef<number | null>(null);
   const baseRef = useRef(0);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  useRegisterActiveTimer({ id: `rate:${title}`, label: title, active: running && !locked, elementRef: cardRef });
 
   useEffect(() => {
     if (!running) return;
@@ -161,8 +164,7 @@ export function RateCard({
                   isEditing ? "text-blue-500" : "text-muted-foreground",
                 )}
               >
-                <span>Times in</span>
-                <span className="inline-flex items-center">
+                <span>{count === 1 ? "Instance in" : "Instances in"}</span>
                   {locked ? (
                     <>
                       <span
