@@ -231,6 +231,7 @@ export function DurationCard({
         </div>
       </div>
     </CardShell>
+    </div>
   );
 }
 
