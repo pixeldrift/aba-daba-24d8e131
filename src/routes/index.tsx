@@ -48,6 +48,7 @@ type CardConfig =
       phase: string;
       description: string;
       minDurationSec: number;
+      locked?: boolean;
     }
   | {
       kind: "duration";
