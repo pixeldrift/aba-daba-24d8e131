@@ -138,17 +138,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }, 10000);
     return () => window.clearInterval(id);
   }, [performSave]);
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      setSaveStatus((s) => {
-        if (s === "dirty") {
-          window.setTimeout(() => performSave(), 0);
-        }
-        return s;
-      });
-    }, 10000);
-    return () => window.clearInterval(id);
-  }, [performSave]);
+
+
 
   const value = useMemo(
     () => ({
