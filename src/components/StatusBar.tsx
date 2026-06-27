@@ -160,6 +160,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
                 {TABS.map((t) => {
                   const Icon = t.icon;
                   const isActive = t.id === activeTab;
+                  const isDataFaded = t.id === "data" && !isRunning;
                   return (
                     <button
                       key={t.id}
@@ -167,10 +168,11 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
                       aria-selected={isActive}
                       onClick={() => onTabChange(t.id)}
                       className={cn(
-                        "relative flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-t-lg border border-b-0 transition-colors",
+                        "relative flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-t-lg border border-b-0 transition-[color,background-color,opacity] duration-300",
                         isActive
                           ? "bg-background text-foreground border-stone-200 font-medium"
                           : "bg-stone-200/70 text-stone-600 border-transparent hover:text-foreground hover:bg-stone-200",
+                        isDataFaded && "opacity-50",
                       )}
                     >
                       <Icon className="size-4" />
@@ -184,9 +186,12 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
               </div>
 
               {isRunning && (
-                <MiniSession elapsedMs={elapsedMs} onPause={pause} />
+                <div className="pb-1.5 sm:pb-2 pr-1">
+                  <MiniSession elapsedMs={elapsedMs} onPause={pause} />
+                </div>
               )}
             </nav>
+
           </LayoutGroup>
         </div>
       </div>
