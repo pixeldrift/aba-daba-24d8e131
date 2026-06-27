@@ -583,7 +583,7 @@ function ExpandedSessionBox({
       </div>
 
       <AnimatePresence>
-        {!picked && (
+        {!dimmed && (
           <motion.div
             key="actions"
             initial={{ opacity: 1, scale: 1 }}
@@ -602,7 +602,7 @@ function ExpandedSessionBox({
               </button>
             ) : (
               <button
-                onClick={handleStartNew}
+                onClick={onStartNew}
                 className="flex items-center justify-center gap-1.5 rounded-full h-9 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3 w-full transition-colors active:scale-95"
               >
                 Start New Session
@@ -621,6 +621,7 @@ function ExpandedSessionBox({
           </motion.div>
         )}
       </AnimatePresence>
+
     </div>
   );
 }
