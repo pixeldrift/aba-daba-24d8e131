@@ -522,8 +522,10 @@ function DiscardAction({ onConfirm }: { onConfirm: () => void }) {
 
   const revert = () => {
     animate(x, 0, { type: "spring", stiffness: 400, damping: 30 });
+    setAnimDone(false);
     setArmed(false);
   };
+
 
   return (
     <div
