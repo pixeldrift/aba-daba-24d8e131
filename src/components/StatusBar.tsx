@@ -704,7 +704,7 @@ function MiniSession({ elapsedMs, onPause }: { elapsedMs: number; onPause: () =>
   const ease = [0.4, 0, 0.2, 1] as const;
   return (
     <div className="flex items-stretch self-stretch pr-1">
-      <div className="flex items-stretch self-start rounded-full overflow-hidden border-2 border-blue-500 bg-white">
+      <div className="flex items-stretch self-start rounded-full overflow-hidden border border-blue-500 bg-white">
         <motion.span
           layoutId="session-timer"
           transition={{ duration: 0.7, ease }}
