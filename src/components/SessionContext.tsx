@@ -119,6 +119,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setSaveStatus("clean");
   }, []);
 
+  // Bumped whenever a brand-new (empty) session is started, so every card
+  // can subscribe and reset its local state.
+  const [resetSignal, setResetSignal] = useState(0);
+  const startFresh = useCallback(() => {
+    setResetSignal((n) => n + 1);
+    start(0);
+  }, [start]);
+
+
   const pause = useCallback(() => {
     baseRef.current = elapsedMs;
     setStatus("paused");
