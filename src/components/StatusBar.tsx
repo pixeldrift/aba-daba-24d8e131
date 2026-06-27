@@ -78,6 +78,48 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
   const isRunning = status === "running";
   const [discardOpen, setDiscardOpen] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
+  // While `pendingStart` is set, the collapse animation runs but the session
+  // timer hasn't started yet — gives a smooth, jank-free transition.
+  const [pendingStart, setPendingStart] = useState<null | "resume" | "previous" | "new">(null);
+  const collapsed = isRunning || pendingStart !== null;
+  const TRANSITION_MS = 700;
+
+  const requestPlay = () => {
+    if (pendingStart) return;
+    if (status === "paused") {
+      setPendingStart("resume");
+      window.setTimeout(() => {
+        resume();
+        setPendingStart(null);
+      }, TRANSITION_MS);
+    } else {
+      setPendingStart("previous");
+      window.setTimeout(() => {
+        start(previousSessionMs);
+        setPendingStart(null);
+      }, TRANSITION_MS);
+    }
+  };
+
+  const requestStartNew = () => {
+    if (pendingStart) return;
+    setPendingStart("new");
+    window.setTimeout(() => {
+      start(0);
+      setPendingStart(null);
+    }, TRANSITION_MS);
+  };
+
+  // What time to show inside the pill during the morph: keep continuity so
+  // the big pill and mini pill display the same value while animating.
+  const pillElapsed = isRunning
+    ? elapsedMs
+    : status === "paused"
+      ? elapsedMs
+      : pendingStart === "new"
+        ? 0
+        : previousSessionMs;
+
 
   return (
     <>
@@ -135,21 +177,19 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
                 shared layoutId, letting motion morph cleanly between the two positions. */}
             <motion.div
               initial={false}
-              animate={{ height: isRunning ? 0 : "auto", opacity: isRunning ? 0 : 1 }}
+              animate={{ height: collapsed ? 0 : "auto", opacity: collapsed ? 0 : 1 }}
               transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
               className="flex justify-center overflow-hidden"
             >
               <ExpandedSessionBox
                 status={status}
-                elapsedMs={status === "paused" ? elapsedMs : previousSessionMs}
+                elapsedMs={pillElapsed}
                 contextTime={status === "paused" ? null : previousSessionEndedAt}
-                showPill={!isRunning}
-                onResumePrevious={() => start(previousSessionMs)}
-                onStartNew={() => start(0)}
-                onResume={resume}
-                onPause={pause}
+                showPill={!collapsed}
+                dimmed={pendingStart !== null}
+                onPlay={requestPlay}
+                onStartNew={requestStartNew}
                 onEnd={() => setEndOpen(true)}
-                onDiscard={clearAndDiscard}
                 onRequestDiscard={() => setDiscardOpen(true)}
               />
             </motion.div>
@@ -158,7 +198,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
 
             {/* Tabs row + mini session (when running) */}
             <nav
-              className={cn("flex items-end justify-between gap-2 -mb-px", isRunning ? "mt-1" : "mt-2")}
+              className={cn("flex items-end justify-between gap-2 -mb-px", collapsed ? "mt-1" : "mt-2")}
               role="tablist"
               aria-label="Session sections"
             >
@@ -191,12 +231,13 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
                 })}
               </div>
 
-              {isRunning && (
+              {collapsed && (
                 <div className="pb-1.5 sm:pb-2 pr-1">
-                  <MiniSession elapsedMs={elapsedMs} onPause={pause} />
+                  <MiniSession elapsedMs={pillElapsed} onPause={pause} disabled={!isRunning} />
                 </div>
               )}
             </nav>
+
 
           </LayoutGroup>
         </div>
@@ -459,45 +500,25 @@ function ExpandedSessionBox({
   elapsedMs,
   contextTime,
   showPill = true,
-  onResumePrevious,
+  dimmed = false,
+  onPlay,
   onStartNew,
-  onResume,
-  onPause: _onPause,
   onEnd,
-  onDiscard: _onDiscard,
   onRequestDiscard,
 }: {
   status: SessionStatus;
   elapsedMs: number;
   contextTime: Date | null;
   showPill?: boolean;
-  onResumePrevious: () => void;
+  dimmed?: boolean;
+  onPlay: () => void;
   onStartNew: () => void;
-  onResume: () => void;
-  onPause: () => void;
   onEnd: () => void;
-  onDiscard: () => void;
   onRequestDiscard: () => void;
 }) {
   const isPaused = status === "paused";
   const label = isPaused ? "Session Paused" : "Previous Session";
-  const [picked, setPicked] = useState<"play" | "new" | null>(null);
   const ease = [0.4, 0, 0.2, 1] as const;
-
-  const handlePlay = () => {
-    if (picked) return;
-    setPicked("play");
-    setTimeout(() => {
-      if (isPaused) onResume();
-      else onResumePrevious();
-    }, 280);
-  };
-
-  const handleStartNew = () => {
-    if (picked) return;
-    setPicked("new");
-    setTimeout(() => onStartNew(), 280);
-  };
 
   // Re-render to refresh "x ago" string.
   const [, setTick] = useState(0);
@@ -506,6 +527,9 @@ function ExpandedSessionBox({
     const i = setInterval(() => setTick((n) => n + 1), 30000);
     return () => clearInterval(i);
   }, [contextTime]);
+
+
+
 
   return (
     <div className="shrink-0 px-3 py-1.5 w-[280px] flex flex-col items-stretch gap-2">
@@ -529,7 +553,7 @@ function ExpandedSessionBox({
             </motion.span>
             <motion.button
               layoutId="session-pill-toggle"
-              onClick={handlePlay}
+              onClick={onPlay}
               whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
               transition={{ duration: 0.7, ease, layout: { duration: 0.7, ease } }}
               aria-label={isPaused ? "Resume session" : "Continue session"}
@@ -559,7 +583,7 @@ function ExpandedSessionBox({
       </div>
 
       <AnimatePresence>
-        {!picked && (
+        {!dimmed && (
           <motion.div
             key="actions"
             initial={{ opacity: 1, scale: 1 }}
@@ -578,7 +602,7 @@ function ExpandedSessionBox({
               </button>
             ) : (
               <button
-                onClick={handleStartNew}
+                onClick={onStartNew}
                 className="flex items-center justify-center gap-1.5 rounded-full h-9 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3 w-full transition-colors active:scale-95"
               >
                 Start New Session
@@ -597,6 +621,7 @@ function ExpandedSessionBox({
           </motion.div>
         )}
       </AnimatePresence>
+
     </div>
   );
 }
@@ -705,7 +730,7 @@ function DiscardAction({ onConfirm }: { onConfirm: () => void }) {
 }
 
 
-function MiniSession({ elapsedMs, onPause }: { elapsedMs: number; onPause: () => void }) {
+function MiniSession({ elapsedMs, onPause, disabled = false }: { elapsedMs: number; onPause: () => void; disabled?: boolean }) {
   const ease = [0.4, 0, 0.2, 1] as const;
   return (
     <motion.div
@@ -722,7 +747,8 @@ function MiniSession({ elapsedMs, onPause }: { elapsedMs: number; onPause: () =>
       </motion.span>
       <motion.button
         layoutId="session-pill-toggle"
-        onClick={onPause}
+        onClick={disabled ? undefined : onPause}
+
         whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
         transition={{ duration: 0.7, ease, layout: { duration: 0.7, ease } }}
         aria-label="Pause session"
