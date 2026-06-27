@@ -9,6 +9,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { useSession } from "./SessionContext";
 import { cn } from "@/lib/utils";
 
 export type TrialResult = "correct" | "incorrect" | null;
