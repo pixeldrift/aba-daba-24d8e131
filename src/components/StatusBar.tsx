@@ -150,7 +150,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
 
             {/* Tabs row + mini session (when running) */}
             <nav
-              className="flex items-end justify-between gap-2 mt-2 -mb-px"
+              className={cn("flex items-end justify-between gap-2 -mb-px", isRunning ? "mt-1" : "mt-2")}
               role="tablist"
               aria-label="Session sections"
             >
