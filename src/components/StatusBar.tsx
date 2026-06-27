@@ -483,6 +483,7 @@ function ExpandedSessionBox({
   return (
     <motion.div
       layout
+      transition={{ layout: { duration: 0.35, ease: [0.4, 0, 0.2, 1] } }}
       className="shrink-0 rounded-xl px-3 py-1.5 min-w-[220px] flex flex-col items-stretch gap-2"
     >
       <motion.div layout className="flex flex-col items-center gap-1">
