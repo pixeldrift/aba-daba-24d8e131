@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { useRef, useState } from "react";
+import { motion, AnimatePresence, LayoutGroup } from "motion/react";
 import {
   Play,
   Pause,
@@ -13,10 +13,12 @@ import {
   ArrowUp,
   RefreshCw,
   User,
+  CornerDownLeft,
 } from "lucide-react";
-import { useSession, type SaveStatus } from "./SessionContext";
+import { useSession, type SaveStatus, type SessionStatus } from "./SessionContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+
 
 export type StatusTab = "info" | "data" | "schedule" | "notifications";
 
