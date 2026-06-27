@@ -28,7 +28,14 @@ export function FrequencyCard({
   const [dir, setDir] = useState<1 | -1>(1);
   const [flash, setFlash] = useState(false);
   const [editing, setEditing] = useState(false);
-  const { markDirty } = useSession();
+  const { markDirty, resetSignal } = useSession();
+
+  useEffect(() => {
+    if (resetSignal === 0) return;
+    setCount(0);
+    setFlash(false);
+    setBumpKey((k) => k + 1);
+  }, [resetSignal]);
 
   const isComplete = count >= minCount;
   const remaining = Math.max(0, minCount - count);
