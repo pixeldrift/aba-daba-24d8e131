@@ -159,7 +159,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
                         "relative flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-t-lg border border-b-0 transition-colors",
                         isActive
                           ? "bg-background text-foreground border-stone-200 font-medium"
-                          : "bg-stone-100/60 text-muted-foreground border-transparent hover:text-foreground hover:bg-stone-100",
+                          : "bg-stone-200/70 text-stone-600 border-transparent hover:text-foreground hover:bg-stone-200",
                       )}
                     >
                       <Icon className="size-4" />
@@ -392,6 +392,21 @@ function ExpandedSessionBox({
 }) {
   const isPaused = status === "paused";
   const label = isPaused ? "Paused Session" : "Previous Session";
+  const [picked, setPicked] = useState<"resume" | "new" | null>(null);
+
+  const handlePick = (which: "resume" | "new") => {
+    if (picked) return;
+    setPicked(which);
+    setTimeout(() => {
+      if (which === "resume") {
+        isPaused ? onResume() : onResumePrevious();
+      } else {
+        onStartNew();
+      }
+    }, 260);
+  };
+
+  const morphTarget: "resume" | "new" = picked ?? "resume";
 
   return (
     <motion.div
@@ -401,7 +416,7 @@ function ExpandedSessionBox({
         isPaused ? "border-stone-300 bg-stone-50/60" : "border-stone-300 bg-white",
       )}
     >
-      <motion.div layout className="flex items-center justify-between gap-2">
+      <motion.div layout className="flex flex-col items-center gap-0.5">
         <motion.span
           layout
           className="text-[10px] uppercase tracking-wider text-muted-foreground"
@@ -418,33 +433,44 @@ function ExpandedSessionBox({
 
       <motion.div layout className="flex flex-col gap-1">
         <motion.button
-          layoutId="session-toggle"
-          onClick={isPaused ? onResume : onResumePrevious}
-          className="flex items-center justify-center gap-1.5 rounded-md bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-2 py-1.5"
+          layoutId={morphTarget === "resume" ? "session-toggle" : undefined}
+          onClick={() => handlePick("resume")}
+          animate={
+            picked === "new"
+              ? { x: 80, opacity: 0 }
+              : { x: 0, opacity: 1 }
+          }
+          transition={{ duration: 0.25, ease: "easeIn" }}
+          className="flex items-center justify-center gap-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium px-2 py-1.5"
         >
-          <motion.span
-            layoutId="session-toggle-label"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            {isPaused ? "Resume Session" : "Resume Session"}
+          <motion.span layoutId={morphTarget === "resume" ? "session-toggle-label" : undefined}>
+            Resume
           </motion.span>
-          <motion.span layoutId="session-toggle-icon" className="grid place-items-center">
+          <motion.span layoutId={morphTarget === "resume" ? "session-toggle-icon" : undefined} className="grid place-items-center">
             <Play className="size-3" fill="currentColor" />
           </motion.span>
         </motion.button>
 
         {!isPaused && (
           <motion.button
+            layoutId={morphTarget === "new" ? "session-toggle" : undefined}
             initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
+            animate={
+              picked === "resume"
+                ? { x: 80, opacity: 0, y: 0 }
+                : { x: 0, opacity: 1, y: 0 }
+            }
             exit={{ opacity: 0, y: -4 }}
-            onClick={onStartNew}
-            className="flex items-center justify-center gap-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium px-2 py-1.5"
+            transition={{ duration: 0.25, ease: "easeIn" }}
+            onClick={() => handlePick("new")}
+            className="flex items-center justify-center gap-1.5 rounded-md bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-2 py-1.5"
           >
-            Start New Session
-            <RefreshCw className="size-3" strokeWidth={2.5} />
+            <motion.span layoutId={morphTarget === "new" ? "session-toggle-label" : undefined}>
+              Start New
+            </motion.span>
+            <motion.span layoutId={morphTarget === "new" ? "session-toggle-icon" : undefined} className="grid place-items-center">
+              <RefreshCw className="size-3" strokeWidth={2.5} />
+            </motion.span>
           </motion.button>
         )}
 
