@@ -126,16 +126,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setSaveStatus((s) => (s === "saving" ? s : "dirty"));
   }, []);
 
-  // Simulate ongoing data changes while a session is running
-  useEffect(() => {
-    if (status !== "running") return;
-    const id = window.setInterval(() => {
-      setSaveStatus((s) => (s === "saving" ? s : "dirty"));
-    }, 3500);
-    return () => window.clearInterval(id);
-  }, [status]);
-
   // Autosave loop: every ~10s if dirty, perform a save
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setSaveStatus((s) => {
+        if (s === "dirty") {
+          window.setTimeout(() => performSave(), 0);
+        }
+        return s;
+      });
+    }, 10000);
+    return () => window.clearInterval(id);
+  }, [performSave]);
   useEffect(() => {
     const id = window.setInterval(() => {
       setSaveStatus((s) => {
