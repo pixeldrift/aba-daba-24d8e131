@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Minus, Plus } from "lucide-react";
 import { CardShell } from "./CardShell";
 import { NumberKeypad } from "./NumberKeypad";
+import { useSession } from "./SessionContext";
 import { cn } from "@/lib/utils";
 
 export interface FrequencyCardProps {
@@ -27,6 +28,7 @@ export function FrequencyCard({
   const [dir, setDir] = useState<1 | -1>(1);
   const [flash, setFlash] = useState(false);
   const [editing, setEditing] = useState(false);
+  const { markDirty } = useSession();
 
   const isComplete = count >= minCount;
   const remaining = Math.max(0, minCount - count);
@@ -41,12 +43,14 @@ export function FrequencyCard({
     setCount((c) => c + 1);
     setBumpKey((k) => k + 1);
     triggerFlash();
+    markDirty();
   };
   const dec = () => {
     setDir(-1);
     setCount((c) => Math.max(0, c - 1));
     setBumpKey((k) => k + 1);
     triggerFlash();
+    markDirty();
   };
 
 
@@ -55,6 +59,7 @@ export function FrequencyCard({
     setCount(next);
     setBumpKey((k) => k + 1);
     triggerFlash();
+    markDirty();
   };
 
 

@@ -20,6 +20,9 @@ interface SessionContextValue {
   resume: () => void;
   endAndSubmit: () => void;
   clearAndDiscard: () => void;
+  // shared tick (so all timers stay in unison with the session timer)
+  sessionRunning: boolean;
+  subscribeTick: (cb: (deltaMs: number) => void) => () => void;
   // active timer registry
   activeTimers: ActiveTimer[];
   registerActiveTimer: (t: ActiveTimer) => void;
@@ -46,13 +49,29 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const startRef = useRef<number | null>(null);
   const baseRef = useRef(0);
 
+  // Shared tick driver — when the session is running, a single interval
+  // updates the session's elapsed AND notifies all subscribed timers with
+  // the delta in ms, so every timer ticks in unison.
+  const tickListenersRef = useRef<Set<(deltaMs: number) => void>>(new Set());
+  const subscribeTick = useCallback((cb: (deltaMs: number) => void) => {
+    tickListenersRef.current.add(cb);
+    return () => {
+      tickListenersRef.current.delete(cb);
+    };
+  }, []);
+
   useEffect(() => {
     if (status !== "running") return;
     startRef.current = performance.now();
+    let last = performance.now();
     const id = window.setInterval(() => {
+      const now = performance.now();
+      const delta = now - last;
+      last = now;
       if (startRef.current !== null) {
-        setElapsedMs(baseRef.current + (performance.now() - startRef.current));
+        setElapsedMs(baseRef.current + (now - startRef.current));
       }
+      tickListenersRef.current.forEach((cb) => cb(delta));
     }, 250);
     return () => window.clearInterval(id);
   }, [status]);
@@ -118,29 +137,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     baseRef.current = 0;
   }, []);
 
-  // Active timer registry
+  // Active timer registry (registration is internal bookkeeping; do NOT mark dirty here).
   const [activeTimers, setActiveTimers] = useState<ActiveTimer[]>([]);
   const registerActiveTimer = useCallback((t: ActiveTimer) => {
     setActiveTimers((arr) => {
       if (arr.some((x) => x.id === t.id)) return arr.map((x) => (x.id === t.id ? t : x));
       return [...arr, t];
     });
-    setSaveStatus((s) => (s === "saving" ? s : "dirty"));
   }, []);
   const unregisterActiveTimer = useCallback((id: string) => {
     setActiveTimers((arr) => arr.filter((x) => x.id !== id));
-    setSaveStatus((s) => (s === "saving" ? s : "dirty"));
   }, []);
 
-  // Autosave: if dirty for 15s, automatically perform a save.
+  // Autosave: if dirty for 20s, automatically perform a save.
   useEffect(() => {
     if (saveStatus !== "dirty") return;
-    const id = window.setTimeout(() => performSave(), 15000);
+    const id = window.setTimeout(() => performSave(), 20000);
     return () => window.clearTimeout(id);
   }, [saveStatus, performSave]);
 
-
-
+  const sessionRunning = status === "running";
 
   const value = useMemo(
     () => ({
@@ -152,6 +168,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       resume,
       endAndSubmit,
       clearAndDiscard,
+      sessionRunning,
+      subscribeTick,
       activeTimers,
       registerActiveTimer,
       unregisterActiveTimer,
@@ -160,7 +178,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       markDirty,
       forceSync,
     }),
-    [status, elapsedMs, lastUpdated, start, pause, resume, endAndSubmit, clearAndDiscard, activeTimers, registerActiveTimer, unregisterActiveTimer, saveStatus, lastSavedAt, markDirty, forceSync],
+    [status, elapsedMs, lastUpdated, start, pause, resume, endAndSubmit, clearAndDiscard, sessionRunning, subscribeTick, activeTimers, registerActiveTimer, unregisterActiveTimer, saveStatus, lastSavedAt, markDirty, forceSync],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

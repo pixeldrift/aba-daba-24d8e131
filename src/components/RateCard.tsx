@@ -4,7 +4,7 @@ import { Lock, Minus, Pause, Play, Plus } from "lucide-react";
 import { CardShell } from "./CardShell";
 import { NumberKeypad } from "./NumberKeypad";
 import { TimeKeypad } from "./TimeKeypad";
-import { useRegisterActiveTimer } from "./SessionContext";
+import { useRegisterActiveTimer, useSession } from "./SessionContext";
 import { cn } from "@/lib/utils";
 
 export interface RateCardProps {
@@ -35,35 +35,38 @@ export function RateCard({
   const [editing, setEditing] = useState(false);
   const [elapsed, setElapsed] = useState(0); // ms
   const [running, setRunning] = useState(true);
-  const startRef = useRef<number | null>(null);
-  const baseRef = useRef(0);
   const cardRef = useRef<HTMLDivElement | null>(null);
-  useRegisterActiveTimer({ id: `rate:${title}`, label: title, active: running && !locked, elementRef: cardRef, source: "rate" });
+  const { sessionRunning, subscribeTick, markDirty } = useSession();
+  // Locked timers always follow the session. Unlocked timers tick only when
+  // BOTH the session is running and the card timer is running.
+  const ticking = locked ? sessionRunning : sessionRunning && running;
+  useRegisterActiveTimer({
+    id: `rate:${title}`,
+    label: title,
+    active: ticking && !locked,
+    elementRef: cardRef,
+    source: "rate",
+  });
 
   useEffect(() => {
-    if (!running) return;
-    startRef.current = performance.now();
-    const id = window.setInterval(() => {
-      if (startRef.current !== null) {
-        setElapsed(baseRef.current + (performance.now() - startRef.current));
-      }
-    }, 100);
-    return () => window.clearInterval(id);
-  }, [running]);
+    if (!ticking) return;
+    return subscribeTick((d) => setElapsed((e) => e + d));
+  }, [ticking, subscribeTick]);
+
+  // When the session pauses, pause the (unlocked) card timer too so the user
+  // must explicitly resume it. Locked timers ignore `running` entirely.
+  useEffect(() => {
+    if (!sessionRunning && running) setRunning(false);
+  }, [sessionRunning, running]);
 
   const toggle = () => {
-    if (running) {
-      baseRef.current = elapsed;
-      setRunning(false);
-    } else {
-      setRunning(true);
-    }
+    setRunning((r) => !r);
+    markDirty();
   };
 
   const setElapsedMs = (ms: number) => {
-    baseRef.current = ms;
-    startRef.current = performance.now();
     setElapsed(ms);
+    markDirty();
   };
 
 
@@ -79,12 +82,14 @@ export function RateCard({
     setCount((c) => c + 1);
     setBumpKey((k) => k + 1);
     triggerFlash();
+    markDirty();
   };
   const dec = () => {
     setDir(-1);
     setCount((c) => Math.max(0, c - 1));
     setBumpKey((k) => k + 1);
     triggerFlash();
+    markDirty();
   };
 
   const commit = (next: number) => {
@@ -92,6 +97,7 @@ export function RateCard({
     setCount(next);
     setBumpKey((k) => k + 1);
     triggerFlash();
+    markDirty();
   };
 
   return (

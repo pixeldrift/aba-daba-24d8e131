@@ -9,6 +9,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { useSession } from "./SessionContext";
 import { cn } from "@/lib/utils";
 
 export type TrialResult = "correct" | "incorrect" | null;
@@ -26,7 +27,7 @@ export interface TrialCardProps {
 }
 
 const BUBBLE = 18; // small bubble diameter
-const BUBBLE_CENTER = 48; // center bubble diameter
+const BUBBLE_CENTER = 64; // center bubble diameter
 const GAP = 6; // tighter spacing
 
 export function TrialCard({
@@ -69,7 +70,10 @@ export function TrialCard({
   const isMaxReached = maxTrials !== undefined && completedCount >= maxTrials;
   const remaining = Math.max(0, minTrials - completedCount);
 
+  const { markDirty } = useSession();
+
   const setResult = (value: Exclude<TrialResult, null>) => {
+    markDirty();
     if (isMaxReached && trials[current] === null) return;
     const isToggleOff = trials[current] === value;
     setTrials((prev) => {
@@ -281,7 +285,7 @@ export function TrialCard({
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -6 }}
                             transition={{ duration: 0.25 }}
-                            className={cn("font-display text-3xl leading-none", centerTextColor)}
+                            className={cn("font-display text-5xl leading-none tabular-nums", centerTextColor)}
                           >
                             {i + 1}
                           </motion.span>
