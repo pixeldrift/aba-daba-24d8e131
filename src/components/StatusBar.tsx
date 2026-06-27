@@ -128,27 +128,33 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
           </div>
 
           <LayoutGroup id="session-bar">
-            {/* Session box area — only this collapses/expands smoothly */}
-            <motion.div
-              layout
-              className="flex justify-center overflow-hidden"
-              transition={{ layout: { duration: 0.7, ease: [0.4, 0, 0.2, 1] } }}
-            >
+            {/* Session box area — animates height smoothly on enter/exit */}
+            <AnimatePresence initial={false}>
               {!isRunning && (
-                <ExpandedSessionBox
-                  status={status}
-                  elapsedMs={status === "paused" ? elapsedMs : previousSessionMs}
-                  contextTime={status === "paused" ? null : previousSessionEndedAt}
-                  onResumePrevious={() => start(previousSessionMs)}
-                  onStartNew={() => start(0)}
-                  onResume={resume}
-                  onPause={pause}
-                  onEnd={() => setEndOpen(true)}
-                  onDiscard={clearAndDiscard}
-                  onRequestDiscard={() => setDiscardOpen(true)}
-                />
+                <motion.div
+                  key="expanded-session"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
+                  className="flex justify-center overflow-hidden"
+                >
+                  <ExpandedSessionBox
+                    status={status}
+                    elapsedMs={status === "paused" ? elapsedMs : previousSessionMs}
+                    contextTime={status === "paused" ? null : previousSessionEndedAt}
+                    onResumePrevious={() => start(previousSessionMs)}
+                    onStartNew={() => start(0)}
+                    onResume={resume}
+                    onPause={pause}
+                    onEnd={() => setEndOpen(true)}
+                    onDiscard={clearAndDiscard}
+                    onRequestDiscard={() => setDiscardOpen(true)}
+                  />
+                </motion.div>
               )}
-            </motion.div>
+            </AnimatePresence>
+
 
             {/* Tabs row + mini session (when running) */}
             <nav
@@ -277,6 +283,92 @@ function SaveIndicator({
 
   return (
     <div className="flex items-center gap-1.5">
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="flex flex-col leading-tight text-right items-end hover:opacity-80 transition-opacity"
+          >
+            {isSaving ? (
+              <>
+                <span className="text-[10px] font-medium text-blue-600">Saving</span>
+                <span className="text-[10px] text-blue-600">Changes</span>
+              </>
+            ) : (
+              <>
+                <span className="text-[10px] font-medium text-stone-700">
+                  {formatSavedLabel(status, lastSavedAt)}
+                </span>
+                <span
+                  className={cn(
+                    "text-[10px] tabular-nums transition-colors",
+                    justSaved ? "text-blue-600" : "text-stone-500",
+                  )}
+                >
+                  {formatTimeOfDay(lastSavedAt)}
+                </span>
+              </>
+            )}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          side="bottom"
+          align="end"
+          sideOffset={10}
+          collisionPadding={16}
+          className="relative w-72 rounded-xl border-2 border-blue-400 bg-white p-0 shadow-[0_10px_30px_-4px_rgba(0,0,0,0.25)]"
+        >
+          {/* Arrow — right-aligned to point at the cloud icon */}
+          <span
+            aria-hidden
+            className="absolute -top-[7px] right-4 size-3 rotate-45 border-l-2 border-t-2 border-blue-400 bg-white"
+          />
+          <div className="relative px-5 pt-4 pb-2 border-b border-stone-200 bg-white rounded-t-xl">
+            <h3 className="font-display text-lg leading-tight">Session Data Status</h3>
+          </div>
+
+          <div className="px-5 py-4 space-y-3 text-sm">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Status</div>
+              <div className="flex items-center gap-2">
+                <span className="relative grid place-items-center size-6 text-stone-400 shrink-0">
+                  <CloudShape className="absolute inset-0 size-6" />
+                  <SymbolIcon
+                    className="relative size-2.5 text-white"
+                    strokeWidth={3.5}
+                    style={{ transform: "translateY(1px)" }}
+                  />
+                </span>
+                <span className="font-medium">
+                  {status === "saving"
+                    ? "Saving changes…"
+                    : status === "dirty"
+                      ? "Unsaved changes"
+                      : "All changes saved"}
+                </span>
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Last Saved</div>
+              <div className="tabular-nums leading-tight">
+                <div>{formatFullDate(lastSavedAt)}</div>
+                <div>{formatFullTime(lastSavedAt)}</div>
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Saved by</div>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-200 text-blue-800 hover:bg-blue-100 hover:text-blue-700 transition-colors text-sm"
+              >
+                <User className="size-3" fill="currentColor" strokeWidth={0} />
+                <span>Perry Plat</span>
+              </button>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+
       <button
         type="button"
         onClick={isDirty ? onSync : undefined}
@@ -294,85 +386,10 @@ function SaveIndicator({
           style={{ transform: "translateY(1.5px)" }}
         />
       </button>
-
-
-      <Popover>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className="flex flex-col leading-tight text-left hover:opacity-80 transition-opacity"
-          >
-            {isSaving ? (
-              <>
-                <span className="text-[11px] font-medium text-blue-600">Saving</span>
-                <span className="text-[11px] text-blue-600">Changes</span>
-              </>
-            ) : (
-              <>
-                <span className="text-[11px] font-medium text-stone-700">
-                  {formatRelativeDay(lastSavedAt)}
-                </span>
-                <span
-                  className={cn(
-                    "text-[11px] tabular-nums transition-colors",
-                    justSaved ? "text-blue-600" : "text-stone-500",
-                  )}
-                >
-                  {formatTimeOfDay(lastSavedAt)}
-                </span>
-              </>
-            )}
-          </button>
-        </PopoverTrigger>
-        <PopoverContent
-          side="bottom"
-          align="center"
-          sideOffset={10}
-          collisionPadding={16}
-          className="relative w-72 rounded-xl border-2 border-blue-400 bg-white p-0 shadow-[0_10px_30px_-4px_rgba(0,0,0,0.25)]"
-        >
-          {/* Arrow — centered, offset so its outer border aligns with the popover's top border */}
-          <span
-            aria-hidden
-            className="absolute -top-[7px] left-1/2 -translate-x-1/2 size-3 rotate-45 border-l-2 border-t-2 border-blue-400 bg-white"
-          />
-          <div className="relative px-5 pt-4 pb-2 border-b border-stone-200 bg-white rounded-t-xl">
-            <h3 className="font-display text-lg leading-tight">Session Data Status</h3>
-          </div>
-
-          <div className="px-5 py-4 space-y-3 text-sm">
-            <div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Status</div>
-              <div className="font-medium">
-                {status === "saving"
-                  ? "Saving changes…"
-                  : status === "dirty"
-                    ? "Unsaved changes"
-                    : "All changes saved"}
-              </div>
-            </div>
-            <div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Last Saved</div>
-              <div className="tabular-nums">
-                {formatFullDate(lastSavedAt)} · {formatFullTime(lastSavedAt)}
-              </div>
-            </div>
-            <div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Saved by</div>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-200 text-blue-800 hover:bg-blue-100 hover:text-blue-700 transition-colors text-sm"
-              >
-                <User className="size-3" fill="currentColor" strokeWidth={0} />
-                <span>Perry Plat</span>
-              </button>
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
     </div>
   );
 }
+
 
 
 function CloudShape({ className }: { className?: string }) {
@@ -399,6 +416,20 @@ function formatRelativeDay(d: Date | null) {
   if (diffDays > 1 && diffDays < 7) return d.toLocaleDateString(undefined, { weekday: "long" });
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
+
+function formatSavedLabel(status: SaveStatus, d: Date | null) {
+  if (status === "dirty") return "Unsaved";
+  if (!d) return "Never saved";
+  const now = new Date();
+  const a = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const b = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.round((b.getTime() - a.getTime()) / 86400000);
+  if (diffDays === 0) return "Data Saved";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays > 1 && diffDays < 7) return d.toLocaleDateString(undefined, { weekday: "long" });
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 
 function formatTimeOfDay(d: Date | null) {
   if (!d) return "—";
