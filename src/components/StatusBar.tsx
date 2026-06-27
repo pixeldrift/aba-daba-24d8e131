@@ -52,85 +52,110 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
 
   const durationTimers = activeTimers.filter((t) => t.source === "duration");
 
+  // Random previous session length between 1-5 hours, generated once on the client.
+  const previousSessionMsRef = useRef<number | null>(null);
+  if (previousSessionMsRef.current === null && typeof window !== "undefined") {
+    previousSessionMsRef.current = Math.floor((1 + Math.random() * 4) * 3600 * 1000);
+  }
+  const previousSessionMs = previousSessionMsRef.current ?? 2 * 3600 * 1000;
+
+  const isRunning = status === "running";
+
   return (
     <div className="sticky top-0 z-40 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b border-stone-200">
       <div className="max-w-5xl mx-auto px-4 pt-2">
-        {/* Top row: title + save status | session box */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <h1 className="font-display text-base sm:text-lg leading-tight truncate">{title}</h1>
-            <SaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} onSync={forceSync} />
-          </div>
-
-          <div className="flex items-start gap-2">
-            <div className="hidden sm:flex items-center gap-1 pt-1">
-              <AnimatePresence>
-                {durationTimers.map((t) => (
-                  <motion.button
-                    key={t.id}
-                    initial={{ opacity: 0, scale: 0.6 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.6 }}
-                    onClick={t.scrollTo}
-                    aria-label={`Jump to running timer: ${t.label}`}
-                    title={`Running: ${t.label}`}
-                    className="relative grid place-items-center size-8 rounded-full bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 transition-colors"
-                  >
-                    <Timer className="size-4" />
-                    <motion.span
-                      animate={{ opacity: [1, 0.3, 1] }}
-                      transition={{ duration: 1.2, repeat: Infinity }}
-                      className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-blue-500"
-                      aria-hidden
-                    />
-                  </motion.button>
-                ))}
-              </AnimatePresence>
+        <LayoutGroup id="session-bar">
+          {/* Top row: title + save status | (expanded session box when not running) */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <h1 className="font-display text-base sm:text-lg leading-tight truncate">{title}</h1>
+              <SaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} onSync={forceSync} />
             </div>
 
-            <SessionBox
-              status={status}
-              elapsedMs={elapsedMs}
-              onStart={start}
-              onPause={pause}
-              onResume={resume}
-              onEnd={endAndSubmit}
-              onDiscard={clearAndDiscard}
-            />
-          </div>
-        </div>
+            <div className="flex items-start gap-2">
+              <div className="hidden sm:flex items-center gap-1 pt-1">
+                <AnimatePresence>
+                  {durationTimers.map((t) => (
+                    <motion.button
+                      key={t.id}
+                      initial={{ opacity: 0, scale: 0.6 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.6 }}
+                      onClick={t.scrollTo}
+                      aria-label={`Jump to running timer: ${t.label}`}
+                      title={`Running: ${t.label}`}
+                      className="relative grid place-items-center size-8 rounded-full bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 transition-colors"
+                    >
+                      <Timer className="size-4" />
+                      <motion.span
+                        animate={{ opacity: [1, 0.3, 1] }}
+                        transition={{ duration: 1.2, repeat: Infinity }}
+                        className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-blue-500"
+                        aria-hidden
+                      />
+                    </motion.button>
+                  ))}
+                </AnimatePresence>
+              </div>
 
-        {/* Tabs row — connected directly to the pane below */}
-        <nav className="flex items-end gap-1 mt-2 -mb-px" role="tablist" aria-label="Session sections">
-          {TABS.map((t) => {
-            const Icon = t.icon;
-            const isActive = t.id === activeTab;
-            return (
-              <button
-                key={t.id}
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => onTabChange(t.id)}
-                className={cn(
-                  "relative flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-t-lg border border-b-0 transition-colors",
-                  isActive
-                    ? "bg-background text-foreground border-stone-200 font-medium"
-                    : "bg-stone-100/60 text-muted-foreground border-transparent hover:text-foreground hover:bg-stone-100",
-                )}
-              >
-                <Icon className="size-4" />
-                <span className="hidden sm:inline">{t.label}</span>
-                {isActive && (
-                  <span className="absolute -bottom-px left-0 right-0 h-px bg-background" aria-hidden />
-                )}
-              </button>
-            );
-          })}
-        </nav>
+              {!isRunning && (
+                <ExpandedSessionBox
+                  status={status}
+                  elapsedMs={status === "paused" ? elapsedMs : previousSessionMs}
+                  onResumePrevious={() => start(previousSessionMs)}
+                  onStartNew={() => start(0)}
+                  onResume={resume}
+                  onPause={pause}
+                  onEnd={endAndSubmit}
+                  onDiscard={clearAndDiscard}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Tabs row + mini session (when running) */}
+          <nav
+            className="flex items-end justify-between gap-2 mt-2 -mb-px"
+            role="tablist"
+            aria-label="Session sections"
+          >
+            <div className="flex items-end gap-1">
+              {TABS.map((t) => {
+                const Icon = t.icon;
+                const isActive = t.id === activeTab;
+                return (
+                  <button
+                    key={t.id}
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => onTabChange(t.id)}
+                    className={cn(
+                      "relative flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-t-lg border border-b-0 transition-colors",
+                      isActive
+                        ? "bg-background text-foreground border-stone-200 font-medium"
+                        : "bg-stone-100/60 text-muted-foreground border-transparent hover:text-foreground hover:bg-stone-100",
+                    )}
+                  >
+                    <Icon className="size-4" />
+                    <span className="hidden sm:inline">{t.label}</span>
+                    {isActive && (
+                      <span className="absolute -bottom-px left-0 right-0 h-px bg-background" aria-hidden />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {isRunning && (
+              <MiniSession elapsedMs={elapsedMs} onPause={pause} />
+            )}
+          </nav>
+        </LayoutGroup>
       </div>
     </div>
   );
 }
+
 
 function SaveIndicator({
   status,
