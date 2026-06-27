@@ -128,27 +128,33 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
           </div>
 
           <LayoutGroup id="session-bar">
-            {/* Session box area — only this collapses/expands smoothly */}
-            <motion.div
-              layout
-              className="flex justify-center overflow-hidden"
-              transition={{ layout: { duration: 0.7, ease: [0.4, 0, 0.2, 1] } }}
-            >
+            {/* Session box area — animates height smoothly on enter/exit */}
+            <AnimatePresence initial={false}>
               {!isRunning && (
-                <ExpandedSessionBox
-                  status={status}
-                  elapsedMs={status === "paused" ? elapsedMs : previousSessionMs}
-                  contextTime={status === "paused" ? null : previousSessionEndedAt}
-                  onResumePrevious={() => start(previousSessionMs)}
-                  onStartNew={() => start(0)}
-                  onResume={resume}
-                  onPause={pause}
-                  onEnd={() => setEndOpen(true)}
-                  onDiscard={clearAndDiscard}
-                  onRequestDiscard={() => setDiscardOpen(true)}
-                />
+                <motion.div
+                  key="expanded-session"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
+                  className="flex justify-center overflow-hidden"
+                >
+                  <ExpandedSessionBox
+                    status={status}
+                    elapsedMs={status === "paused" ? elapsedMs : previousSessionMs}
+                    contextTime={status === "paused" ? null : previousSessionEndedAt}
+                    onResumePrevious={() => start(previousSessionMs)}
+                    onStartNew={() => start(0)}
+                    onResume={resume}
+                    onPause={pause}
+                    onEnd={() => setEndOpen(true)}
+                    onDiscard={clearAndDiscard}
+                    onRequestDiscard={() => setDiscardOpen(true)}
+                  />
+                </motion.div>
               )}
-            </motion.div>
+            </AnimatePresence>
+
 
             {/* Tabs row + mini session (when running) */}
             <nav
