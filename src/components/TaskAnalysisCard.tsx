@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { Check, HandHelping, X } from "lucide-react";
 import { CardShell } from "./CardShell";
+import { useSession } from "./SessionContext";
 import { cn } from "@/lib/utils";
 
 export type StepStatus = "independent" | "prompted" | "error" | null;
