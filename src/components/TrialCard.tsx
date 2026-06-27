@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useMotionValue, animate, type PanInfo } from "motion/react";
 import { Check, X, Info, Sparkles } from "lucide-react";
 import {
