@@ -49,8 +49,10 @@ export function TaskAnalysisCard({
   onActivate,
 }: TaskAnalysisCardProps) {
   const [statuses, setStatuses] = useState<StepStatus[]>(() => steps.map(() => null));
+  const { markDirty } = useSession();
 
   const setStep = (idx: number, value: Exclude<StepStatus, null>) => {
+    markDirty();
     setStatuses((prev) => {
       const next = [...prev];
       next[idx] = next[idx] === value ? null : value;
