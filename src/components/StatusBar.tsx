@@ -497,7 +497,6 @@ function ExpandedSessionBox({
 function DiscardAction({ onConfirm }: { onConfirm: () => void }) {
   const [armed, setArmed] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
-  const [animDone, setAnimDone] = useState(false);
 
   const trackRef = useRef<HTMLDivElement | null>(null);
   const x = useMotionValue(0);
@@ -522,7 +521,6 @@ function DiscardAction({ onConfirm }: { onConfirm: () => void }) {
 
   const revert = () => {
     animate(x, 0, { type: "spring", stiffness: 400, damping: 30 });
-    setAnimDone(false);
     setArmed(false);
   };
 
@@ -571,31 +569,29 @@ function DiscardAction({ onConfirm }: { onConfirm: () => void }) {
       )}
 
       {/* Drag handle */}
-      <motion.button
-        type="button"
-        aria-label="Drag to confirm discard"
-        initial={false}
-        animate={animDone ? undefined : { scale: armed ? 1 : 0, opacity: armed ? 1 : 0 }}
-        transition={{ type: "spring", stiffness: 400, damping: 22 }}
-        onAnimationComplete={() => { if (armed) setAnimDone(true); }}
-        drag={armed && !confirmed ? "x" : false}
-        dragConstraints={{ left: 0, right: maxX }}
-        dragElastic={0}
-        dragMomentum={false}
-        style={{ x }}
-        onDragEnd={() => {
-          if (x.get() >= maxX - 6) {
-            setConfirmed(true);
-            animate(x, maxX, { duration: 0.15 });
-            setTimeout(onConfirm, 150);
-          } else {
-            revert();
-          }
-        }}
-        className="absolute left-1 top-1/2 -translate-y-1/2 grid place-items-center size-9 rounded-full bg-white text-red-600 shadow-md cursor-grab active:cursor-grabbing touch-none"
-      >
-        <ArrowRight className="size-4" strokeWidth={2.75} />
-      </motion.button>
+      {armed && (
+        <motion.button
+          type="button"
+          aria-label="Drag to confirm discard"
+          drag={!confirmed ? "x" : false}
+          dragConstraints={{ left: 0, right: maxX }}
+          dragElastic={0}
+          dragMomentum={false}
+          style={{ x }}
+          onDragEnd={() => {
+            if (x.get() >= maxX - 6) {
+              setConfirmed(true);
+              animate(x, maxX, { duration: 0.15 });
+              setTimeout(onConfirm, 150);
+            } else {
+              revert();
+            }
+          }}
+          className="absolute left-1 top-1/2 -translate-y-1/2 grid place-items-center size-9 rounded-full bg-white text-red-600 shadow-md cursor-grab active:cursor-grabbing touch-none"
+        >
+          <ArrowRight className="size-4" strokeWidth={2.75} />
+        </motion.button>
+      )}
 
 
     </div>
