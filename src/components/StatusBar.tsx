@@ -553,7 +553,7 @@ function ExpandedSessionBox({
             </motion.span>
             <motion.button
               layoutId="session-pill-toggle"
-              onClick={handlePlay}
+              onClick={onPlay}
               whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
               transition={{ duration: 0.7, ease, layout: { duration: 0.7, ease } }}
               aria-label={isPaused ? "Resume session" : "Continue session"}
