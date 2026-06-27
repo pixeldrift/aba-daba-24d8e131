@@ -12,6 +12,7 @@ import {
   Trash2,
   ArrowUp,
   RefreshCw,
+  User,
 } from "lucide-react";
 import { useSession, type SaveStatus } from "./SessionContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
