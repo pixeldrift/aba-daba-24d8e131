@@ -49,13 +49,29 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const startRef = useRef<number | null>(null);
   const baseRef = useRef(0);
 
+  // Shared tick driver — when the session is running, a single interval
+  // updates the session's elapsed AND notifies all subscribed timers with
+  // the delta in ms, so every timer ticks in unison.
+  const tickListenersRef = useRef<Set<(deltaMs: number) => void>>(new Set());
+  const subscribeTick = useCallback((cb: (deltaMs: number) => void) => {
+    tickListenersRef.current.add(cb);
+    return () => {
+      tickListenersRef.current.delete(cb);
+    };
+  }, []);
+
   useEffect(() => {
     if (status !== "running") return;
     startRef.current = performance.now();
+    let last = performance.now();
     const id = window.setInterval(() => {
+      const now = performance.now();
+      const delta = now - last;
+      last = now;
       if (startRef.current !== null) {
-        setElapsedMs(baseRef.current + (performance.now() - startRef.current));
+        setElapsedMs(baseRef.current + (now - startRef.current));
       }
+      tickListenersRef.current.forEach((cb) => cb(delta));
     }, 250);
     return () => window.clearInterval(id);
   }, [status]);
