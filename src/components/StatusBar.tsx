@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence, LayoutGroup } from "motion/react";
+import { motion, AnimatePresence, LayoutGroup, useMotionValue, useTransform, animate } from "motion/react";
 import {
   Play,
   Pause,
@@ -11,8 +11,10 @@ import {
   Check,
   Trash2,
   ArrowUp,
+  ArrowLeft,
   RefreshCw,
   User,
+  GripVertical,
 } from "lucide-react";
 import { useSession, type SaveStatus, type SessionStatus } from "./SessionContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -71,14 +73,28 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
     <div className="sticky top-0 z-40 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b border-stone-200">
       <div className="max-w-5xl mx-auto px-4 pt-2">
         <LayoutGroup id="session-bar">
-          {/* Top row: title + save status | (expanded session box when not running) */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
+          {/* Top row: back + title | save status + session box */}
+          <div className={cn(
+            "flex items-start justify-between gap-3",
+            !isRunning && "min-h-[120px]",
+          )}>
+            <div className="flex items-center gap-2 min-w-0 pt-1">
+              <button
+                type="button"
+                aria-label="Back to sessions"
+                title="Back to sessions"
+                className="grid place-items-center size-8 -ml-1 rounded-md text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors shrink-0"
+              >
+                <ArrowLeft className="size-5" />
+              </button>
               <h1 className="font-display text-base sm:text-lg leading-tight truncate">{title}</h1>
-              <SaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} onSync={forceSync} />
             </div>
 
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-3 shrink-0">
+              <div className="pt-1">
+                <SaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} onSync={forceSync} />
+              </div>
+
               <div className="hidden sm:flex items-center gap-1 pt-1">
                 <AnimatePresence>
                   {durationTimers.map((t) => (
@@ -118,6 +134,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
               )}
             </div>
           </div>
+
 
           {/* Tabs row + mini session (when running) */}
           <nav
@@ -422,31 +439,28 @@ function ExpandedSessionBox({
               </button>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle className="text-red-600">Severe Warning</DialogTitle>
+                  <DialogTitle className="text-red-600">Warning!</DialogTitle>
                   <DialogDescription>
-                    Warning! End the current session and disregard any data collected during this session?
+                    Are you sure? This will end the current session and discard any data collected during the session so far!
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-end gap-2">
                   <button
-                    onClick={() => {
-                      onDiscard();
-                      setDiscardOpen(false);
-                    }}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-md bg-red-500 hover:bg-red-600 text-white text-xs font-medium px-3 py-2 transition-colors"
-                  >
-                    <Trash2 className="size-3" />
-                    End & Discard Session!
-                  </button>
-                  <button
                     onClick={() => setDiscardOpen(false)}
                     className="inline-flex items-center justify-center gap-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium px-3 py-2 transition-colors"
                   >
-                    <Play className="size-3" fill="currentColor" />
                     Continue Session Safely
+                    <Play className="size-3" fill="currentColor" />
                   </button>
+                  <SwipeToDiscard
+                    onConfirm={() => {
+                      onDiscard();
+                      setDiscardOpen(false);
+                    }}
+                  />
                 </DialogFooter>
               </DialogContent>
+
             </Dialog>
           </>
         )}
@@ -454,6 +468,70 @@ function ExpandedSessionBox({
     </motion.div>
   );
 }
+
+function SwipeToDiscard({ onConfirm }: { onConfirm: () => void }) {
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const x = useMotionValue(0);
+  const [maxX, setMaxX] = useState(0);
+  const [confirmed, setConfirmed] = useState(false);
+
+  useEffect(() => {
+    const measure = () => {
+      const el = trackRef.current;
+      if (!el) return;
+      // track inner width - handle size (40) - side paddings (4*2)
+      const w = el.clientWidth - 40 - 8;
+      setMaxX(Math.max(0, w));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  // Fade out the label as the handle moves to the right.
+  const labelOpacity = useTransform(x, [0, Math.max(1, maxX * 0.7)], [1, 0]);
+
+  return (
+    <div
+      ref={trackRef}
+      className="relative h-11 w-full sm:w-72 rounded-full bg-red-500 overflow-hidden select-none"
+    >
+      <motion.span
+        style={{ opacity: labelOpacity }}
+        className="absolute inset-0 grid place-items-center text-white text-xs font-medium px-12 text-center pointer-events-none"
+      >
+        Drag the circle to the trash to confirm
+      </motion.span>
+
+      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white pointer-events-none">
+        <Trash2 className="size-5" />
+      </span>
+
+      <motion.button
+        type="button"
+        aria-label="Drag to confirm discard"
+        drag={confirmed ? false : "x"}
+        dragConstraints={{ left: 0, right: maxX }}
+        dragElastic={0}
+        dragMomentum={false}
+        style={{ x }}
+        onDragEnd={() => {
+          if (x.get() >= maxX - 4) {
+            setConfirmed(true);
+            animate(x, maxX, { duration: 0.15 });
+            setTimeout(onConfirm, 150);
+          } else {
+            animate(x, 0, { type: "spring", stiffness: 400, damping: 30 });
+          }
+        }}
+        className="absolute left-1 top-1/2 -translate-y-1/2 grid place-items-center size-10 rounded-full bg-white text-red-600 shadow-md cursor-grab active:cursor-grabbing"
+      >
+        <GripVertical className="size-4" />
+      </motion.button>
+    </div>
+  );
+}
+
 
 function MiniSession({ elapsedMs, onPause }: { elapsedMs: number; onPause: () => void }) {
   return (
