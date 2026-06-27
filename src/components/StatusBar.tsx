@@ -280,11 +280,7 @@ function SaveIndicator({
   const cloudColorClass = isDirty || isSaving ? "text-blue-500" : "text-stone-400";
   const SymbolIcon = isDirty ? ArrowUp : isSaving ? RefreshCw : Check;
 
-  const labelLines = isSaving
-    ? ["Saving", "Data"]
-    : isDirty
-      ? ["Unsaved", "Data"]
-      : ["Data", "Saved"];
+  const label = isSaving ? "Saving" : isDirty ? "Unsaved" : "Saved";
   const labelColor = isSaving || isDirty ? "text-blue-600" : "text-stone-700";
 
   return (
@@ -293,10 +289,9 @@ function SaveIndicator({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex flex-col leading-[15px] text-right items-end hover:opacity-80 transition-opacity h-8 justify-center"
+            className="flex items-center text-right hover:opacity-80 transition-opacity h-8"
           >
-            <span className={cn("text-[13px] font-medium", labelColor)}>{labelLines[0]}</span>
-            <span className={cn("text-[13px] font-medium", labelColor)}>{labelLines[1]}</span>
+            <span className={cn("text-[11px] font-medium leading-none", labelColor)}>{label}</span>
           </button>
         </PopoverTrigger>
         <PopoverContent
