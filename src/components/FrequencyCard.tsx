@@ -59,6 +59,7 @@ export function FrequencyCard({
     setCount(next);
     setBumpKey((k) => k + 1);
     triggerFlash();
+    markDirty();
   };
 
 
