@@ -73,14 +73,28 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
     <div className="sticky top-0 z-40 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b border-stone-200">
       <div className="max-w-5xl mx-auto px-4 pt-2">
         <LayoutGroup id="session-bar">
-          {/* Top row: title + save status | (expanded session box when not running) */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
+          {/* Top row: back + title | save status + session box */}
+          <div className={cn(
+            "flex items-start justify-between gap-3",
+            !isRunning && "min-h-[120px]",
+          )}>
+            <div className="flex items-center gap-2 min-w-0 pt-1">
+              <button
+                type="button"
+                aria-label="Back to sessions"
+                title="Back to sessions"
+                className="grid place-items-center size-8 -ml-1 rounded-md text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors shrink-0"
+              >
+                <ArrowLeft className="size-5" />
+              </button>
               <h1 className="font-display text-base sm:text-lg leading-tight truncate">{title}</h1>
-              <SaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} onSync={forceSync} />
             </div>
 
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-3 shrink-0">
+              <div className="pt-1">
+                <SaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} onSync={forceSync} />
+              </div>
+
               <div className="hidden sm:flex items-center gap-1 pt-1">
                 <AnimatePresence>
                   {durationTimers.map((t) => (
@@ -120,6 +134,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
               )}
             </div>
           </div>
+
 
           {/* Tabs row + mini session (when running) */}
           <nav
