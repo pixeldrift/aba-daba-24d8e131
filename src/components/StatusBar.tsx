@@ -83,7 +83,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
         <div className={cn("max-w-5xl mx-auto px-4", isRunning ? "pt-1" : "pt-2")}>
           <LayoutGroup id="session-bar">
             {/* Top row: back + title | save status + session box */}
-            <div className="flex flex-col gap-3">
+            <motion.div layout className="flex flex-col gap-3" transition={{ layout: { duration: 0.35, ease: [0.4, 0, 0.2, 1] } }}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0 pt-1">
                   <button
