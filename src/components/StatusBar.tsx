@@ -502,7 +502,7 @@ function DiscardAction({ onConfirm }: { onConfirm: () => void }) {
         !armed && "cursor-pointer hover:bg-red-600",
       )}
     >
-      {/* Label: crossfade + slight slide between states */}
+      {/* Label + trash crossfade between tap and drag states */}
       <AnimatePresence mode="wait" initial={false}>
         {!armed ? (
           <motion.span
@@ -514,32 +514,33 @@ function DiscardAction({ onConfirm }: { onConfirm: () => void }) {
             className="absolute inset-0 flex items-center justify-center gap-2 text-white text-sm font-medium pointer-events-none"
           >
             <span>End &amp; Discard Session!</span>
+            <motion.span layoutId="discard-trash">
+              <Trash2 className="size-4" />
+            </motion.span>
           </motion.span>
         ) : (
-          <motion.span
-            key="drag-label"
-            initial={{ opacity: 0, x: -12 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, delay: 0.05 }}
-            style={{ opacity: labelOpacity }}
-            className="absolute inset-0 grid place-items-center px-14 text-white text-sm font-medium text-center pointer-events-none"
-          >
-            Drag the circle to the trash to confirm
-          </motion.span>
+          <>
+            <motion.span
+              key="drag-label"
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, delay: 0.05 }}
+              style={{ opacity: labelOpacity }}
+              className="absolute inset-0 grid place-items-center px-14 text-white text-sm font-medium text-center pointer-events-none"
+            >
+              Drag the circle to the trash to confirm
+            </motion.span>
+            <motion.span
+              layoutId="discard-trash"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white pointer-events-none"
+            >
+              <Trash2 className="size-4" />
+            </motion.span>
+          </>
         )}
       </AnimatePresence>
 
-      {/* Trash icon: slides from inline (next to label) to right edge */}
-      <motion.span
-        layout
-        initial={false}
-        animate={{ right: armed ? 12 : "50%", x: armed ? 0 : 84 }}
-        transition={{ type: "spring", stiffness: 280, damping: 28 }}
-        className="absolute top-1/2 -translate-y-1/2 text-white pointer-events-none"
-      >
-        <Trash2 className="size-4" />
-      </motion.span>
 
       {/* Drag handle: scales up from 0 when armed */}
       <motion.button
