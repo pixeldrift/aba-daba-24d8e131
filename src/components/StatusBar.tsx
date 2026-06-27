@@ -316,126 +316,155 @@ function formatFullTime(d: Date | null) {
   return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" });
 }
 
-function SessionBox({
+function ExpandedSessionBox({
   status,
   elapsedMs,
-  onStart,
-  onPause,
+  onResumePrevious,
+  onStartNew,
   onResume,
+  onPause: _onPause,
   onEnd,
   onDiscard,
 }: {
-  status: "idle" | "running" | "paused";
+  status: SessionStatus;
   elapsedMs: number;
-  onStart: () => void;
-  onPause: () => void;
+  onResumePrevious: () => void;
+  onStartNew: () => void;
   onResume: () => void;
+  onPause: () => void;
   onEnd: () => void;
   onDiscard: () => void;
 }) {
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const isPaused = status === "paused";
+  const label = isPaused ? "Paused Session" : "Previous Session";
 
   return (
-    <div
+    <motion.div
+      layout
       className={cn(
-        "shrink-0 rounded-xl border-2 px-3 py-1.5 min-w-[180px] flex flex-col items-stretch gap-1 transition-colors",
-        status === "running"
-          ? "border-blue-500 bg-blue-50/40"
-          : status === "paused"
-            ? "border-stone-300 bg-stone-50/60"
-            : "border-stone-300 bg-white",
+        "shrink-0 rounded-xl border-2 px-3 py-1.5 min-w-[200px] flex flex-col items-stretch gap-1",
+        isPaused ? "border-stone-300 bg-stone-50/60" : "border-stone-300 bg-white",
       )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-          Session
-        </span>
-        <span
-          className={cn(
-            "text-lg tabular-nums leading-none",
-            status === "idle" && "text-stone-400",
-          )}
+      <motion.div layout className="flex items-center justify-between gap-2">
+        <motion.span
+          layout
+          className="text-[10px] uppercase tracking-wider text-muted-foreground"
+        >
+          {label}
+        </motion.span>
+        <motion.span
+          layoutId="session-timer"
+          className="text-lg tabular-nums leading-none text-stone-700"
         >
           {formatTime(elapsedMs)}
-        </span>
-      </div>
+        </motion.span>
+      </motion.div>
 
-      {status === "idle" && (
-        <div className="flex flex-col gap-1">
-          <button
-            onClick={onStart}
-            className="flex items-center justify-center gap-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium px-2 py-1.5 transition-colors"
-          >
-            <Play className="size-3" fill="currentColor" />
-            Start New Session
-          </button>
-          <button
-            onClick={onStart}
-            className="flex items-center justify-center gap-1.5 rounded-md bg-white hover:bg-stone-50 border border-stone-300 text-foreground text-[11px] px-2 py-1 transition-colors"
-          >
-            Resume Paused Session
-          </button>
-        </div>
-      )}
-
-      {status === "running" && (
-        <button
-          onClick={onPause}
-          className="flex items-center justify-center gap-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium px-2 py-1.5 transition-colors"
+      <motion.div layout className="flex flex-col gap-1">
+        <motion.button
+          layoutId="session-toggle"
+          onClick={isPaused ? onResume : onResumePrevious}
+          className="flex items-center justify-center gap-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium px-2 py-1.5"
         >
-          <Pause className="size-3" fill="currentColor" />
-          Pause Session
-        </button>
-      )}
-
-      {status === "paused" && (
-        <div className="flex flex-col gap-1">
-          <button
-            onClick={onResume}
-            className="flex items-center justify-center gap-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium px-2 py-1.5 transition-colors"
-          >
+          <motion.span layoutId="session-toggle-icon" className="grid place-items-center">
             <Play className="size-3" fill="currentColor" />
-            Resume
-          </button>
-          <button
-            onClick={onEnd}
-            className="flex items-center justify-center gap-1.5 rounded-md bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-2 py-1.5 transition-colors"
+          </motion.span>
+          <motion.span
+            layoutId="session-toggle-label"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
           >
-            <Check className="size-3" strokeWidth={3} />
-            End & Submit Data
-          </button>
-          {confirmDiscard ? (
-            <div className="flex gap-1">
-              <button
-                onClick={() => {
-                  onDiscard();
-                  setConfirmDiscard(false);
-                }}
-                className="flex-1 rounded-md bg-red-500 hover:bg-red-600 text-white text-[10px] font-medium px-1.5 py-1 transition-colors"
-              >
-                Discard
-              </button>
-              <button
-                onClick={() => setConfirmDiscard(false)}
-                className="flex-1 rounded-md bg-stone-100 hover:bg-stone-200 text-foreground text-[10px] px-1.5 py-1 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setConfirmDiscard(true)}
-              className="flex items-center justify-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-[10px] px-1.5 py-1 rounded-md transition-colors"
+            {isPaused ? "Resume Session" : "Resume Session"}
+          </motion.span>
+        </motion.button>
+
+        {!isPaused && (
+          <motion.button
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            onClick={onStartNew}
+            className="flex items-center justify-center gap-1.5 rounded-md bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-2 py-1.5"
+          >
+            <CornerDownLeft className="size-3" strokeWidth={2.5} />
+            Start New Session
+          </motion.button>
+        )}
+
+        {isPaused && (
+          <>
+            <motion.button
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              onClick={onEnd}
+              className="flex items-center justify-center gap-1.5 rounded-md bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-2 py-1.5"
             >
-              <Trash2 className="size-3" />
-              Clear & Discard
-            </button>
-          )}
-        </div>
-      )}
-    </div>
+              <Check className="size-3" strokeWidth={3} />
+              End & Submit Data
+            </motion.button>
+            {confirmDiscard ? (
+              <div className="flex gap-1">
+                <button
+                  onClick={() => {
+                    onDiscard();
+                    setConfirmDiscard(false);
+                  }}
+                  className="flex-1 rounded-md bg-red-500 hover:bg-red-600 text-white text-[10px] font-medium px-1.5 py-1 transition-colors"
+                >
+                  Discard
+                </button>
+                <button
+                  onClick={() => setConfirmDiscard(false)}
+                  className="flex-1 rounded-md bg-stone-100 hover:bg-stone-200 text-foreground text-[10px] px-1.5 py-1 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDiscard(true)}
+                className="flex items-center justify-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-[10px] px-1.5 py-1 rounded-md transition-colors"
+              >
+                <Trash2 className="size-3" />
+                Clear & Discard
+              </button>
+            )}
+          </>
+        )}
+      </motion.div>
+    </motion.div>
   );
 }
+
+function MiniSession({ elapsedMs, onPause }: { elapsedMs: number; onPause: () => void }) {
+  return (
+    <motion.div layout className="flex items-center gap-2 pb-1.5 pr-1">
+      <motion.span
+        layoutId="session-timer"
+        className="text-base sm:text-lg tabular-nums leading-none text-blue-700 font-medium"
+      >
+        {formatTime(elapsedMs)}
+      </motion.span>
+      <motion.button
+        layoutId="session-toggle"
+        onClick={onPause}
+        aria-label="Pause session"
+        title="Pause session"
+        className="grid place-items-center size-7 rounded-full bg-blue-500 hover:bg-blue-600 text-white"
+      >
+        <motion.span layoutId="session-toggle-icon" className="grid place-items-center">
+          <Pause className="size-3" fill="currentColor" />
+        </motion.span>
+      </motion.button>
+    </motion.div>
+  );
+}
+
+
 
 function formatTime(ms: number) {
   const total = Math.floor(ms / 1000);
