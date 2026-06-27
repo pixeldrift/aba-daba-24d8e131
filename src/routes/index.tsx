@@ -8,6 +8,7 @@ import { DurationCard } from "@/components/DurationCard";
 import { TaskAnalysisCard } from "@/components/TaskAnalysisCard";
 import { SessionProvider, useSession } from "@/components/SessionContext";
 import { StatusBar, type StatusTab } from "@/components/StatusBar";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () => ({
