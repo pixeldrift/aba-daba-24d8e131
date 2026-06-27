@@ -567,11 +567,10 @@ function DiscardAction({ onConfirm }: { onConfirm: () => void }) {
 
 
       {/* Drag handle: scales up from 0 when armed */}
-      <motion.div
-        role="button"
+      <motion.button
+        type="button"
         aria-label="Drag to confirm discard"
-        tabIndex={0}
-        initial={{ scale: 0, opacity: 0 }}
+        initial={false}
         animate={{ scale: armed ? 1 : 0, opacity: armed ? 1 : 0 }}
         transition={{ type: "spring", stiffness: 400, damping: 22, delay: armed ? 0.05 : 0 }}
         drag={armed && !confirmed ? "x" : false}
@@ -589,13 +588,10 @@ function DiscardAction({ onConfirm }: { onConfirm: () => void }) {
             setTimeout(() => setArmed(false), 250);
           }
         }}
-        className={cn(
-          "absolute left-1 top-1/2 -translate-y-1/2 grid place-items-center size-9 rounded-full bg-white text-red-600 shadow-md cursor-grab active:cursor-grabbing touch-none",
-          !armed && "pointer-events-none",
-        )}
+        className="absolute left-1 top-1/2 -translate-y-1/2 grid place-items-center size-9 rounded-full bg-white text-red-600 shadow-md cursor-grab active:cursor-grabbing"
       >
         <ArrowRight className="size-4" strokeWidth={2.75} />
-      </motion.div>
+      </motion.button>
     </div>
   );
 }
