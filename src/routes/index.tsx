@@ -6,6 +6,7 @@ import { FrequencyCard } from "@/components/FrequencyCard";
 import { RateCard } from "@/components/RateCard";
 import { DurationCard } from "@/components/DurationCard";
 import { TaskAnalysisCard } from "@/components/TaskAnalysisCard";
+import { ScheduleView } from "@/components/ScheduleView";
 import { SessionProvider, useSession } from "@/components/SessionContext";
 import { StatusBar, type StatusTab } from "@/components/StatusBar";
 import { cn } from "@/lib/utils";
@@ -192,7 +193,7 @@ function IndexInner() {
         )}
 
         {tab === "info" && <InfoPane />}
-        {tab === "schedule" && <PlaceholderPane title="Schedule" description="Planned sessions, calendar, and reminders will live here." />}
+        {tab === "schedule" && <ScheduleView />}
         {tab === "notifications" && <PlaceholderPane title="Alerts & announcements" description="Messages, reminders, and supervisor notes will appear here." />}
       </section>
     </main>
