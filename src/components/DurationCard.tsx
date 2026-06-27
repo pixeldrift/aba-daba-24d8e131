@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Play, Pause } from "lucide-react";
 import { CardShell } from "./CardShell";
 import { TimeKeypad } from "./TimeKeypad";
-import { useRegisterActiveTimer } from "./SessionContext";
+import { useRegisterActiveTimer, useSession } from "./SessionContext";
 import { cn } from "@/lib/utils";
 
 export interface DurationCardProps {
