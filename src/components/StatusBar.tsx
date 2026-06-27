@@ -500,45 +500,34 @@ function ExpandedSessionBox({
   elapsedMs,
   contextTime,
   showPill = true,
-  onResumePrevious,
+  dimmed = false,
+  onPlay,
   onStartNew,
-  onResume,
-  onPause: _onPause,
   onEnd,
-  onDiscard: _onDiscard,
   onRequestDiscard,
 }: {
   status: SessionStatus;
   elapsedMs: number;
   contextTime: Date | null;
   showPill?: boolean;
-  onResumePrevious: () => void;
+  dimmed?: boolean;
+  onPlay: () => void;
   onStartNew: () => void;
-  onResume: () => void;
-  onPause: () => void;
   onEnd: () => void;
-  onDiscard: () => void;
   onRequestDiscard: () => void;
 }) {
   const isPaused = status === "paused";
   const label = isPaused ? "Session Paused" : "Previous Session";
-  const [picked, setPicked] = useState<"play" | "new" | null>(null);
   const ease = [0.4, 0, 0.2, 1] as const;
 
-  const handlePlay = () => {
-    if (picked) return;
-    setPicked("play");
-    setTimeout(() => {
-      if (isPaused) onResume();
-      else onResumePrevious();
-    }, 280);
-  };
+  // Re-render to refresh "x ago" string.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!contextTime) return;
+    const i = setInterval(() => setTick((n) => n + 1), 30000);
+    return () => clearInterval(i);
+  }, [contextTime]);
 
-  const handleStartNew = () => {
-    if (picked) return;
-    setPicked("new");
-    setTimeout(() => onStartNew(), 280);
-  };
 
   // Re-render to refresh "x ago" string.
   const [, setTick] = useState(0);
