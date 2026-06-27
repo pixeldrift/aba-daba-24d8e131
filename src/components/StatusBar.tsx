@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { useSession, type SaveStatus, type SessionStatus } from "./SessionContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import * as PopoverPrimitive from "@radix-ui/react-popover";
+import { X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -137,7 +139,8 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
-                  className="flex justify-center overflow-hidden"
+                  className="flex justify-center"
+                  style={{ overflow: "visible" }}
                 >
                   <ExpandedSessionBox
                     status={status}
@@ -277,9 +280,12 @@ function SaveIndicator({
   const cloudColorClass = isDirty || isSaving ? "text-blue-500" : "text-stone-400";
   const SymbolIcon = isDirty ? ArrowUp : isSaving ? RefreshCw : Check;
 
-  const justSaved = status === "clean" && lastSavedAt
-    ? Date.now() - lastSavedAt.getTime() < 2500
-    : false;
+  const labelLines = isSaving
+    ? ["Saving", "Data"]
+    : isDirty
+      ? ["Unsaved", "Data"]
+      : ["Data", "Saved"];
+  const labelColor = isSaving || isDirty ? "text-blue-600" : "text-stone-700";
 
   return (
     <div className="flex items-center gap-1.5">
@@ -287,28 +293,10 @@ function SaveIndicator({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex flex-col leading-tight text-right items-end hover:opacity-80 transition-opacity"
+            className="flex flex-col leading-[15px] text-right items-end hover:opacity-80 transition-opacity h-8 justify-center"
           >
-            {isSaving ? (
-              <>
-                <span className="text-[10px] font-medium text-blue-600">Saving</span>
-                <span className="text-[10px] text-blue-600">Changes</span>
-              </>
-            ) : (
-              <>
-                <span className="text-[10px] font-medium text-stone-700">
-                  {formatSavedLabel(status, lastSavedAt)}
-                </span>
-                <span
-                  className={cn(
-                    "text-[10px] tabular-nums transition-colors",
-                    justSaved ? "text-blue-600" : "text-stone-500",
-                  )}
-                >
-                  {formatTimeOfDay(lastSavedAt)}
-                </span>
-              </>
-            )}
+            <span className={cn("text-[13px] font-medium", labelColor)}>{labelLines[0]}</span>
+            <span className={cn("text-[13px] font-medium", labelColor)}>{labelLines[1]}</span>
           </button>
         </PopoverTrigger>
         <PopoverContent
@@ -323,8 +311,14 @@ function SaveIndicator({
             aria-hidden
             className="absolute -top-[7px] right-4 size-3 rotate-45 border-l-2 border-t-2 border-blue-400 bg-white"
           />
+          <PopoverPrimitive.Close
+            aria-label="Close"
+            className="absolute top-2 right-2 grid place-items-center size-7 rounded-full text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors z-10"
+          >
+            <X className="size-4" />
+          </PopoverPrimitive.Close>
           <div className="relative px-5 pt-4 pb-2 border-b border-stone-200 bg-white rounded-t-xl">
-            <h3 className="font-display text-lg leading-tight">Session Data Status</h3>
+            <h3 className="font-display text-lg leading-tight pr-8">Session Data Status</h3>
           </div>
 
           <div className="px-5 py-4 space-y-3 text-sm">
@@ -334,9 +328,9 @@ function SaveIndicator({
                 <span className="relative grid place-items-center size-6 text-stone-400 shrink-0">
                   <CloudShape className="absolute inset-0 size-6" />
                   <SymbolIcon
-                    className="relative size-2.5 text-white"
+                    className={cn("relative text-white", isSaving ? "size-2" : "size-2.5")}
                     strokeWidth={3.5}
-                    style={{ transform: "translateY(1px)" }}
+                    style={{ transform: isSaving ? "translateY(-0.5px)" : "translateY(1px)" }}
                   />
                 </span>
                 <span className="font-medium">
@@ -381,9 +375,9 @@ function SaveIndicator({
       >
         <CloudShape className={cn("absolute inset-0 size-8", cloudColorClass, isDirty && "hover:text-blue-600")} />
         <SymbolIcon
-          className="relative size-3 text-white"
+          className={cn("relative text-white", isSaving ? "size-2.5" : "size-3")}
           strokeWidth={3.5}
-          style={{ transform: "translateY(1.5px)" }}
+          style={{ transform: isSaving ? "translateY(0px)" : "translateY(1.5px)" }}
         />
       </button>
     </div>
@@ -520,15 +514,11 @@ function ExpandedSessionBox({
   }, [contextTime]);
 
   return (
-    <motion.div
-      layout
-      transition={{ layout: { duration: 0.7, ease } }}
-      className="shrink-0 px-3 py-1.5 w-[280px] flex flex-col items-stretch gap-2"
-    >
-      <motion.div layout className="flex flex-col items-center gap-1">
-        <motion.span layout className="text-[10px] uppercase tracking-wider text-muted-foreground">
+    <div className="shrink-0 px-3 py-1.5 w-[280px] flex flex-col items-stretch gap-2">
+      <div className="flex flex-col items-center gap-1">
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
           {label}
-        </motion.span>
+        </span>
 
         <motion.div
           layoutId="session-pill"
@@ -557,7 +547,7 @@ function ExpandedSessionBox({
         </motion.div>
 
         {contextTime && (
-          <motion.div layout className="flex flex-col items-center gap-0.5 mt-0.5 leading-tight">
+          <div className="flex flex-col items-center gap-0.5 mt-0.5 leading-tight">
             <span className="text-[10px] text-muted-foreground tabular-nums">
               {formatRelativeFromNow(contextTime)} ({formatMDY(contextTime)})
             </span>
@@ -568,9 +558,9 @@ function ExpandedSessionBox({
                 <span>Perry Plat</span>
               </span>
             </span>
-          </motion.div>
+          </div>
         )}
-      </motion.div>
+      </div>
 
       <AnimatePresence>
         {!picked && (
@@ -611,7 +601,7 @@ function ExpandedSessionBox({
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }
 

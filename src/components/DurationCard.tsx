@@ -151,7 +151,7 @@ export function DurationCard({
           <Row label="Phase" value={phase} />
           <Row label="Data type" value="Frequency / Duration" />
           <Row label="Minimum" value={`${minDurationSec}s`} />
-          <Row label="Instances" value={String(instances.length)} />
+          <Row label="Times" value={String(instances.length)} />
           <Row label="Total" value={formatTime(totalMs)} />
         </dl>
       }
@@ -225,7 +225,7 @@ export function DurationCard({
 
         <div className="mt-1 flex items-center justify-center gap-3 text-[11px] uppercase tracking-wider text-muted-foreground h-4">
           <span>
-            Instance{" "}
+            Time{" "}
             <span className="normal-case tracking-normal tabular-nums text-foreground">
               {viewIdx + 1}
             </span>{" "}
