@@ -438,13 +438,13 @@ function ExpandedSessionBox({
                 <Trash2 className="size-3" />
               </button>
               <DialogContent className="sm:max-w-md">
-                <DialogHeader>
+                <DialogHeader className="text-left sm:text-left">
                   <DialogTitle className="text-red-600">Warning!</DialogTitle>
-                  <DialogDescription>
+                  <DialogDescription className="text-left">
                     Are you sure? This will end the current session and discard any data collected during the session so far!
                   </DialogDescription>
                 </DialogHeader>
-                <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-end gap-2 items-center">
                   <button
                     onClick={() => setDiscardOpen(false)}
                     className="inline-flex items-center justify-center gap-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium px-3 py-2 transition-colors"
@@ -452,7 +452,9 @@ function ExpandedSessionBox({
                     Continue Session Safely
                     <Play className="size-3" fill="currentColor" />
                   </button>
-                  <SwipeToDiscard
+                  <span className="text-xs text-muted-foreground hidden sm:inline">Or:</span>
+                  <span className="text-xs text-muted-foreground text-center sm:hidden">Or:</span>
+                  <DiscardAction
                     onConfirm={() => {
                       onDiscard();
                       setDiscardOpen(false);
