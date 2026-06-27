@@ -130,33 +130,30 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
           </div>
 
           <LayoutGroup id="session-bar">
-            {/* Session box area — animates height smoothly on enter/exit */}
-            <AnimatePresence initial={false}>
-              {!isRunning && (
-                <motion.div
-                  key="expanded-session"
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
-                  className="flex justify-center"
-                  style={{ overflow: "visible" }}
-                >
-                  <ExpandedSessionBox
-                    status={status}
-                    elapsedMs={status === "paused" ? elapsedMs : previousSessionMs}
-                    contextTime={status === "paused" ? null : previousSessionEndedAt}
-                    onResumePrevious={() => start(previousSessionMs)}
-                    onStartNew={() => start(0)}
-                    onResume={resume}
-                    onPause={pause}
-                    onEnd={() => setEndOpen(true)}
-                    onDiscard={clearAndDiscard}
-                    onRequestDiscard={() => setDiscardOpen(true)}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Session box area — always rendered; height animates symmetrically both ways.
+                The pill inside is hidden when running so only the mini pill carries the
+                shared layoutId, letting motion morph cleanly between the two positions. */}
+            <motion.div
+              initial={false}
+              animate={{ height: isRunning ? 0 : "auto", opacity: isRunning ? 0 : 1 }}
+              transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
+              className="flex justify-center overflow-hidden"
+            >
+              <ExpandedSessionBox
+                status={status}
+                elapsedMs={status === "paused" ? elapsedMs : previousSessionMs}
+                contextTime={status === "paused" ? null : previousSessionEndedAt}
+                showPill={!isRunning}
+                onResumePrevious={() => start(previousSessionMs)}
+                onStartNew={() => start(0)}
+                onResume={resume}
+                onPause={pause}
+                onEnd={() => setEndOpen(true)}
+                onDiscard={clearAndDiscard}
+                onRequestDiscard={() => setDiscardOpen(true)}
+              />
+            </motion.div>
+
 
 
             {/* Tabs row + mini session (when running) */}
@@ -280,11 +277,7 @@ function SaveIndicator({
   const cloudColorClass = isDirty || isSaving ? "text-blue-500" : "text-stone-400";
   const SymbolIcon = isDirty ? ArrowUp : isSaving ? RefreshCw : Check;
 
-  const labelLines = isSaving
-    ? ["Saving", "Data"]
-    : isDirty
-      ? ["Unsaved", "Data"]
-      : ["Data", "Saved"];
+  const label = isSaving ? "Saving" : isDirty ? "Unsaved" : "Saved";
   const labelColor = isSaving || isDirty ? "text-blue-600" : "text-stone-700";
 
   return (
@@ -293,10 +286,9 @@ function SaveIndicator({
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex flex-col leading-[15px] text-right items-end hover:opacity-80 transition-opacity h-8 justify-center"
+            className="flex items-center text-right hover:opacity-80 transition-opacity h-8"
           >
-            <span className={cn("text-[13px] font-medium", labelColor)}>{labelLines[0]}</span>
-            <span className={cn("text-[13px] font-medium", labelColor)}>{labelLines[1]}</span>
+            <span className={cn("text-[11px] font-medium leading-none", labelColor)}>{label}</span>
           </button>
         </PopoverTrigger>
         <PopoverContent
@@ -466,6 +458,7 @@ function ExpandedSessionBox({
   status,
   elapsedMs,
   contextTime,
+  showPill = true,
   onResumePrevious,
   onStartNew,
   onResume,
@@ -477,6 +470,7 @@ function ExpandedSessionBox({
   status: SessionStatus;
   elapsedMs: number;
   contextTime: Date | null;
+  showPill?: boolean;
   onResumePrevious: () => void;
   onStartNew: () => void;
   onResume: () => void;
@@ -520,31 +514,33 @@ function ExpandedSessionBox({
           {label}
         </span>
 
-        <motion.div
-          layoutId="session-pill"
-          transition={{ duration: 0.7, ease, layout: { duration: 0.7, ease } }}
-          className="flex items-stretch rounded-full overflow-hidden border-2 border-stone-300 bg-white w-full h-12"
-        >
-          <motion.span
-            layoutId="session-pill-time"
-            transition={{ duration: 0.7, ease }}
-            className="flex-1 flex items-center justify-center text-3xl tabular-nums leading-none text-stone-800 font-medium px-3"
-          >
-            {formatTime(elapsedMs)}
-          </motion.span>
-          <motion.button
-            layoutId="session-pill-toggle"
-            onClick={handlePlay}
-            whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
+        {showPill && (
+          <motion.div
+            layoutId="session-pill"
             transition={{ duration: 0.7, ease, layout: { duration: 0.7, ease } }}
-            aria-label={isPaused ? "Resume session" : "Continue session"}
-            className="grid place-items-center w-14 bg-blue-500 hover:bg-blue-600 text-white transition-colors shrink-0"
+            className="flex items-stretch rounded-full overflow-hidden border-2 border-stone-300 bg-white w-full h-12"
           >
-            <motion.span layoutId="session-pill-icon" className="grid place-items-center">
-              <Play className="size-5" fill="currentColor" strokeWidth={0} />
+            <motion.span
+              layoutId="session-pill-time"
+              transition={{ duration: 0.7, ease }}
+              className="flex-1 flex items-center justify-center text-3xl tabular-nums leading-none text-stone-800 font-medium px-3"
+            >
+              {formatTime(elapsedMs)}
             </motion.span>
-          </motion.button>
-        </motion.div>
+            <motion.button
+              layoutId="session-pill-toggle"
+              onClick={handlePlay}
+              whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
+              transition={{ duration: 0.7, ease, layout: { duration: 0.7, ease } }}
+              aria-label={isPaused ? "Resume session" : "Continue session"}
+              className="grid place-items-center w-14 bg-blue-500 hover:bg-blue-600 text-white transition-colors shrink-0"
+            >
+              <motion.span layoutId="session-pill-icon" className="grid place-items-center">
+                <Play className="size-5" fill="currentColor" strokeWidth={0} />
+              </motion.span>
+            </motion.button>
+          </motion.div>
+        )}
 
         {contextTime && (
           <div className="flex flex-col items-center gap-0.5 mt-0.5 leading-tight">
