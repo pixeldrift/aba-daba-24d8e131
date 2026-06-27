@@ -509,23 +509,6 @@ function ExpandedSessionBox({
       </motion.div>
 
       <motion.div layout className="flex flex-col gap-1">
-        <motion.button
-          layoutId={morphTarget === "resume" ? "session-toggle" : undefined}
-          onClick={() => handlePick("resume")}
-          whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
-          animate={picked === "new" ? { opacity: 0 } : { opacity: 1 }}
-          transition={{ duration: 0.25, ease, layout: { duration: 0.35, ease } }}
-          style={{ backgroundColor: "#3b82f6" }}
-          className="flex items-center justify-center gap-1.5 rounded-full h-7 text-white text-xs font-medium px-3"
-        >
-          <motion.span layoutId={morphTarget === "resume" ? "session-toggle-label" : undefined}>
-            {isPaused ? "Continue Session" : "Continue Session"}
-          </motion.span>
-          <motion.span layoutId={morphTarget === "resume" ? "session-toggle-icon" : undefined} className="grid place-items-center">
-            <Play className="size-3" fill="currentColor" />
-          </motion.span>
-        </motion.button>
-
         {!isPaused && (
           <motion.button
             layoutId={morphTarget === "new" ? "session-toggle" : undefined}
@@ -541,7 +524,8 @@ function ExpandedSessionBox({
             whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
             transition={{ duration: 0.25, ease, layout: { duration: 0.35, ease } }}
             onClick={() => handlePick("new")}
-            className="flex items-center justify-center gap-1.5 rounded-full h-7 text-white text-xs font-medium px-3"
+            style={{ backgroundColor: "#22c55e" }}
+            className="flex items-center justify-center gap-1.5 rounded-[0.875rem] h-7 text-white text-xs font-medium px-3 overflow-hidden whitespace-nowrap"
           >
             <motion.span layoutId={morphTarget === "new" ? "session-toggle-label" : undefined}>
               Start New Session
@@ -553,26 +537,44 @@ function ExpandedSessionBox({
         )}
 
         {isPaused && (
-          <>
-            <motion.button
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
-              onClick={onEnd}
-              className="flex items-center justify-center gap-1.5 rounded-full h-7 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3"
-            >
-              End & Submit Data
-              <LineChart className="size-3" strokeWidth={2.5} />
-            </motion.button>
-            <button
-              onClick={onRequestDiscard}
-              className="flex items-center justify-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-[10px] px-1.5 py-1 rounded-md transition-colors active:scale-95"
-            >
-              End & Discard Session!
-              <Trash2 className="size-3" />
-            </button>
-          </>
+          <motion.button
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
+            onClick={onEnd}
+            className="flex items-center justify-center gap-1.5 rounded-[0.875rem] h-7 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3 overflow-hidden whitespace-nowrap"
+          >
+            End & Submit Data
+            <LineChart className="size-3" strokeWidth={2.5} />
+          </motion.button>
+        )}
+
+        <motion.button
+          layoutId={morphTarget === "resume" ? "session-toggle" : undefined}
+          onClick={() => handlePick("resume")}
+          whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
+          animate={picked === "new" ? { opacity: 0 } : { opacity: 1 }}
+          transition={{ duration: 0.25, ease, layout: { duration: 0.35, ease } }}
+          style={{ backgroundColor: "#3b82f6" }}
+          className="flex items-center justify-center gap-1.5 rounded-[0.875rem] h-7 text-white text-xs font-medium px-3 overflow-hidden whitespace-nowrap"
+        >
+          <motion.span layoutId={morphTarget === "resume" ? "session-toggle-label" : undefined}>
+            Continue Session
+          </motion.span>
+          <motion.span layoutId={morphTarget === "resume" ? "session-toggle-icon" : undefined} className="grid place-items-center">
+            <Play className="size-3" fill="currentColor" />
+          </motion.span>
+        </motion.button>
+
+        {isPaused && (
+          <button
+            onClick={onRequestDiscard}
+            className="flex items-center justify-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-[10px] px-1.5 py-1 rounded-md transition-colors active:scale-95"
+          >
+            End & Discard Session!
+            <Trash2 className="size-3" />
+          </button>
         )}
       </motion.div>
     </motion.div>
