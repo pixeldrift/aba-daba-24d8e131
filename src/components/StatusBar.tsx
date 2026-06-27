@@ -74,10 +74,8 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
   }, []);
 
   const isRunning = status === "running";
-  const sessionActive = isRunning;
   const [discardOpen, setDiscardOpen] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
-
 
   return (
     <>
@@ -130,25 +128,17 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
           </div>
 
           <LayoutGroup id="session-bar">
-            {/* Session box area — height animates smoothly between expanded and 0 */}
+            {/* Session box area — only this collapses/expands smoothly */}
             <motion.div
-              initial={false}
-              animate={{
-                height: isRunning ? 0 : "auto",
-                opacity: isRunning ? 0 : 1,
-              }}
-              transition={{
-                height: { duration: 0.7, ease: [0.4, 0, 0.2, 1] },
-                opacity: { duration: isRunning ? 0.35 : 0.5, ease: [0.4, 0, 0.2, 1] },
-              }}
-              className="overflow-hidden"
+              layout
+              className="flex justify-center overflow-hidden"
+              transition={{ layout: { duration: 0.7, ease: [0.4, 0, 0.2, 1] } }}
             >
-              <div className="flex justify-center">
+              {!isRunning && (
                 <ExpandedSessionBox
                   status={status}
                   elapsedMs={status === "paused" ? elapsedMs : previousSessionMs}
                   contextTime={status === "paused" ? null : previousSessionEndedAt}
-                  showPill={!isRunning}
                   onResumePrevious={() => start(previousSessionMs)}
                   onStartNew={() => start(0)}
                   onResume={resume}
@@ -157,7 +147,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
                   onDiscard={clearAndDiscard}
                   onRequestDiscard={() => setDiscardOpen(true)}
                 />
-              </div>
+              )}
             </motion.div>
 
             {/* Tabs row + mini session (when running) */}
@@ -170,7 +160,6 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
                 {TABS.map((t) => {
                   const Icon = t.icon;
                   const isActive = t.id === activeTab;
-                  const dim = !sessionActive && t.id === "data";
                   return (
                     <button
                       key={t.id}
@@ -182,7 +171,6 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
                         isActive
                           ? "bg-background text-foreground border-stone-200 font-medium"
                           : "bg-stone-200/70 text-stone-600 border-transparent hover:text-foreground hover:bg-stone-200",
-                        dim && "opacity-50",
                       )}
                     >
                       <Icon className="size-4" />
@@ -200,7 +188,6 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
               )}
             </nav>
           </LayoutGroup>
-
         </div>
       </div>
       <Dialog open={discardOpen} onOpenChange={setDiscardOpen}>
@@ -456,8 +443,6 @@ function ExpandedSessionBox({
   onEnd,
   onDiscard: _onDiscard,
   onRequestDiscard,
-  showPill = true,
-
 }: {
   status: SessionStatus;
   elapsedMs: number;
@@ -469,20 +454,25 @@ function ExpandedSessionBox({
   onEnd: () => void;
   onDiscard: () => void;
   onRequestDiscard: () => void;
-  showPill?: boolean;
 }) {
   const isPaused = status === "paused";
   const label = isPaused ? "Session Paused" : "Previous Session";
-  const [picking, setPicking] = useState(false);
-  const ease = [0.4, 0, 0.2, 1] as const;
+  const [picked, setPicked] = useState<"resume" | "new" | null>(null);
 
-  const handlePlay = () => {
-    if (picking) return;
-    setPicking(true);
+  const handlePick = (which: "resume" | "new") => {
+    if (picked) return;
+    setPicked(which);
     setTimeout(() => {
-      isPaused ? onResume() : onResumePrevious();
-    }, 50);
+      if (which === "resume") {
+        isPaused ? onResume() : onResumePrevious();
+      } else {
+        onStartNew();
+      }
+    }, 260);
   };
+
+  const morphTarget: "resume" | "new" = picked ?? "resume";
+  const ease = [0.4, 0, 0.2, 1] as const;
 
   // Re-render to refresh "x ago" string.
   const [, setTick] = useState(0);
@@ -492,110 +482,107 @@ function ExpandedSessionBox({
     return () => clearInterval(i);
   }, [contextTime]);
 
-  const showActions = !picking;
-
   return (
     <motion.div
       layout
-      transition={{ layout: { duration: 0.7, ease } }}
-      className="shrink-0 px-3 py-2 min-w-[240px] flex flex-col items-center gap-2"
+      transition={{ layout: { duration: 0.7, ease: [0.4, 0, 0.2, 1] } }}
+      className="shrink-0 rounded-xl px-3 py-1.5 min-w-[220px] flex flex-col items-stretch gap-2"
     >
-      <div className="flex flex-col items-center leading-tight">
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-          {label}
-        </span>
-        {!isPaused && contextTime && (
-          <span className="text-[10px] text-muted-foreground mt-0.5">
-            {formatRelativeFromNow(contextTime)} · {formatFullDateShort(contextTime)}
-          </span>
-        )}
-      </div>
-
-      {/* Pill — same shape/style as the Duration center pill */}
-      <motion.div
-        layout
-        transition={{ layout: { duration: 0.7, ease } }}
-        className="flex items-stretch rounded-full overflow-hidden border-2 border-blue-500 bg-white h-12"
-      >
+      <motion.div layout className="flex flex-col items-center gap-1">
         <motion.span
-          layoutId={showPill ? "session-timer" : undefined}
-          transition={{ duration: 0.7, ease }}
-          className="flex items-center pl-5 pr-4 text-2xl tabular-nums leading-none text-stone-800 font-medium"
+          layout
+          className="text-[10px] uppercase tracking-wider text-muted-foreground"
+        >
+          {label}
+        </motion.span>
+        <motion.span
+          layoutId="session-timer"
+          initial={false}
+          animate={{ scale: 1 }}
+          transition={{ duration: 0.6, ease }}
+          className="text-3xl tabular-nums leading-none text-stone-800 font-medium px-3 py-1 rounded-lg border border-stone-300"
         >
           {formatTime(elapsedMs)}
         </motion.span>
-        <motion.button
-          layoutId={showPill ? "session-toggle" : undefined}
-          onClick={handlePlay}
-          whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
-          transition={{ duration: 0.7, ease, layout: { duration: 0.7, ease } }}
-          style={{ backgroundColor: "#3b82f6" }}
-          aria-label={isPaused ? "Resume session" : "Start session"}
-          className="grid place-items-center w-14 text-white hover:bg-blue-600 transition-colors"
-        >
-          <motion.span layoutId={showPill ? "session-toggle-icon" : undefined} className="grid place-items-center">
-            {picking ? (
-              <Pause className="size-5" fill="currentColor" strokeWidth={0} />
-            ) : (
-              <Play className="size-5" fill="currentColor" strokeWidth={0} />
-            )}
-          </motion.span>
-        </motion.button>
+        {contextTime && (
+          <span className="text-[10px] text-muted-foreground">
+            {formatRelativeFromNow(contextTime)}
+          </span>
+        )}
       </motion.div>
 
-      {/* Actions — fade & shrink away when transitioning to mini */}
-      <motion.div
-        initial={false}
-        animate={{
-          opacity: showActions ? 1 : 0,
-          height: showActions ? "auto" : 0,
-          scale: showActions ? 1 : 0.92,
-        }}
-        transition={{
-          height: { duration: 0.5, ease },
-          opacity: { duration: 0.3, ease },
-          scale: { duration: 0.4, ease },
-        }}
-        className="flex flex-col gap-1.5 items-stretch w-full overflow-hidden"
-      >
-        {isPaused ? (
-          <>
-            <button
-              onClick={onEnd}
-              className="flex items-center justify-center gap-1.5 rounded-full h-8 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3 whitespace-nowrap transition-colors active:scale-95"
-            >
-              End &amp; Submit Data
-              <LineChart className="size-3.5" strokeWidth={2.5} />
-            </button>
-            <button
-              onClick={onRequestDiscard}
-              className="flex items-center justify-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-[10px] px-1.5 py-1 rounded-md transition-colors active:scale-95"
-            >
-              End &amp; Discard Session!
-              <Trash2 className="size-3" />
-            </button>
-          </>
-        ) : (
-          <button
-            onClick={onStartNew}
-            className="flex items-center justify-center gap-1.5 rounded-full h-8 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3 whitespace-nowrap transition-colors active:scale-95"
+      <motion.div layout className="flex flex-col gap-1">
+        {!isPaused && (
+          <motion.button
+            layoutId={morphTarget === "new" ? "session-toggle" : undefined}
+            initial={{ opacity: 0, y: -4 }}
+            animate={
+              picked === "resume"
+                ? { opacity: 0, y: 0, backgroundColor: "#22c55e" }
+                : picked === "new"
+                  ? { opacity: 1, y: 0, backgroundColor: "#3b82f6" }
+                  : { opacity: 1, y: 0, backgroundColor: "#22c55e" }
+            }
+            exit={{ opacity: 0, y: -4 }}
+            whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
+            transition={{ duration: 0.5, ease, layout: { duration: 0.7, ease } }}
+            onClick={() => handlePick("new")}
+            style={{ backgroundColor: "#22c55e" }}
+            className="flex items-center justify-center gap-1.5 rounded-[0.875rem] h-7 text-white text-xs font-medium px-3 overflow-hidden whitespace-nowrap"
           >
-            Start New Session
-            <RefreshCw className="size-3.5" strokeWidth={2.5} />
+            <motion.span layoutId={morphTarget === "new" ? "session-toggle-label" : undefined}>
+              Start New Session
+            </motion.span>
+            <motion.span layoutId={morphTarget === "new" ? "session-toggle-icon" : undefined} className="grid place-items-center">
+              <RefreshCw className="size-3" strokeWidth={2.5} />
+            </motion.span>
+          </motion.button>
+        )}
+
+        {isPaused && (
+          <motion.button
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
+            onClick={onEnd}
+            className="flex items-center justify-center gap-1.5 rounded-[0.875rem] h-7 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3 overflow-hidden whitespace-nowrap"
+          >
+            End & Submit Data
+            <LineChart className="size-3" strokeWidth={2.5} />
+          </motion.button>
+        )}
+
+        <motion.button
+          layoutId={morphTarget === "resume" ? "session-toggle" : undefined}
+          onClick={() => handlePick("resume")}
+          whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
+          animate={picked === "new" ? { opacity: 0 } : { opacity: 1 }}
+          transition={{ duration: 0.5, ease, layout: { duration: 0.7, ease } }}
+          style={{ backgroundColor: "#3b82f6" }}
+          className="flex items-center justify-center gap-1.5 rounded-[0.875rem] h-7 text-white text-xs font-medium px-3 overflow-hidden whitespace-nowrap"
+        >
+          <motion.span layoutId={morphTarget === "resume" ? "session-toggle-label" : undefined}>
+            Continue Session
+          </motion.span>
+          <motion.span layoutId={morphTarget === "resume" ? "session-toggle-icon" : undefined} className="grid place-items-center">
+            <Play className="size-3" fill="currentColor" />
+          </motion.span>
+        </motion.button>
+
+        {isPaused && (
+          <button
+            onClick={onRequestDiscard}
+            className="flex items-center justify-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-[10px] px-1.5 py-1 rounded-md transition-colors active:scale-95"
+          >
+            End & Discard Session!
+            <Trash2 className="size-3" />
           </button>
         )}
       </motion.div>
     </motion.div>
   );
 }
-
-function formatFullDateShort(d: Date) {
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) +
-    " · " +
-    d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-}
-
-
 
 function DiscardAction({ onConfirm }: { onConfirm: () => void }) {
   const [armed, setArmed] = useState(false);
@@ -703,12 +690,12 @@ function DiscardAction({ onConfirm }: { onConfirm: () => void }) {
 function MiniSession({ elapsedMs, onPause }: { elapsedMs: number; onPause: () => void }) {
   const ease = [0.4, 0, 0.2, 1] as const;
   return (
-    <div className="flex items-stretch self-stretch pr-1">
-      <div className="flex items-stretch self-start rounded-full overflow-hidden border border-blue-500 bg-white">
+    <div className="flex items-center pb-1.5 pr-1">
+      <div className="flex items-stretch rounded-full overflow-hidden border-2 border-blue-500 bg-white">
         <motion.span
           layoutId="session-timer"
           transition={{ duration: 0.7, ease }}
-          className="flex items-center px-2 text-xs sm:text-sm tabular-nums leading-none text-blue-700 font-medium"
+          className="flex items-center px-2.5 text-base sm:text-lg tabular-nums leading-none text-blue-700 font-medium"
         >
           {formatTime(elapsedMs)}
         </motion.span>
@@ -720,14 +707,13 @@ function MiniSession({ elapsedMs, onPause }: { elapsedMs: number; onPause: () =>
           style={{ backgroundColor: "#3b82f6" }}
           aria-label="Pause session"
           title="Pause session"
-          className="grid place-items-center w-7 text-white hover:bg-blue-600 transition-colors"
+          className="grid place-items-center w-9 h-7 text-white hover:bg-blue-600 transition-colors"
         >
           <motion.span layoutId="session-toggle-icon" className="grid place-items-center">
             <Pause className="size-3" fill="currentColor" />
           </motion.span>
         </motion.button>
       </div>
-
     </div>
   );
 }
