@@ -80,10 +80,10 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
   return (
     <>
       <div className="sticky top-0 z-40 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b border-stone-200">
-        <div className="max-w-5xl mx-auto px-4 pt-2">
+        <div className={cn("max-w-5xl mx-auto px-4", isRunning ? "pt-1" : "pt-2")}>
           <LayoutGroup id="session-bar">
             {/* Top row: back + title | save status + session box */}
-            <div className="flex flex-col gap-3">
+            <motion.div layout className="flex flex-col gap-3" transition={{ layout: { duration: 0.35, ease: [0.4, 0, 0.2, 1] } }}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0 pt-1">
                   <button
@@ -129,7 +129,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
                 </div>
               </div>
 
-              <motion.div layout className="flex justify-center">
+              <motion.div layout className="flex justify-center" transition={{ layout: { duration: 0.35, ease: [0.4, 0, 0.2, 1] } }}>
                 {!isRunning && (
                   <ExpandedSessionBox
                     status={status}
@@ -145,12 +145,12 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
                   />
                 )}
               </motion.div>
-            </div>
+            </motion.div>
 
 
             {/* Tabs row + mini session (when running) */}
             <nav
-              className="flex items-end justify-between gap-2 mt-2 -mb-px"
+              className={cn("flex items-end justify-between gap-2 -mb-px", isRunning ? "mt-1" : "mt-2")}
               role="tablist"
               aria-label="Session sections"
             >
@@ -203,7 +203,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
                 setDiscardOpen(false);
               }}
             />
-            <span className="text-xs text-muted-foreground text-center">Or:</span>
+            <span className="text-xs text-muted-foreground text-center">Or</span>
             <button
               onClick={() => setDiscardOpen(false)}
               className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium px-4 transition-colors w-full"
@@ -224,14 +224,6 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
           </DialogHeader>
           <DialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0 items-stretch">
             <button
-              onClick={() => setEndOpen(false)}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium px-4 transition-colors w-full"
-            >
-              Return & Continue Session
-              <Play className="size-4" fill="currentColor" />
-            </button>
-            <span className="text-xs text-muted-foreground text-center">Or:</span>
-            <button
               onClick={() => {
                 endAndSubmit();
                 setEndOpen(false);
@@ -240,6 +232,14 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
             >
               End & Submit Data
               <LineChart className="size-4" strokeWidth={2.5} />
+            </button>
+            <span className="text-xs text-muted-foreground text-center">Or</span>
+            <button
+              onClick={() => setEndOpen(false)}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium px-4 transition-colors w-full"
+            >
+              Return to Session
+              <Play className="size-4" fill="currentColor" />
             </button>
           </DialogFooter>
         </DialogContent>
@@ -483,6 +483,7 @@ function ExpandedSessionBox({
   return (
     <motion.div
       layout
+      transition={{ layout: { duration: 0.35, ease: [0.4, 0, 0.2, 1] } }}
       className="shrink-0 rounded-xl px-3 py-1.5 min-w-[220px] flex flex-col items-stretch gap-2"
     >
       <motion.div layout className="flex flex-col items-center gap-1">
@@ -509,23 +510,6 @@ function ExpandedSessionBox({
       </motion.div>
 
       <motion.div layout className="flex flex-col gap-1">
-        <motion.button
-          layoutId={morphTarget === "resume" ? "session-toggle" : undefined}
-          onClick={() => handlePick("resume")}
-          whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
-          animate={picked === "new" ? { opacity: 0 } : { opacity: 1 }}
-          transition={{ duration: 0.25, ease, layout: { duration: 0.35, ease } }}
-          style={{ backgroundColor: "#3b82f6" }}
-          className="flex items-center justify-center gap-1.5 rounded-full h-7 text-white text-xs font-medium px-3"
-        >
-          <motion.span layoutId={morphTarget === "resume" ? "session-toggle-label" : undefined}>
-            {isPaused ? "Continue Session" : "Continue Session"}
-          </motion.span>
-          <motion.span layoutId={morphTarget === "resume" ? "session-toggle-icon" : undefined} className="grid place-items-center">
-            <Play className="size-3" fill="currentColor" />
-          </motion.span>
-        </motion.button>
-
         {!isPaused && (
           <motion.button
             layoutId={morphTarget === "new" ? "session-toggle" : undefined}
@@ -541,7 +525,8 @@ function ExpandedSessionBox({
             whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
             transition={{ duration: 0.25, ease, layout: { duration: 0.35, ease } }}
             onClick={() => handlePick("new")}
-            className="flex items-center justify-center gap-1.5 rounded-full h-7 text-white text-xs font-medium px-3"
+            style={{ backgroundColor: "#22c55e" }}
+            className="flex items-center justify-center gap-1.5 rounded-[0.875rem] h-7 text-white text-xs font-medium px-3 overflow-hidden whitespace-nowrap"
           >
             <motion.span layoutId={morphTarget === "new" ? "session-toggle-label" : undefined}>
               Start New Session
@@ -553,26 +538,44 @@ function ExpandedSessionBox({
         )}
 
         {isPaused && (
-          <>
-            <motion.button
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
-              onClick={onEnd}
-              className="flex items-center justify-center gap-1.5 rounded-full h-7 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3"
-            >
-              End & Submit Data
-              <LineChart className="size-3" strokeWidth={2.5} />
-            </motion.button>
-            <button
-              onClick={onRequestDiscard}
-              className="flex items-center justify-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-[10px] px-1.5 py-1 rounded-md transition-colors active:scale-95"
-            >
-              End & Discard Session!
-              <Trash2 className="size-3" />
-            </button>
-          </>
+          <motion.button
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
+            onClick={onEnd}
+            className="flex items-center justify-center gap-1.5 rounded-[0.875rem] h-7 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3 overflow-hidden whitespace-nowrap"
+          >
+            End & Submit Data
+            <LineChart className="size-3" strokeWidth={2.5} />
+          </motion.button>
+        )}
+
+        <motion.button
+          layoutId={morphTarget === "resume" ? "session-toggle" : undefined}
+          onClick={() => handlePick("resume")}
+          whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
+          animate={picked === "new" ? { opacity: 0 } : { opacity: 1 }}
+          transition={{ duration: 0.25, ease, layout: { duration: 0.35, ease } }}
+          style={{ backgroundColor: "#3b82f6" }}
+          className="flex items-center justify-center gap-1.5 rounded-[0.875rem] h-7 text-white text-xs font-medium px-3 overflow-hidden whitespace-nowrap"
+        >
+          <motion.span layoutId={morphTarget === "resume" ? "session-toggle-label" : undefined}>
+            Continue Session
+          </motion.span>
+          <motion.span layoutId={morphTarget === "resume" ? "session-toggle-icon" : undefined} className="grid place-items-center">
+            <Play className="size-3" fill="currentColor" />
+          </motion.span>
+        </motion.button>
+
+        {isPaused && (
+          <button
+            onClick={onRequestDiscard}
+            className="flex items-center justify-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-[10px] px-1.5 py-1 rounded-md transition-colors active:scale-95"
+          >
+            End & Discard Session!
+            <Trash2 className="size-3" />
+          </button>
         )}
       </motion.div>
     </motion.div>
@@ -701,7 +704,7 @@ function MiniSession({ elapsedMs, onPause }: { elapsedMs: number; onPause: () =>
         style={{ backgroundColor: "#3b82f6" }}
         aria-label="Pause session"
         title="Pause session"
-        className="grid place-items-center h-7 w-7 rounded-full text-white"
+        className="grid place-items-center h-7 w-7 rounded-[0.875rem] text-white"
       >
         <motion.span layoutId="session-toggle-icon" className="grid place-items-center">
           <Pause className="size-3" fill="currentColor" />
