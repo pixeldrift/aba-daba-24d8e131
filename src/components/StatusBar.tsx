@@ -141,7 +141,7 @@ function SaveIndicator({
   const isDirty = status === "dirty";
   const isSaving = status === "saving";
 
-  const bgColorClass = isDirty || isSaving ? "bg-blue-500" : "bg-stone-400";
+  const cloudColorClass = isDirty || isSaving ? "text-blue-500" : "text-stone-400";
   const SymbolIcon = isDirty ? ArrowUp : isSaving ? RefreshCw : Check;
 
   const justSaved = status === "clean" && lastSavedAt
@@ -156,20 +156,18 @@ function SaveIndicator({
         aria-label={isDirty ? "Save now" : isSaving ? "Saving" : "All changes saved"}
         title={isDirty ? "Save now" : isSaving ? "Saving…" : "All changes saved"}
         className={cn(
-          "relative grid place-items-center size-9 rounded-full transition-colors",
-          bgColorClass,
-          isDirty && "hover:bg-blue-600 cursor-pointer",
-          !isDirty && "cursor-default",
+          "relative grid place-items-center size-10 transition-colors",
+          isDirty ? "cursor-pointer" : "cursor-default",
         )}
       >
-        {/* Cloud silhouette as solid white outline of the badge already; render a white cloud-shaped mask via Lucide cloud filled */}
-        <CloudShape className="absolute inset-0 m-auto size-9 text-white" />
+        <CloudShape className={cn("absolute inset-0 size-10", cloudColorClass, isDirty && "hover:text-blue-600")} />
         <SymbolIcon
           className="relative size-3.5 text-white"
-          strokeWidth={3}
+          strokeWidth={3.5}
           style={{ transform: "translateY(2px)" }}
         />
       </button>
+
 
       <Popover>
         <PopoverTrigger asChild>
