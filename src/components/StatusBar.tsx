@@ -497,6 +497,8 @@ function ExpandedSessionBox({
 function DiscardAction({ onConfirm }: { onConfirm: () => void }) {
   const [armed, setArmed] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [animDone, setAnimDone] = useState(false);
+
   const trackRef = useRef<HTMLDivElement | null>(null);
   const x = useMotionValue(0);
   const [maxX, setMaxX] = useState(0);
