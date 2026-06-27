@@ -110,7 +110,7 @@ function IndexInner() {
     <main className="min-h-screen bg-background">
       <StatusBar activeTab={tab} onTabChange={setTab} />
 
-      <section className="px-5 pt-6 pb-16 max-w-5xl mx-auto">
+      <section className="px-5 pt-5 pb-16 max-w-5xl mx-auto border-t border-stone-200 -mt-px">
         {tab === "data" && (
           <div className="flex flex-col items-center gap-5">
             {cards.map((card, i) => {
