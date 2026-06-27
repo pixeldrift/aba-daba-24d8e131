@@ -58,7 +58,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [status]);
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("clean");
-  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(() => new Date());
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  useEffect(() => {
+    // Set on the client only to avoid SSR hydration mismatches on time formatting.
+    setLastSavedAt((d) => d ?? new Date());
+  }, []);
+
 
   const markDirty = useCallback(() => {
     setSaveStatus((s) => (s === "saving" ? s : "dirty"));
