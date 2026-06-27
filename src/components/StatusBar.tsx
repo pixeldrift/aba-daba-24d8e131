@@ -133,6 +133,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
                   <ExpandedSessionBox
                     status={status}
                     elapsedMs={status === "paused" ? elapsedMs : previousSessionMs}
+                    contextTime={status === "paused" ? null : previousSessionEndedAt}
                     onResumePrevious={() => start(previousSessionMs)}
                     onStartNew={() => start(0)}
                     onResume={resume}
