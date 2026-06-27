@@ -78,6 +78,48 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
   const isRunning = status === "running";
   const [discardOpen, setDiscardOpen] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
+  // While `pendingStart` is set, the collapse animation runs but the session
+  // timer hasn't started yet — gives a smooth, jank-free transition.
+  const [pendingStart, setPendingStart] = useState<null | "resume" | "previous" | "new">(null);
+  const collapsed = isRunning || pendingStart !== null;
+  const TRANSITION_MS = 700;
+
+  const requestPlay = () => {
+    if (pendingStart) return;
+    if (status === "paused") {
+      setPendingStart("resume");
+      window.setTimeout(() => {
+        resume();
+        setPendingStart(null);
+      }, TRANSITION_MS);
+    } else {
+      setPendingStart("previous");
+      window.setTimeout(() => {
+        start(previousSessionMs);
+        setPendingStart(null);
+      }, TRANSITION_MS);
+    }
+  };
+
+  const requestStartNew = () => {
+    if (pendingStart) return;
+    setPendingStart("new");
+    window.setTimeout(() => {
+      start(0);
+      setPendingStart(null);
+    }, TRANSITION_MS);
+  };
+
+  // What time to show inside the pill during the morph: keep continuity so
+  // the big pill and mini pill display the same value while animating.
+  const pillElapsed = isRunning
+    ? elapsedMs
+    : status === "paused"
+      ? elapsedMs
+      : pendingStart === "new"
+        ? 0
+        : previousSessionMs;
+
 
   return (
     <>
