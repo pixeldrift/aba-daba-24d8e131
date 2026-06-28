@@ -80,6 +80,14 @@ const cards: CardConfig[] = [
     minDurationSec: 30,
   },
   {
+    kind: "duration",
+    title: "Tolerates sitting in social group",
+    phase: "Intervention",
+    description:
+      "Track each interval the learner remains seated with the social group. Start a new instance when they rejoin.",
+    minDurationSec: 60,
+  },
+  {
     kind: "task-analysis",
     title: "Washing hands",
     phase: "Intervention",
