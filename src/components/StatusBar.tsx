@@ -187,7 +187,6 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
               aria-label="Session sections"
             >
               <div className="flex items-end gap-1">
-                <ActiveDurationIndicator timers={durationTimers} />
                 {TABS.map((t) => {
                   const Icon = t.icon;
                   const isActive = t.id === activeTab;
@@ -214,6 +213,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
                     </button>
                   );
                 })}
+                <ActiveDurationIndicator timers={durationTimers} />
               </div>
 
               {collapsed && (
