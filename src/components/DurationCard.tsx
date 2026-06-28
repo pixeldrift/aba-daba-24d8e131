@@ -36,7 +36,7 @@ export function DurationCard({
   const runningIdxRef = useRef<number | null>(null);
   const cardRef = useRef<HTMLElement | null>(null);
   const { sessionRunning, subscribeTick, markDirty, resetSignal } = useSession();
-  useRegisterActiveTimer({ id: `duration:${title}`, label: title, active: running && sessionRunning, elementRef: cardRef, source: "duration" });
+  useRegisterActiveTimer({ id: `duration:${title}`, label: title, active: running && sessionRunning, elementRef: cardRef, source: "duration", onActivate });
 
   useEffect(() => {
     if (resetSignal === 0) return;
