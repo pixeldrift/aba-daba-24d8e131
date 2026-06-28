@@ -140,14 +140,8 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
               <h1 className="font-display text-base sm:text-lg leading-tight truncate">{title}</h1>
             </div>
 
-            <div className="flex items-start gap-3 shrink-0">
-              <div className="pt-1">
-                <SaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} onSync={forceSync} />
-              </div>
-
-              <div className="flex items-center pt-1">
-                <ActiveDurationIndicator timers={durationTimers} />
-              </div>
+            <div className="pt-1">
+              <SaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} onSync={forceSync} />
             </div>
           </div>
 
