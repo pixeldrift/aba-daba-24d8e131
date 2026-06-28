@@ -3,16 +3,16 @@ import {
   Plus,
   Pencil,
   Trash2,
-  Save,
   Eye,
   EyeOff,
   Bell,
   BellOff,
-  Volume2,
-  VolumeX,
+  BellRing,
   ChevronDown,
   Layers,
   Activity,
+  Copy,
+  Type,
 } from "lucide-react";
 import {
   Select,
@@ -80,14 +80,15 @@ const LOCATION_ICONS: Record<string, string> = {
   "Small Gym": "🤾",
 };
 
+type AlertMode = "off" | "visual" | "audio";
+
 type ScheduleItem = {
   id: string;
   start: string; // "HH:MM" 24h
-  end: string;
+  end: string;   // kept as metadata, not displayed
   activity: string;
   location: string;
-  visualAlert: boolean;
-  audioAlert: boolean;
+  alert: AlertMode;
 };
 
 type Schedule = {
@@ -100,7 +101,7 @@ type TreatmentOverlay = {
   label: string;
   start: string;
   end: string;
-  color: string; // tailwind text/border tinted
+  color: string;
   enabled: boolean;
 };
 
@@ -108,28 +109,28 @@ const DAY_START = "10:00";
 const DAY_END = "16:00";
 
 const GROUP_A: ScheduleItem[] = [
-  { id: "a1", start: "10:00", end: "10:30", activity: "Arrive/Pairing", location: "Treatment Room", visualAlert: true, audioAlert: false },
-  { id: "a2", start: "10:30", end: "11:15", activity: "Discreet Trials", location: "Treatment Room", visualAlert: true, audioAlert: true },
-  { id: "a3", start: "11:15", end: "11:45", activity: "Gym Time", location: "Big Gym", visualAlert: true, audioAlert: true },
-  { id: "a4", start: "11:45", end: "12:15", activity: "Lunch", location: "Kitchen", visualAlert: true, audioAlert: false },
-  { id: "a5", start: "12:15", end: "13:00", activity: "Social Group", location: "Classroom", visualAlert: true, audioAlert: true },
-  { id: "a6", start: "13:00", end: "13:30", activity: "Sensory Play", location: "Treatment Room", visualAlert: false, audioAlert: false },
-  { id: "a7", start: "13:30", end: "14:15", activity: "Arts and Crafts", location: "Classroom", visualAlert: true, audioAlert: false },
-  { id: "a8", start: "14:15", end: "14:45", activity: "Snack", location: "Kitchen", visualAlert: true, audioAlert: false },
-  { id: "a9", start: "14:45", end: "15:30", activity: "Peer Play", location: "Small Gym", visualAlert: true, audioAlert: true },
-  { id: "a10", start: "15:30", end: "16:00", activity: "Pack Up/Dismissal", location: "Treatment Room", visualAlert: true, audioAlert: true },
+  { id: "a1", start: "10:00", end: "10:30", activity: "Arrive/Pairing", location: "Treatment Room", alert: "visual" },
+  { id: "a2", start: "10:30", end: "11:15", activity: "Discreet Trials", location: "Treatment Room", alert: "audio" },
+  { id: "a3", start: "11:15", end: "11:45", activity: "Gym Time", location: "Big Gym", alert: "audio" },
+  { id: "a4", start: "11:45", end: "12:15", activity: "Lunch", location: "Kitchen", alert: "visual" },
+  { id: "a5", start: "12:15", end: "13:00", activity: "Social Group", location: "Classroom", alert: "audio" },
+  { id: "a6", start: "13:00", end: "13:30", activity: "Sensory Play", location: "Treatment Room", alert: "off" },
+  { id: "a7", start: "13:30", end: "14:15", activity: "Arts and Crafts", location: "Classroom", alert: "visual" },
+  { id: "a8", start: "14:15", end: "14:45", activity: "Snack", location: "Kitchen", alert: "visual" },
+  { id: "a9", start: "14:45", end: "15:30", activity: "Peer Play", location: "Small Gym", alert: "audio" },
+  { id: "a10", start: "15:30", end: "16:00", activity: "Pack Up/Dismissal", location: "Treatment Room", alert: "audio" },
 ];
 
 const GROUP_B: ScheduleItem[] = [
-  { id: "b1", start: "10:00", end: "10:30", activity: "Arrive/Pairing", location: "Classroom", visualAlert: true, audioAlert: false },
-  { id: "b2", start: "10:30", end: "11:15", activity: "Imaginative Play", location: "Classroom", visualAlert: false, audioAlert: false },
-  { id: "b3", start: "11:15", end: "12:00", activity: "Discreet Trials", location: "Treatment Room", visualAlert: true, audioAlert: true },
-  { id: "b4", start: "12:00", end: "12:30", activity: "Lunch", location: "Kitchen", visualAlert: true, audioAlert: false },
-  { id: "b5", start: "12:30", end: "13:15", activity: "Gym Time", location: "Big Gym", visualAlert: true, audioAlert: true },
-  { id: "b6", start: "13:15", end: "14:00", activity: "Client Choice", location: "Small Gym", visualAlert: false, audioAlert: false },
-  { id: "b7", start: "14:00", end: "14:30", activity: "Snack", location: "Kitchen", visualAlert: true, audioAlert: false },
-  { id: "b8", start: "14:30", end: "15:30", activity: "Social Group", location: "Classroom", visualAlert: true, audioAlert: true },
-  { id: "b9", start: "15:30", end: "16:00", activity: "Pack Up/Dismissal", location: "Treatment Room", visualAlert: true, audioAlert: true },
+  { id: "b1", start: "10:00", end: "10:30", activity: "Arrive/Pairing", location: "Classroom", alert: "visual" },
+  { id: "b2", start: "10:30", end: "11:15", activity: "Imaginative Play", location: "Classroom", alert: "off" },
+  { id: "b3", start: "11:15", end: "12:00", activity: "Discreet Trials", location: "Treatment Room", alert: "audio" },
+  { id: "b4", start: "12:00", end: "12:30", activity: "Lunch", location: "Kitchen", alert: "visual" },
+  { id: "b5", start: "12:30", end: "13:15", activity: "Gym Time", location: "Big Gym", alert: "audio" },
+  { id: "b6", start: "13:15", end: "14:00", activity: "Client Choice", location: "Small Gym", alert: "off" },
+  { id: "b7", start: "14:00", end: "14:30", activity: "Snack", location: "Kitchen", alert: "visual" },
+  { id: "b8", start: "14:30", end: "15:30", activity: "Social Group", location: "Classroom", alert: "audio" },
+  { id: "b9", start: "15:30", end: "16:00", activity: "Pack Up/Dismissal", location: "Treatment Room", alert: "audio" },
 ];
 
 const PRESETS: Schedule[] = [
@@ -138,9 +139,10 @@ const PRESETS: Schedule[] = [
 ];
 
 const DEFAULT_OVERLAYS: TreatmentOverlay[] = [
-  { id: "speech", label: "Speech", start: "11:00", end: "11:30", color: "bg-violet-100 border-violet-400 text-violet-800", enabled: false },
-  { id: "ot", label: "Occupational", start: "13:00", end: "13:45", color: "bg-amber-100 border-amber-400 text-amber-800", enabled: false },
-  { id: "pt", label: "Physical", start: "14:30", end: "15:00", color: "bg-emerald-100 border-emerald-400 text-emerald-800", enabled: false },
+  { id: "full", label: "Full Day", start: DAY_START, end: DAY_END, color: "bg-stone-100 border-stone-400 text-stone-700", enabled: false },
+  { id: "speech", label: "Speech Therapy", start: "11:00", end: "11:30", color: "bg-violet-100 border-violet-400 text-violet-800", enabled: false },
+  { id: "ot", label: "Occupational Therapy", start: "13:00", end: "13:45", color: "bg-amber-100 border-amber-400 text-amber-800", enabled: false },
+  { id: "pt", label: "Physical Therapy", start: "14:30", end: "15:00", color: "bg-emerald-100 border-emerald-400 text-emerald-800", enabled: false },
 ];
 
 function toMin(t: string) {
@@ -154,12 +156,26 @@ function fmt12(t: string) {
   return `${hh}:${m.toString().padStart(2, "0")}${period}`;
 }
 
+// Demo clock — initialized to a random time inside the schedule window.
+function randomDemoTime(): Date {
+  const d = new Date();
+  const startMin = toMin(DAY_START);
+  const endMin = toMin(DAY_END);
+  const m = startMin + Math.floor(Math.random() * (endMin - startMin));
+  d.setHours(Math.floor(m / 60), m % 60, 0, 0);
+  return d;
+}
+
 export function ScheduleView() {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 15_000);
-    return () => clearInterval(id);
-  }, []);
+  const [now, setNow] = useState<Date>(() => randomDemoTime());
+  // Tap on time advances 10 minutes for debugging.
+  const bumpTime = () => {
+    setNow((prev) => {
+      const d = new Date(prev);
+      d.setMinutes(d.getMinutes() + 10);
+      return d;
+    });
+  };
 
   const [schedules, setSchedules] = useState<Schedule[]>(PRESETS);
   const [activeName, setActiveName] = useState<string>("Group A");
@@ -177,13 +193,14 @@ export function ScheduleView() {
 
   const [editing, setEditing] = useState<ScheduleItem | null>(null);
   const [creatingNew, setCreatingNew] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
 
   const dayStart = toMin(DAY_START);
   const dayEnd = toMin(DAY_END);
   const nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
   const inDay = nowMin >= dayStart && nowMin <= dayEnd;
 
-  // current item by real time
   const currentItem = active.items.find(
     (i) => nowMin >= toMin(i.start) && nowMin < toMin(i.end),
   );
@@ -194,15 +211,21 @@ export function ScheduleView() {
     );
   };
 
-  const saveAsNew = () => {
+  const saveAsCopy = () => {
     const baseName = active.name.replace(/^Custom \(|\)$/g, "");
-    const name = `Custom (${baseName})`;
-    if (schedules.some((s) => s.name === name)) {
-      setActiveName(name);
-      return;
+    let name = `Custom (${baseName})`;
+    let n = 2;
+    while (schedules.some((s) => s.name === name)) {
+      name = `Custom (${baseName}) ${n++}`;
     }
     setSchedules((p) => [...p, { name, items: active.items.map((x) => ({ ...x })) }]);
     setActiveName(name);
+  };
+
+  const renameActive = (newName: string) => {
+    if (!newName.trim() || schedules.some((s) => s.name === newName)) return;
+    setSchedules((p) => p.map((s) => (s.name === activeName ? { ...s, name: newName } : s)));
+    setActiveName(newName);
   };
 
   const dateStr = now.toLocaleDateString(undefined, {
@@ -220,8 +243,6 @@ export function ScheduleView() {
     minute: "2-digit",
   });
 
-  // For the "now" arrow: position proportionally over the rendered list by
-  // measuring item rows and interpolating between rows based on real time.
   const listRef = useRef<HTMLDivElement>(null);
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [arrowTop, setArrowTop] = useState<number | null>(null);
@@ -235,7 +256,6 @@ export function ScheduleView() {
         return;
       }
       const listTop = list.getBoundingClientRect().top;
-      // Find item containing now; if gap, find nearest neighbors
       const items = active.items;
       for (let i = 0; i < items.length; i++) {
         const it = items[i];
@@ -250,43 +270,43 @@ export function ScheduleView() {
           return;
         }
       }
-      // No exact match — interpolate by overall time window
       const ratio = (nowMin - dayStart) / Math.max(1, dayEnd - dayStart);
       setArrowTop(list.clientHeight * ratio);
     };
     update();
-    const id = setInterval(update, 5_000);
     const ro = new ResizeObserver(update);
     if (listRef.current) ro.observe(listRef.current);
-    return () => {
-      clearInterval(id);
-      ro.disconnect();
-    };
+    return () => ro.disconnect();
   }, [active, nowMin, inDay, dayStart, dayEnd]);
 
   return (
-    <div className="max-w-3xl mx-auto pt-4 pb-12">
+    <div className="max-w-3xl mx-auto pt-1 pb-12">
       {/* Header */}
       <div className="flex items-start justify-between px-1">
         <div>
           <h1 className="font-display text-2xl leading-tight">{dateStr}</h1>
           <div className="text-xs text-muted-foreground tabular-nums">{numericDate}</div>
         </div>
-        <div className="text-right">
+        <button
+          type="button"
+          onClick={bumpTime}
+          className="text-right rounded-md px-1 -mr-1 active:bg-stone-100"
+          title="Tap to advance 10 minutes (demo)"
+        >
           <div className="font-display text-xl tabular-nums">{timeStr}</div>
           <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
             {inDay ? "Live" : nowMin < dayStart ? "Before day" : "After day"}
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Schedule selector */}
-      <div className="mt-5 flex items-center gap-2 px-1">
+      <div className="mt-4 flex items-center gap-2 px-1">
         <Select value={activeName} onValueChange={setActiveName}>
-          <SelectTrigger className="flex-1 h-11 text-base">
+          <SelectTrigger className="flex-1 h-11 text-base rounded-full bg-white border-2 border-blue-500 text-blue-700 px-4 focus:ring-blue-300">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="rounded-2xl">
             {schedules.map((s) => (
               <SelectItem key={s.name} value={s.name}>
                 {s.name}
@@ -297,40 +317,62 @@ export function ScheduleView() {
         <Button
           variant={editMode ? "default" : "outline"}
           size="icon"
-          className="h-11 w-11"
+          className={cn(
+            "h-11 w-11 rounded-full border-2",
+            editMode
+              ? "bg-blue-600 hover:bg-blue-700 border-blue-600 text-white"
+              : "bg-white border-blue-500 text-blue-600 hover:bg-blue-50",
+          )}
           onClick={() => setEditMode((v) => !v)}
           aria-label="Edit schedule"
         >
           <Pencil className="size-4" />
         </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-11 w-11"
-          onClick={saveAsNew}
-          aria-label="Save as new schedule"
-          title="Save as new"
-        >
-          <Save className="size-4" />
-        </Button>
       </div>
 
+      {editMode && (
+        <div className="mt-2 flex items-center gap-2 px-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full border-blue-300 text-blue-700 hover:bg-blue-50"
+            onClick={saveAsCopy}
+          >
+            <Copy className="size-3.5 mr-1.5" /> Save copy
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full border-blue-300 text-blue-700 hover:bg-blue-50"
+            onClick={() => {
+              setRenameValue(active.name);
+              setRenameOpen(true);
+            }}
+          >
+            <Type className="size-3.5 mr-1.5" /> Rename
+          </Button>
+        </div>
+      )}
+
       {/* Toggles row */}
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 px-1 text-xs text-stone-600">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 px-1 text-xs">
         <button
           type="button"
           onClick={() => setShowThumbs((v) => !v)}
-          className="flex items-center gap-1.5 hover:text-stone-900"
+          className={cn(
+            "flex items-center gap-1.5",
+            showThumbs ? "text-blue-600" : "text-stone-400 hover:text-stone-600",
+          )}
         >
-          {showThumbs ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+          <Eye className="size-3.5" />
           Thumbnails
         </button>
         <button
           type="button"
           onClick={() => setShowMaster((v) => !v)}
           className={cn(
-            "flex items-center gap-1.5 hover:text-stone-900",
-            showMaster && "text-stone-900",
+            "flex items-center gap-1.5",
+            showMaster ? "text-blue-600" : "text-stone-400 hover:text-stone-600",
           )}
           title="Show master schedule behind custom"
         >
@@ -341,12 +383,12 @@ export function ScheduleView() {
           type="button"
           onClick={() => setOverlaysOpen((v) => !v)}
           className={cn(
-            "flex items-center gap-1.5 hover:text-stone-900 ml-auto",
-            overlays.some((o) => o.enabled) && "text-stone-900",
+            "flex items-center gap-1.5 ml-auto",
+            overlays.some((o) => o.enabled) ? "text-blue-600" : "text-stone-400 hover:text-stone-600",
           )}
         >
           <Activity className="size-3.5" />
-          Treatment overlays ({overlays.filter((o) => o.enabled).length})
+          Clinical ({overlays.filter((o) => o.enabled).length})
           <ChevronDown className={cn("size-3 transition-transform", overlaysOpen && "rotate-180")} />
         </button>
       </div>
@@ -359,7 +401,9 @@ export function ScheduleView() {
               <div className="flex-1 text-sm">
                 <div className="font-medium">{o.label}</div>
                 <div className="text-xs text-muted-foreground">
-                  {fmt12(o.start)} – {fmt12(o.end)}
+                  {o.id === "full"
+                    ? "Entire scheduled day"
+                    : `${fmt12(o.start)} – ${fmt12(o.end)}`}
                 </div>
               </div>
               <Switch
@@ -367,137 +411,130 @@ export function ScheduleView() {
                 onCheckedChange={(v) =>
                   setOverlays((p) => p.map((x) => (x.id === o.id ? { ...x, enabled: v } : x)))
                 }
+                className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-white border-2 border-blue-500 [&>span]:data-[state=checked]:bg-white [&>span]:data-[state=unchecked]:bg-blue-500"
               />
             </div>
           ))}
         </div>
       )}
 
-      {/* Grid header */}
-      <div className="mt-4 grid grid-cols-[14px_64px_1fr_88px_64px] gap-2 px-1 pb-2 text-[10px] uppercase tracking-wide text-muted-foreground">
-        <div />
-        <div>Time</div>
-        <div>Activity</div>
-        <div>Location</div>
-        <div className="text-center">Alerts</div>
-      </div>
-
       {/* Schedule grid */}
-      <div ref={listRef} className="relative border-t border-stone-200">
-        {/* Current-time arrow */}
-        {arrowTop !== null && (
-          <div
-            className="absolute left-0 z-10 pointer-events-none -translate-y-1/2"
-            style={{ top: arrowTop }}
-          >
-            <div className="flex items-center">
-              <div className="size-0 border-y-[6px] border-y-transparent border-l-[8px] border-l-red-500" />
-              <div className="h-px w-3 bg-red-500/70" />
-            </div>
-          </div>
-        )}
+      <div className="mt-3 mx-1 rounded-xl bg-white border border-stone-200 overflow-hidden">
+        {/* header */}
+        <div className="grid grid-cols-[44px_1fr_88px_36px] gap-1.5 px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground border-b border-stone-300 bg-stone-50">
+          <div>Time</div>
+          <div>Activity</div>
+          <div>Location</div>
+          <div className="text-center">Alert</div>
+        </div>
 
-        {active.items.map((it) => {
-          const isCurrent = currentItem?.id === it.id;
-          const masterMatch = showMaster && master
-            ? master.items.find((m) => m.start === it.start)
-            : null;
-          const overlapOverlay = overlays.find(
-            (o) =>
-              o.enabled &&
-              toMin(o.start) < toMin(it.end) &&
-              toMin(o.end) > toMin(it.start),
-          );
-          return (
+        <div ref={listRef} className="relative">
+          {arrowTop !== null && (
             <div
-              key={it.id}
-              ref={(el) => {
-                if (el) rowRefs.current.set(it.id, el);
-                else rowRefs.current.delete(it.id);
-              }}
-              className={cn(
-                "grid grid-cols-[14px_64px_1fr_88px_64px] gap-2 px-1 py-2.5 border-b border-stone-200 items-center transition-colors",
-                isCurrent && "bg-yellow-50",
-                overlapOverlay && cn("border-l-4", overlapOverlay.color.split(" ").find((c) => c.startsWith("border-"))),
-              )}
+              className="absolute left-0 z-10 pointer-events-none -translate-y-1/2"
+              style={{ top: arrowTop }}
             >
-              <div />
-              <div className="text-[11px] tabular-nums leading-tight">
-                <div>{fmt12(it.start)}</div>
-                <div className="text-muted-foreground">{fmt12(it.end)}</div>
+              <div className="flex items-center">
+                <div className="size-0 border-y-[5px] border-y-transparent border-l-[6px] border-l-blue-600" />
+                <div className="h-px w-1.5 bg-blue-600/70" />
               </div>
-              <div className="flex items-center gap-2 min-w-0">
-                {showThumbs && (
-                  <span className="text-lg shrink-0">{ACTIVITY_ICONS[it.activity] ?? "•"}</span>
+            </div>
+          )}
+
+          {active.items.map((it, idx) => {
+            const isCurrent = currentItem?.id === it.id;
+            const masterMatch = showMaster && master
+              ? master.items.find((m) => m.start === it.start)
+              : null;
+            const overlapOverlay = overlays.find(
+              (o) =>
+                o.enabled &&
+                toMin(o.start) < toMin(it.end) &&
+                toMin(o.end) > toMin(it.start),
+            );
+            return (
+              <div
+                key={it.id}
+                ref={(el) => {
+                  if (el) rowRefs.current.set(it.id, el);
+                  else rowRefs.current.delete(it.id);
+                }}
+                className={cn(
+                  "grid grid-cols-[44px_1fr_88px_36px] gap-1.5 px-2 py-1.5 items-center transition-colors",
+                  idx !== active.items.length - 1 && "border-b border-stone-300",
+                  isCurrent && "bg-blue-50",
+                  overlapOverlay && cn(
+                    "border-l-4",
+                    overlapOverlay.color.split(" ").find((c) => c.startsWith("border-")),
+                  ),
                 )}
-                <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">{it.activity}</div>
-                  {masterMatch && masterMatch.activity !== it.activity && (
-                    <div className="text-[10px] text-stone-400 truncate">
-                      master: {masterMatch.activity}
-                    </div>
+              >
+                <div className="text-[11px] tabular-nums leading-tight pl-0.5">
+                  {fmt12(it.start)}
+                </div>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  {showThumbs && (
+                    <span className="text-base shrink-0">{ACTIVITY_ICONS[it.activity] ?? "•"}</span>
                   )}
-                  {overlapOverlay && (
-                    <div className={cn("text-[10px] truncate", overlapOverlay.color.split(" ").find((c) => c.startsWith("text-")))}>
-                      {overlapOverlay.label} overrides
-                    </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium truncate">{it.activity}</div>
+                    {masterMatch && masterMatch.activity !== it.activity && (
+                      <div className="text-[10px] text-stone-400 truncate">
+                        master: {masterMatch.activity}
+                      </div>
+                    )}
+                    {overlapOverlay && (
+                      <div className={cn("text-[10px] truncate", overlapOverlay.color.split(" ").find((c) => c.startsWith("text-")))}>
+                        {overlapOverlay.label}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 min-w-0">
+                  {showThumbs && (
+                    <span className="text-sm shrink-0">{LOCATION_ICONS[it.location] ?? "📍"}</span>
+                  )}
+                  <span className="text-xs truncate">{it.location}</span>
+                </div>
+                <div className="flex items-center justify-center gap-1">
+                  {editMode ? (
+                    <>
+                      <Button size="icon" variant="ghost" className="size-7" onClick={() => setEditing(it)}>
+                        <Pencil className="size-3.5" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="size-7 text-red-600 hover:text-red-700"
+                        onClick={() => updateActive((items) => items.filter((x) => x.id !== it.id))}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </>
+                  ) : (
+                    <AlertCycle
+                      mode={it.alert}
+                      onChange={(m) =>
+                        updateActive((items) =>
+                          items.map((x) => (x.id === it.id ? { ...x, alert: m } : x)),
+                        )
+                      }
+                    />
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 min-w-0">
-                {showThumbs && (
-                  <span className="text-sm shrink-0">{LOCATION_ICONS[it.location] ?? "📍"}</span>
-                )}
-                <span className="text-xs truncate">{it.location}</span>
-              </div>
-              <div className="flex items-center justify-center gap-1">
-                {editMode ? (
-                  <>
-                    <Button size="icon" variant="ghost" className="size-7" onClick={() => setEditing(it)}>
-                      <Pencil className="size-3.5" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="size-7 text-red-600 hover:text-red-700"
-                      onClick={() => updateActive((items) => items.filter((x) => x.id !== it.id))}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <AlertToggle
-                      on={it.visualAlert}
-                      onChange={(v) =>
-                        updateActive((items) =>
-                          items.map((x) => (x.id === it.id ? { ...x, visualAlert: v } : x)),
-                        )
-                      }
-                      OnIcon={Bell}
-                      OffIcon={BellOff}
-                    />
-                    <AlertToggle
-                      on={it.audioAlert}
-                      onChange={(v) =>
-                        updateActive((items) =>
-                          items.map((x) => (x.id === it.id ? { ...x, audioAlert: v } : x)),
-                        )
-                      }
-                      OnIcon={Volume2}
-                      OffIcon={VolumeX}
-                    />
-                  </>
-                )}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {editMode && (
         <div className="mt-3 px-1">
-          <Button variant="outline" className="w-full" onClick={() => setCreatingNew(true)}>
+          <Button
+            variant="outline"
+            className="w-full rounded-full border-blue-300 text-blue-700 hover:bg-blue-50"
+            onClick={() => setCreatingNew(true)}
+          >
             <Plus className="size-4 mr-1" /> Add item
           </Button>
           <p className="mt-3 text-[11px] text-muted-foreground">
@@ -525,32 +562,45 @@ export function ScheduleView() {
           setCreatingNew(false);
         }}
       />
+
+      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Rename schedule</DialogTitle>
+          </DialogHeader>
+          <Input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                renameActive(renameValue.trim());
+                setRenameOpen(false);
+              }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function AlertToggle({
-  on,
-  onChange,
-  OnIcon,
-  OffIcon,
-}: {
-  on: boolean;
-  onChange: (v: boolean) => void;
-  OnIcon: typeof Bell;
-  OffIcon: typeof BellOff;
-}) {
-  const Icon = on ? OnIcon : OffIcon;
+function AlertCycle({ mode, onChange }: { mode: AlertMode; onChange: (m: AlertMode) => void }) {
+  const next: Record<AlertMode, AlertMode> = { off: "visual", visual: "audio", audio: "off" };
+  const Icon = mode === "off" ? BellOff : mode === "visual" ? Bell : BellRing;
   return (
     <button
       type="button"
-      onClick={() => onChange(!on)}
+      onClick={() => onChange(next[mode])}
       className={cn(
-        "size-7 rounded-full grid place-content-center transition-colors",
-        on ? "bg-blue-100 text-blue-700" : "bg-stone-100 text-stone-400 hover:text-stone-600",
+        "size-7 grid place-content-center rounded-full transition-colors",
+        mode === "off" ? "text-stone-300" : "text-blue-600",
       )}
+      aria-label={`Alert: ${mode}`}
+      title={`Alert: ${mode}`}
     >
-      <Icon className="size-3.5" />
+      <Icon className="size-4" />
     </button>
   );
 }
@@ -570,8 +620,7 @@ function ItemDialog({
   const [end, setEnd] = useState("10:30");
   const [activity, setActivity] = useState<string>(ACTIVITIES[0]);
   const [location, setLocation] = useState<string>(LOCATIONS[0]);
-  const [visualAlert, setVisualAlert] = useState(true);
-  const [audioAlert, setAudioAlert] = useState(false);
+  const [alert, setAlert] = useState<AlertMode>("visual");
 
   useEffect(() => {
     if (open) {
@@ -579,8 +628,7 @@ function ItemDialog({
       setEnd(item?.end ?? "10:30");
       setActivity(item?.activity ?? ACTIVITIES[0]);
       setLocation(item?.location ?? LOCATIONS[0]);
-      setVisualAlert(item?.visualAlert ?? true);
-      setAudioAlert(item?.audioAlert ?? false);
+      setAlert(item?.alert ?? "visual");
     }
   }, [open, item]);
 
@@ -627,17 +675,25 @@ function ItemDialog({
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-center justify-between pt-1">
-            <Label className="text-xs flex items-center gap-2">
-              <Bell className="size-3.5" /> Visual alert
-            </Label>
-            <Switch checked={visualAlert} onCheckedChange={setVisualAlert} />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label className="text-xs flex items-center gap-2">
-              <Volume2 className="size-3.5" /> Audio alert
-            </Label>
-            <Switch checked={audioAlert} onCheckedChange={setAudioAlert} />
+          <div>
+            <Label className="text-xs">Alert</Label>
+            <div className="flex gap-2 mt-1">
+              {(["off", "visual", "audio"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setAlert(m)}
+                  className={cn(
+                    "flex-1 h-9 rounded-full border-2 text-xs capitalize",
+                    alert === m
+                      ? "bg-blue-600 border-blue-600 text-white"
+                      : "bg-white border-blue-300 text-blue-700",
+                  )}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <DialogFooter>
@@ -650,8 +706,7 @@ function ItemDialog({
                 end,
                 activity,
                 location,
-                visualAlert,
-                audioAlert,
+                alert,
               })
             }
           >
