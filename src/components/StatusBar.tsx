@@ -187,7 +187,6 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
               aria-label="Session sections"
             >
               <div className="flex items-end gap-1">
-                <ActiveDurationIndicator timers={durationTimers} />
                 {TABS.map((t) => {
                   const Icon = t.icon;
                   const isActive = t.id === activeTab;
@@ -214,6 +213,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
                     </button>
                   );
                 })}
+                <ActiveDurationIndicator timers={durationTimers} />
               </div>
 
               {collapsed && (
@@ -312,18 +312,19 @@ function ActiveDurationIndicator({ timers }: { timers: { id: string; label: stri
           onClick={handleClick}
           aria-label={count > 1 ? `Jump to next running timer (${count} active)` : `Jump to running timer`}
           title={count > 1 ? `${count} timers running — tap to cycle` : timers[0]?.label}
-          initial={{ opacity: 0, scale: 0.6 }}
-          animate={{ opacity: 1, scale: [1, 1.12, 1] }}
-          exit={{ opacity: 0, scale: 0.6, y: [-4, 0], transition: { duration: 0.3, ease: "easeOut" } }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0, scale: [1, 1.12, 1] }}
+          exit={{ opacity: 0, y: [0, -5, 10] }}
           transition={{
+            y: { type: "spring", stiffness: 400, damping: 12 },
             opacity: { duration: 0.25 },
             scale: { duration: 1, repeat: Infinity, ease: "easeInOut" },
           }}
-          className="relative flex items-center justify-center px-2 py-1.5 sm:py-2 cursor-pointer text-sky-400 hover:text-sky-500 transition-colors"
+          className="relative flex items-center justify-center px-2 py-1.5 sm:py-2 cursor-pointer text-blue-600 hover:text-blue-700 transition-colors"
         >
           <Timer className="size-4" />
           {count > 1 && (
-            <span className="absolute top-0.5 right-0 min-w-[14px] h-[14px] px-0.5 rounded-full bg-sky-400 text-white text-[9px] font-semibold leading-[14px] text-center">
+            <span className="absolute top-0.5 right-0 min-w-[14px] h-[14px] px-0.5 rounded-full bg-blue-600 text-white text-[9px] font-semibold leading-[14px] text-center">
               {count}
             </span>
           )}
