@@ -692,12 +692,38 @@ export function ScheduleView() {
                   )}
                   <div className="min-w-0 flex-1">
                     <ScrubText text={displayName} className="text-xs font-medium" />
-                    {apptOverlap && (
-                      <ScrubText
-                        text={`🤝 ${apptOverlap.type} · ${apptOverlap.provider}`}
-                        className="text-[10px] text-blue-700"
+                    {apptOverlap && !(allApptsCollapsed || collapsedAppts[apptOverlap.id]) && (
+                      <div className="flex items-center gap-1">
+                        <ScrubText
+                          text={`🤝 ${apptOverlap.type} · ${apptOverlap.provider}`}
+                          className="text-[10px] text-green-700 flex-1"
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCollapsedAppts((p) => ({ ...p, [apptOverlap.id]: true }));
+                          }}
+                          className="shrink-0 text-green-600 hover:text-green-700"
+                          aria-label="Collapse appointment"
+                        >
+                          <EyeOff className="size-3" />
+                        </button>
+                      </div>
+                    )}
+                    {apptOverlap && (allApptsCollapsed || collapsedAppts[apptOverlap.id]) && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCollapsedAppts((p) => ({ ...p, [apptOverlap.id]: false }));
+                          setAllApptsCollapsed(false);
+                        }}
+                        className="mt-0.5 h-1 w-full rounded-full bg-green-500 hover:bg-green-600"
+                        aria-label="Expand appointment"
                       />
                     )}
+
                   </div>
                 </div>
                 <div className="flex items-center gap-1 min-w-0">
