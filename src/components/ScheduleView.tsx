@@ -154,6 +154,11 @@ const MIN_ROW_MIN = 5;
 const COLLAPSED_ROW_PX = 40;  // uniform row height in collapsed mode
 const CLIENT_GROUP = "Group A"; // demo: this client belongs to Group A
 
+// Defaults — TODO: surface in user settings.
+const DEFAULT_PRIMING_MINUTES = 5;
+const SNOOZE_MINUTES = 1;
+const AUTOFADE_SECONDS = 5;
+
 
 
 const GROUP_A: ScheduleItem[] = [
