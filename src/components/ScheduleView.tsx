@@ -718,7 +718,7 @@ export function ScheduleView() {
               >
                 <div
                   className={cn(
-                    "absolute inset-0 rounded-md border border-stone-200 bg-white transition-colors",
+                    "absolute inset-0 rounded-md border border-stone-300 bg-white transition-colors",
                     isCurrent && "!border-2 !border-blue-500 !bg-blue-50",
                     isCurrent && nowAnim > 0 && "animate-row-flash",
                   )}
