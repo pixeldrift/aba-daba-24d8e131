@@ -368,13 +368,12 @@ function SideBubble({
         {index + 1}
       </span>
       {running && (
-        <motion.span
-          animate={{ opacity: [1, 0.3, 1], scale: [1, 1.3, 1] }}
-          transition={{ duration: 1.2, repeat: Infinity }}
-          className="absolute -bottom-2 left-1/2 -translate-x-1/2 size-1.5 rounded-full bg-blue-500"
+        <span
+          className="absolute -bottom-2 left-1/2 -translate-x-1/2 size-1.5 rounded-full bg-blue-500 animate-pulse-dot"
           aria-hidden
         />
       )}
+
     </button>
   );
 }
