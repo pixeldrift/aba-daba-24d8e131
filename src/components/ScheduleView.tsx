@@ -423,17 +423,24 @@ export function ScheduleView() {
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const scrollToNow = () => {
-    if (currentItem) {
-      const el = rowRefs.current.get(currentItem.id);
-      el?.scrollIntoView({ behavior: "smooth", block: "center" });
-      if (el) {
-        el.classList.remove("animate-row-flash");
-        void el.offsetWidth;
-        el.classList.add("animate-row-flash");
-      }
-      setNowAnim((n) => n + 1);
+    if (!currentItem) return;
+    const el = rowRefs.current.get(currentItem.id);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (el) {
+      el.classList.remove("animate-row-flash");
+      void el.offsetWidth;
+      el.classList.add("animate-row-flash");
     }
+    setNowAnim((n) => n + 1);
   };
+
+  // Auto-scroll to current activity when it changes (or layout/schedule changes).
+  useEffect(() => {
+    if (!currentItem) return;
+    const el = rowRefs.current.get(currentItem.id);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentItem?.id, layoutMode, activeName]);
 
   const setAlertFor = (it: ScheduleItem, m: AlertMode) => {
     updateActive((list) => list.map((x) => (x.id === it.id ? { ...x, alert: m } : x)));
