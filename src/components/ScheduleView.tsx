@@ -645,49 +645,6 @@ export function ScheduleView() {
       </div>
 
 
-      {/* Toggles row */}
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 px-1 text-xs">
-        <button
-          type="button"
-          onClick={() => setShowThumbs((v) => !v)}
-          className={cn(
-            "flex items-center gap-1.5",
-            showThumbs ? "text-blue-600" : "text-stone-400 hover:text-stone-600",
-          )}
-        >
-          <Eye className="size-3.5" />
-          Icons
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowFullDay((v) => !v)}
-          className={cn(
-            "flex items-center gap-1.5",
-            showFullDay ? "text-blue-600" : "text-stone-400 hover:text-stone-600",
-          )}
-          title="Show base (clinic) schedule behind custom"
-        >
-          <CalendarDays className="size-3.5" />
-          Clinic
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setAllApptsCollapsed((v) => !v);
-            setCollapsedAppts({});
-          }}
-          className={cn(
-            "flex items-center gap-1.5",
-            !allApptsCollapsed ? "text-green-700" : "text-stone-400 hover:text-stone-600",
-          )}
-          title="Toggle all appointments"
-        >
-          <HandHelping className="size-3.5" />
-          Appointments
-        </button>
-
-      </div>
-
       {/* Schedule grid */}
       <div className="mt-3 mx-1 rounded-xl bg-white border border-stone-200 overflow-visible">
         <div className="grid grid-cols-[44px_1fr_88px_36px] gap-1.5 px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground border-b border-stone-300 bg-stone-50 rounded-t-xl">
@@ -722,17 +679,15 @@ export function ScheduleView() {
             </div>
           )}
 
-          {merged.map((it) => {
+          {rowLayout.map(({ item: it, top, height }) => {
             const isCurrent = !editMode && currentItem?.id === it.id;
-            const top = (toMin(it.start) - dayStart) * PX_PER_MIN;
-            const durMin = Math.max(toMin(it.end) - toMin(it.start), MIN_ROW_MIN);
-            const height = durMin * PX_PER_MIN;
-            const displayName = it.activity === "Custom" ? it.customName ?? "Custom" : it.activity;
+            const displayName =
+              it.activity === "Custom" ? it.customName ?? "Custom" : it.activity;
             const displayIcon =
               it.activity === "Custom"
                 ? it.customIcon ?? "✨"
                 : ACTIVITY_ICONS[it.activity] ?? "•";
-            const alertMode = effectiveAlert(it);
+            const alertMode = it.alert;
             return (
               <div
                 key={it.id}
@@ -740,47 +695,32 @@ export function ScheduleView() {
                   if (el) rowRefs.current.set(it.id, el);
                   else rowRefs.current.delete(it.id);
                 }}
-                className={cn(
-                  "absolute left-0 right-0",
-                  it.fromBase ? "z-0" : "z-10",
-                )}
+                className="absolute left-0 right-0 z-10"
                 style={{ top, height }}
               >
-                {/* Visual frame — inset for base rows, full width + shadow for custom rows */}
                 <div
                   className={cn(
-                    "absolute inset-y-0 rounded-md border-2 border-transparent transition-colors",
-                    it.fromBase
-                      ? "left-[10px] right-[10px]"
-                      : "left-0 right-0 bg-white shadow-[0_2px_10px_-2px_rgba(0,0,0,0.18)]",
-                    isCurrent && "!border-blue-500 !bg-blue-50 shadow-[0_2px_8px_rgba(37,99,235,0.25)]",
+                    "absolute inset-0 rounded-md border border-stone-200 bg-white transition-colors",
+                    isCurrent && "!border-2 !border-blue-500 !bg-blue-50",
                     isCurrent && nowAnim > 0 && "animate-row-flash",
                   )}
                 />
-                {/* Content grid — columns aligned with header; inset for base rows so the
-                    cream background peeks through the gutter. */}
-                <div
-                  className={cn(
-                    "relative h-full grid grid-cols-[44px_1fr_88px_36px] gap-1.5 items-start pt-1.5",
-                    it.fromBase ? "px-3 opacity-55" : "px-2",
-                    it.fromBase && isCurrent && "opacity-100",
-                  )}
-                >
+                <div className="relative h-full grid grid-cols-[44px_1fr_88px_36px] gap-1.5 items-start pt-1.5 px-2">
                   <div className="text-[11px] tabular-nums leading-tight pl-0.5 pt-0.5">
                     {fmt12(it.start)}
                   </div>
                   <div className="flex items-start gap-1.5 min-w-0">
-                    {showThumbs && <span className="text-base leading-none shrink-0">{displayIcon}</span>}
+                    <span className="text-base leading-none shrink-0">{displayIcon}</span>
                     <ScrubText text={displayName} className="text-xs font-medium flex-1 leading-tight" />
                   </div>
                   <div className="flex items-start gap-1 min-w-0">
-                    {showThumbs && (
-                      <span className="text-sm leading-none shrink-0">{LOCATION_ICONS[it.location] ?? "📍"}</span>
-                    )}
+                    <span className="text-sm leading-none shrink-0">
+                      {LOCATION_ICONS[it.location] ?? "📍"}
+                    </span>
                     <ScrubText text={it.location} className="text-xs flex-1 leading-tight" />
                   </div>
                   <div className="flex items-start justify-center gap-0.5 -mt-1">
-                    {editMode && !it.fromBase ? (
+                    {editMode ? (
                       <>
                         <Button
                           size="icon"
@@ -810,9 +750,7 @@ export function ScheduleView() {
 
 
           {/* Appointment overlays — top layer, on top of activity rows */}
-          {visibleAppts.map((a) => {
-            const top = (toMin(a.start) - dayStart) * PX_PER_MIN;
-            const height = (toMin(a.end) - toMin(a.start)) * PX_PER_MIN;
+          {visibleAppts.map(({ appt: a, top, height }) => {
             const collapsed = allApptsCollapsed || collapsedAppts[a.id];
             if (collapsed) {
               return (
@@ -823,8 +761,8 @@ export function ScheduleView() {
                     setCollapsedAppts((p) => ({ ...p, [a.id]: false }));
                     setAllApptsCollapsed(false);
                   }}
-                  className="absolute left-[6px] right-[6px] z-20 h-1 rounded-full bg-green-500 hover:bg-green-600 shadow-sm"
-                  style={{ top: top + height / 2 - 2 }}
+                  className="absolute left-[4px] right-[4px] z-20 h-1.5 rounded-full bg-green-500 hover:bg-green-600 shadow-[0_2px_6px_-1px_rgba(34,197,94,0.45)] transition-all"
+                  style={{ top }}
                   aria-label={`Expand ${a.type}`}
                   title={`${a.type} · ${a.provider}`}
                 />
@@ -833,16 +771,26 @@ export function ScheduleView() {
             return (
               <div
                 key={a.id}
-                className="absolute left-[4px] right-[4px] z-20 rounded-md bg-green-50 border-2 border-green-500 shadow-[0_4px_14px_-2px_rgba(34,197,94,0.35)] overflow-hidden"
+                className="absolute left-[4px] right-[4px] z-20 rounded-md bg-green-50 border-2 border-green-500 shadow-[0_4px_14px_-2px_rgba(34,197,94,0.35)] overflow-hidden transition-all"
                 style={{ top, height }}
               >
-                <div className="relative h-full grid grid-cols-[44px_1fr_36px] gap-1.5 px-2 items-center">
-                  <div className="text-[11px] tabular-nums leading-tight text-green-800 pl-0.5">
+                <div className="relative h-full grid grid-cols-[44px_1fr_36px] gap-1.5 px-2 pt-1.5 items-start">
+                  <div className="text-[11px] tabular-nums leading-tight text-green-800 pl-0.5 pt-0.5">
                     {fmt12(a.start)}
                   </div>
                   <div className="min-w-0">
-                    <ScrubText text={`🤝 ${a.type}`} className="text-xs font-medium text-green-800" />
-                    <ScrubText text={a.provider} className="text-[10px] text-green-700" />
+                    <ScrubText
+                      text={a.type}
+                      className="text-xs font-semibold text-green-800 leading-tight"
+                    />
+                    <div className="text-[10px] italic text-green-700/90 leading-tight truncate">
+                      {a.provider}
+                    </div>
+                    {a.tag && (
+                      <div className="mt-0.5 inline-flex items-center rounded-full bg-green-600 text-white text-[9px] uppercase tracking-wide px-1.5 py-px font-semibold">
+                        {a.tag}
+                      </div>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -860,6 +808,7 @@ export function ScheduleView() {
           })}
         </div>
       </div>
+
 
 
       {editMode && (
