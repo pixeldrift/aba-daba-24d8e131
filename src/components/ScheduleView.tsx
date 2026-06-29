@@ -40,6 +40,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { ScrubText } from "@/components/ScrubText";
+import { useNotifications } from "@/components/NotificationContext";
 
 
 const LOCATIONS = [
@@ -359,6 +360,53 @@ export function ScheduleView() {
     (i) => nowMin >= toMin(i.start) && nowMin < toMin(i.end),
   );
   const outsideSchedule = !currentItem;
+
+  // ---- Alert firing: when `now` crosses an item's priming or start time,
+  // push a notification. Idempotent per (itemId, kind, day) via dedupeKey.
+  const { push: pushNotification } = useNotifications();
+  const lastNowMinRef = useRef<number>(nowMin);
+  useEffect(() => {
+    const prevMin = lastNowMinRef.current;
+    lastNowMinRef.current = nowMin;
+    if (nowMin <= prevMin) return; // only fire on forward time progression
+    const dayKey = now.toDateString();
+    for (const it of items) {
+      const startMin = toMin(it.start);
+      const alertCfg = it.alertCfg ?? { ...DEFAULT_ALERT, mode: it.alert };
+      const priming = it.priming;
+      // alert-now
+      if (alertCfg.mode !== "off" && prevMin < startMin && nowMin >= startMin) {
+        pushNotification({
+          dedupeKey: `alert-now:${it.id}:${dayKey}`,
+          kind: "alert-now",
+          title: `Time for ${it.customName ?? it.activity}`,
+          body: it.location,
+          icon: alertCfg.mode === "audio" ? "bell-chime" : "bell",
+          autofadeMs: alertCfg.autofade ? AUTOFADE_SECONDS * 1000 : undefined,
+          allowSnooze: alertCfg.allowSnooze,
+          sourceRef: { type: "activity", id: it.id },
+        });
+      }
+      // alert-priming
+      if (priming && priming.mode !== "off") {
+        const primeMin = startMin - priming.minutesPrior;
+        if (prevMin < primeMin && nowMin >= primeMin) {
+          pushNotification({
+            dedupeKey: `alert-priming:${it.id}:${dayKey}`,
+            kind: "alert-priming",
+            title: `In ${priming.minutesPrior} min: ${it.customName ?? it.activity}`,
+            body: it.location,
+            icon: priming.mode === "audio" ? "bell-chime" : "bell",
+            autofadeMs: priming.autofade ? AUTOFADE_SECONDS * 1000 : undefined,
+            allowSnooze: priming.allowSnooze,
+            sourceRef: { type: "activity", id: it.id },
+          });
+        }
+      }
+    }
+  }, [nowMin, items, now, pushNotification]);
+
+
 
   const updateActive = (mut: (items: ScheduleItem[]) => ScheduleItem[]) => {
     setSchedules((prev) =>
