@@ -300,9 +300,8 @@ export function ScheduleView() {
   const nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
   const inDay = nowMin >= dayStart && nowMin <= dayEnd;
 
-  const merged = mergeWithBase(active.items, showFullDay ? base?.items ?? null : null);
-
-  const currentItem = merged.find(
+  const items = active.items;
+  const currentItem = items.find(
     (i) => nowMin >= toMin(i.start) && nowMin < toMin(i.end),
   );
 
@@ -315,12 +314,6 @@ export function ScheduleView() {
   const updateActiveAppts = (mut: (a: Appointment[]) => Appointment[]) => {
     setSchedules((prev) =>
       prev.map((s) => (s.name === activeName ? { ...s, appointments: mut(s.appointments) } : s)),
-    );
-  };
-
-  const setBaseSchedule = (name: string | null) => {
-    setSchedules((prev) =>
-      prev.map((s) => (s.name === activeName ? { ...s, baseScheduleName: name } : s)),
     );
   };
 
@@ -342,7 +335,7 @@ export function ScheduleView() {
     setActiveName(name);
   };
 
-  const createNewSchedule = (name: string, baseName: string | null) => {
+  const createNewSchedule = (name: string) => {
     const trimmed = name.trim();
     if (!trimmed) return;
     let final = trimmed;
@@ -350,7 +343,7 @@ export function ScheduleView() {
     while (schedules.some((s) => s.name === final)) final = `${trimmed} ${n++}`;
     setSchedules((p) => [
       ...p,
-      { name: final, items: [], appointments: [], baseScheduleName: baseName },
+      { name: final, items: [], appointments: [] },
     ]);
     setActiveName(final);
     setEditMode(true);
@@ -387,14 +380,40 @@ export function ScheduleView() {
     minute: "2-digit",
   });
 
-  const totalHeight = (dayEnd - dayStart) * PX_PER_MIN;
-  const arrowTop = editMode
-    ? null
-    : inDay
-      ? (nowMin - dayStart) * PX_PER_MIN
-      : nowMin < dayStart
-        ? 0
-        : totalHeight;
+  // Compute each row's top and height based on layoutMode.
+  const rowLayout = useMemo(() => {
+    if (layoutMode === "collapsed") {
+      return items.map((it, idx) => ({
+        item: it,
+        top: idx * COLLAPSED_ROW_PX,
+        height: COLLAPSED_ROW_PX,
+      }));
+    }
+    return items.map((it) => {
+      const top = (toMin(it.start) - dayStart) * PX_PER_MIN;
+      const durMin = Math.max(toMin(it.end) - toMin(it.start), MIN_ROW_MIN);
+      return { item: it, top, height: durMin * PX_PER_MIN };
+    });
+  }, [items, layoutMode, dayStart]);
+
+  const totalHeight =
+    layoutMode === "collapsed"
+      ? Math.max(items.length * COLLAPSED_ROW_PX, COLLAPSED_ROW_PX)
+      : (dayEnd - dayStart) * PX_PER_MIN;
+
+  const arrowTop = (() => {
+    if (editMode) return null;
+    if (layoutMode === "proportional") {
+      if (inDay) return (nowMin - dayStart) * PX_PER_MIN;
+      return nowMin < dayStart ? 0 : totalHeight;
+    }
+    // collapsed: anchor at current row center, or top/bottom if outside
+    if (currentItem) {
+      const row = rowLayout.find((r) => r.item.id === currentItem.id);
+      if (row) return row.top + row.height / 2;
+    }
+    return nowMin < dayStart ? 0 : totalHeight;
+  })();
 
   const listRef = useRef<HTMLDivElement>(null);
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -403,10 +422,8 @@ export function ScheduleView() {
     if (currentItem) {
       const el = rowRefs.current.get(currentItem.id);
       el?.scrollIntoView({ behavior: "smooth", block: "center" });
-      // Force-replay row flash even when same row stays current.
       if (el) {
         el.classList.remove("animate-row-flash");
-        // reflow
         void el.offsetWidth;
         el.classList.add("animate-row-flash");
       }
@@ -414,42 +431,36 @@ export function ScheduleView() {
     }
   };
 
-  const setAlertFor = (it: MergedRow, m: AlertMode) => {
-    if (it.fromBase) {
-      const baseId = it.id.split("__")[0];
-      setSchedules((prev) =>
-        prev.map((s) =>
-          s.name === activeName
-            ? {
-                ...s,
-                baseAlertOverrides: { ...(s.baseAlertOverrides ?? {}), [baseId]: m },
-              }
-            : s,
-        ),
-      );
-    } else {
-      updateActive((items) => items.map((x) => (x.id === it.id ? { ...x, alert: m } : x)));
-    }
-  };
-
-  const effectiveAlert = (it: MergedRow): AlertMode => {
-    if (it.fromBase) {
-      const baseId = it.id.split("__")[0];
-      return active.baseAlertOverrides?.[baseId] ?? it.alert;
-    }
-    return it.alert;
+  const setAlertFor = (it: ScheduleItem, m: AlertMode) => {
+    updateActive((list) => list.map((x) => (x.id === it.id ? { ...x, alert: m } : x)));
   };
 
 
+  // Appointment overlays, positioned via rowLayout so collapsed mode also lines up.
+  const visibleAppts = useMemo(() => {
+    if (!showAppts) return [];
+    return active.appointments.map((a) => {
+      if (layoutMode === "proportional") {
+        const top = (toMin(a.start) - dayStart) * PX_PER_MIN;
+        const height = Math.max(toMin(a.end) - toMin(a.start), MIN_ROW_MIN) * PX_PER_MIN;
+        return { appt: a, top, height };
+      }
+      // collapsed: pin to row containing the appt start
+      const aStart = toMin(a.start);
+      const aEnd = toMin(a.end);
+      const startRow =
+        rowLayout.find((r) => aStart >= toMin(r.item.start) && aStart < toMin(r.item.end)) ??
+        rowLayout.find((r) => toMin(r.item.start) >= aStart) ??
+        rowLayout[rowLayout.length - 1];
+      const endRow =
+        rowLayout.find((r) => aEnd > toMin(r.item.start) && aEnd <= toMin(r.item.end)) ??
+        startRow;
+      const top = startRow ? startRow.top : 0;
+      const bottom = endRow ? endRow.top + endRow.height : top + COLLAPSED_ROW_PX;
+      return { appt: a, top, height: Math.max(bottom - top, COLLAPSED_ROW_PX) };
+    });
+  }, [showAppts, active.appointments, layoutMode, dayStart, rowLayout]);
 
-  const otherSchedules = schedules.filter((s) => s.name !== activeName);
-
-  // Build appointments visible for activity rows: appointments are shown next to
-  // any activity rows they overlap (regardless of day-of-week, for display demo).
-  const visibleAppts = useMemo(
-    () => (showAppts ? active.appointments : []),
-    [showAppts, active.appointments],
-  );
 
   return (
     <div className="max-w-3xl mx-auto pt-0 pb-12">
