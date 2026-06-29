@@ -680,7 +680,7 @@ export function ScheduleView() {
         className={cn(
           "sticky z-30 -mx-1 px-1 transition-all duration-300",
           stickyCompact
-            ? "bg-background/85 backdrop-blur border-b border-stone-200/70 shadow-sm py-1.5"
+            ? "bg-background border-b border-stone-200/70 shadow-sm py-1.5"
             : "bg-transparent py-2 mt-3",
         )}
         style={{ top: stickyTop }}
@@ -740,8 +740,25 @@ export function ScheduleView() {
               {showAppts ? "Hide Appointments" : "Show Appointments"}
             </span>
           </button>
+
+          {/* Right-side info — fades in when compact/pinned */}
+          <div
+            className={cn(
+              "ml-auto flex items-center gap-2 min-w-0 overflow-hidden transition-all duration-300 ease-out",
+              stickyCompact ? "max-w-[70%] opacity-100" : "max-w-0 opacity-0",
+            )}
+            aria-hidden={!stickyCompact}
+          >
+            <span className="text-[11px] text-stone-500 whitespace-nowrap tabular-nums shrink-0">
+              {now.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+            </span>
+            <span className="text-xs font-bold text-stone-700 whitespace-nowrap truncate">
+              {active.name}
+            </span>
+          </div>
         </div>
       </div>
+
 
 
 
