@@ -633,9 +633,9 @@ export function ScheduleView() {
           }
         >
           {layoutMode === "proportional" ? (
-            <AlignVerticalJustifyStart className="size-3.5" />
-          ) : (
             <Rows3 className="size-3.5" />
+          ) : (
+            <AlignVerticalJustifyStart className="size-3.5" />
           )}
           {layoutMode === "proportional" ? "Show Collapsed" : "Show Proportional"}
         </button>
