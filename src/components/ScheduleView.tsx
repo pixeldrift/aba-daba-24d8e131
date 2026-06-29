@@ -435,8 +435,10 @@ export function ScheduleView() {
     if (currentItem) {
       const el = rowRefs.current.get(currentItem.id);
       el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setNowAnim((n) => n + 1);
     }
   };
+
 
   const otherSchedules = schedules.filter((s) => s.name !== activeName);
 
