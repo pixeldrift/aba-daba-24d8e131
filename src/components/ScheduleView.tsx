@@ -927,11 +927,9 @@ export function ScheduleView() {
 
       <NewScheduleDialog
         open={newSchedOpen}
-        schedules={schedules}
-        defaultBase={active.name}
         onCancel={() => setNewSchedOpen(false)}
-        onCreate={(name, base) => {
-          createNewSchedule(name, base);
+        onCreate={(name) => {
+          createNewSchedule(name);
           setNewSchedOpen(false);
         }}
       />
