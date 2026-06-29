@@ -61,9 +61,10 @@ export function ScrubText({
     setDragging(true);
     startXRef.current = e.clientX;
     startOffsetRef.current = x;
-    (e.target as Element).setPointerCapture?.(e.pointerId);
+    wrapRef.current?.setPointerCapture?.(e.pointerId);
     if (idleTimerRef.current) window.clearTimeout(idleTimerRef.current);
   };
+
   const onPointerMove = (e: React.PointerEvent) => {
     if (!dragging) return;
     const delta = e.clientX - startXRef.current;
@@ -85,13 +86,17 @@ export function ScrubText({
   return (
     <div
       ref={wrapRef}
-      className={cn("relative overflow-hidden touch-pan-y select-none", className)}
+      className={cn("relative overflow-hidden select-none", className)}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      style={mask ? { WebkitMaskImage: mask, maskImage: mask } : undefined}
+      style={{
+        touchAction: dragging ? "none" : "pan-y",
+        ...(mask ? { WebkitMaskImage: mask, maskImage: mask } : {}),
+      }}
     >
+
       <span
         ref={innerRef}
         className="inline-block whitespace-nowrap"
