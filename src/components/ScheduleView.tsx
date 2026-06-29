@@ -175,7 +175,7 @@ const GROUP_B: ScheduleItem[] = [
 ];
 
 const GROUP_C: ScheduleItem[] = [
-  { id: "c1", start: "08:00", end: "08:30", activity: "Arrive/Pairing", location: "Treatment Room", alert: "visual" },
+  { id: "c1", start: "08:00", end: "08:30", activity: "Reading", location: "Classroom", alert: "visual" },
   { id: "c2", start: "08:30", end: "09:30", activity: "Sensory Play", location: "Treatment Room", alert: "off" },
   { id: "c3", start: "09:30", end: "10:30", activity: "Social Group", location: "Classroom", alert: "audio" },
   { id: "c4", start: "10:30", end: "11:00", activity: "Snack", location: "Kitchen", alert: "visual" },
