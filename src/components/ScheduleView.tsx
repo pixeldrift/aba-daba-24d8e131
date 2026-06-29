@@ -865,6 +865,7 @@ export function ScheduleView() {
                 style={{ top, height }}
               >
                 <div
+                  key={isCurrent ? `bg-${nowAnim}` : "bg"}
                   className={cn(
                     "absolute inset-0 rounded-md border border-stone-300 bg-white transition-colors",
                     isCurrent && "!border-2 !border-blue-500 !bg-blue-50",
