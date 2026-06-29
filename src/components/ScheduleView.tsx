@@ -172,9 +172,9 @@ type Schedule = {
 
 const DAY_START = "08:00";
 const DAY_END = "18:00";
-const PX_PER_MIN = 4.5;       // proportional: 5min smallest row ≈ 22px
+const PX_PER_MIN = 3.6;       // proportional: 5min smallest row ≈ 18px
 const MIN_ROW_MIN = 5;
-const COLLAPSED_ROW_PX = 40;  // uniform row height in collapsed mode
+const COLLAPSED_ROW_PX = 36;  // uniform row height in collapsed mode
 const CLIENT_GROUP = "Group A"; // demo: this client belongs to Group A
 
 // Defaults — TODO: surface in user settings.
