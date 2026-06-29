@@ -347,12 +347,20 @@ export function ScheduleView() {
     setActiveName(name);
   };
 
-  const createNewSchedule = (name: string) => {
+  const createNewSchedule = (name: string, baseName: string | null) => {
     const trimmed = name.trim();
-    if (!trimmed || schedules.some((s) => s.name === trimmed)) return;
-    setSchedules((p) => [...p, { name: trimmed, items: [], appointments: [] }]);
-    setActiveName(trimmed);
+    if (!trimmed) return;
+    let final = trimmed;
+    let n = 2;
+    while (schedules.some((s) => s.name === final)) final = `${trimmed} ${n++}`;
+    setSchedules((p) => [
+      ...p,
+      { name: final, items: [], appointments: [], baseScheduleName: baseName },
+    ]);
+    setActiveName(final);
+    setEditMode(true);
   };
+
 
   const renameActive = (newName: string) => {
     if (!newName.trim() || schedules.some((s) => s.name === newName)) return;
