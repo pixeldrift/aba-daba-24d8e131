@@ -687,6 +687,11 @@ export function ScheduleView() {
                 ? it.customIcon ?? "✨"
                 : ACTIVITY_ICONS[it.activity] ?? "•";
             const alertMode = it.alert;
+            const actualDurMin = toMin(it.end) - toMin(it.start);
+            const gridLines =
+              layoutMode === "proportional"
+                ? Math.max(0, Math.floor((actualDurMin - 1) / 5))
+                : 0;
             return (
               <div
                 key={it.id}
