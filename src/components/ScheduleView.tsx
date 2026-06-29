@@ -322,6 +322,34 @@ export function ScheduleView() {
   const [confirmItemDelete, setConfirmItemDelete] = useState<ScheduleItem | null>(null);
   const [confirmApptDelete, setConfirmApptDelete] = useState<Appointment | null>(null);
   const [nowAnim, setNowAnim] = useState(0); // bump to retrigger bounce/flash
+  const [stickyTop, setStickyTop] = useState(0);
+  const [stickyCompact, setStickyCompact] = useState(false);
+  const togglesSentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const bar = document.querySelector("[data-status-bar]") as HTMLElement | null;
+    if (!bar) return;
+    const update = () => setStickyTop(bar.getBoundingClientRect().height);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(bar);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  useEffect(() => {
+    const el = togglesSentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setStickyCompact(!entry.isIntersecting),
+      { rootMargin: `-${stickyTop}px 0px 0px 0px`, threshold: 0 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [stickyTop]);
 
   const items = active.items;
   const nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
