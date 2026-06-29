@@ -141,10 +141,14 @@ type Schedule = {
   appointments: Appointment[];
   baseScheduleName?: string | null;
   locked?: boolean;
+  /** Per-base-item alert overrides; keyed by the base item's id. Personal. */
+  baseAlertOverrides?: Record<string, AlertMode>;
 };
 
 const DAY_START = "08:00";
 const DAY_END = "18:00";
+const PX_PER_MIN = 1.6;
+
 
 const GROUP_A: ScheduleItem[] = [
   { id: "a1", start: "08:00", end: "08:30", activity: "Reading", location: "Classroom", alert: "visual" },
