@@ -284,6 +284,8 @@ export function ScheduleView() {
   const [showThumbs, setShowThumbs] = useState(true);
   const [showFullDay, setShowFullDay] = useState(true);
   const [showAppts, setShowAppts] = useState(true);
+  const [collapsedAppts, setCollapsedAppts] = useState<Record<string, boolean>>({});
+  const [allApptsCollapsed, setAllApptsCollapsed] = useState(false);
 
   const [editing, setEditing] = useState<ScheduleItem | null>(null);
   const [creatingNew, setCreatingNew] = useState(false);
@@ -292,10 +294,11 @@ export function ScheduleView() {
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [newSchedOpen, setNewSchedOpen] = useState(false);
-  const [newSchedName, setNewSchedName] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [confirmItemDelete, setConfirmItemDelete] = useState<ScheduleItem | null>(null);
   const [confirmApptDelete, setConfirmApptDelete] = useState<Appointment | null>(null);
+  const [nowAnim, setNowAnim] = useState(0); // bump to retrigger bounce/flash
+
 
   const dayStart = toMin(DAY_START);
   const dayEnd = toMin(DAY_END);
