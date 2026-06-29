@@ -591,8 +591,7 @@ export function ScheduleView() {
             </Button>
             <Button
               size="sm"
-              variant="ghost"
-              className="h-8 rounded-full text-blue-600 hover:bg-blue-50 px-2.5 text-xs gap-1 [&_svg]:size-3 ml-auto"
+              className="h-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white px-2.5 text-xs gap-1 [&_svg]:size-3 ml-auto"
               onClick={() => setDeleteOpen(true)}
             >
               <Trash2 /> Delete
