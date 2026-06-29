@@ -582,41 +582,39 @@ export function ScheduleView() {
 
       {editMode && (
         <div className="mt-2 space-y-2 px-1">
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex items-center gap-1 flex-nowrap">
             <Button
               size="sm"
-              className="h-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white px-3 [&_svg]:size-3"
+              className="h-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white px-2.5 text-xs gap-1 [&_svg]:size-3"
               onClick={() => {
                 setRenameValue(active.name);
                 setRenameOpen(true);
               }}
             >
-              <Type className="mr-1" /> Rename
+              <Type /> Rename
             </Button>
             <Button
               size="sm"
-              className="h-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white px-3 [&_svg]:size-3"
+              className="h-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white px-2.5 text-xs gap-1 [&_svg]:size-3"
               onClick={duplicateActive}
             >
-              <Copy className="mr-1" /> Duplicate
+              <Copy /> Duplicate
             </Button>
             <Button
               size="sm"
-              className="h-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white px-3 [&_svg]:size-3"
+              className="h-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white px-2.5 text-xs gap-1 [&_svg]:size-3"
               onClick={() => setNewSchedOpen(true)}
             >
-              <FilePlus className="mr-1" /> New
+              <FilePlus /> New
             </Button>
             <Button
               size="sm"
               variant="ghost"
-              className="h-8 rounded-full text-blue-600 hover:bg-blue-50 px-3 [&_svg]:size-3 ml-auto"
+              className="h-8 rounded-full text-blue-600 hover:bg-blue-50 px-2.5 text-xs gap-1 [&_svg]:size-3 ml-auto"
               onClick={() => setDeleteOpen(true)}
-              aria-label="Delete schedule"
             >
-              <Trash2 className="mr-1" /> Delete
+              <Trash2 /> Delete
             </Button>
-
           </div>
           <div className="flex items-center gap-2 text-xs text-stone-600">
             <span>Based on:</span>
@@ -624,9 +622,9 @@ export function ScheduleView() {
               {active.baseScheduleName ?? "None (blank)"}
             </span>
           </div>
-
         </div>
       )}
+
 
       {/* Toggles row */}
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 px-1 text-xs">
