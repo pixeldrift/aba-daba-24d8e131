@@ -4,6 +4,7 @@ import {
   Pencil,
   Trash2,
   Eye,
+  EyeOff,
   Bell,
   BellOff,
   BellRing,
@@ -36,6 +37,8 @@ import { Button } from "@/components/ui/button";
 
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { ScrubText } from "@/components/ScrubText";
+
 
 const LOCATIONS = [
   "Treatment Room",
