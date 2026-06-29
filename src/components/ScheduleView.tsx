@@ -678,12 +678,12 @@ export function ScheduleView() {
           <div className="text-center">Alert</div>
         </div>
 
-        <div ref={listRef} className="relative">
+        <div ref={listRef} className="relative" style={{ height: totalHeight }}>
           {arrowTop !== null && !editMode && (
             <div
               key={`arrow-${nowAnim}`}
               className={cn(
-                "absolute z-20 pointer-events-none -translate-y-1/2",
+                "absolute z-30 pointer-events-none -translate-y-1/2",
                 nowAnim > 0 && "animate-bounce-x",
               )}
               style={{ top: arrowTop, left: -6 }}
@@ -703,15 +703,16 @@ export function ScheduleView() {
             </div>
           )}
 
-          {merged.map((it, idx) => {
+          {merged.map((it) => {
             const isCurrent = !editMode && currentItem?.id === it.id;
-            const apptOverlap = visibleAppts.find((a) => overlaps(a.start, a.end, it.start, it.end));
+            const top = (toMin(it.start) - dayStart) * PX_PER_MIN;
+            const height = (toMin(it.end) - toMin(it.start)) * PX_PER_MIN;
             const displayName = it.activity === "Custom" ? it.customName ?? "Custom" : it.activity;
             const displayIcon =
               it.activity === "Custom"
                 ? it.customIcon ?? "✨"
                 : ACTIVITY_ICONS[it.activity] ?? "•";
-            const tickCount = Math.max(1, Math.round((toMin(it.end) - toMin(it.start)) / 5));
+            const alertMode = effectiveAlert(it);
             return (
               <div
                 key={it.id}
@@ -720,114 +721,123 @@ export function ScheduleView() {
                   else rowRefs.current.delete(it.id);
                 }}
                 className={cn(
-                  "relative grid grid-cols-[44px_1fr_88px_36px] gap-1.5 px-2 py-1.5 items-center transition-colors border-2 border-transparent",
-                  idx !== merged.length - 1 && "border-b-stone-300",
-                  it.fromBase && "opacity-50 pl-[18px] pr-[18px]",
-                  isCurrent && "border-blue-500 rounded-lg bg-blue-50 shadow-[0_2px_8px_rgba(37,99,235,0.18)]",
-                  isCurrent && nowAnim > 0 && "animate-row-flash",
-                  apptOverlap && !isCurrent && "border-l-green-500",
+                  "absolute left-0 right-0",
+                  it.fromBase ? "z-0" : "z-10",
                 )}
+                style={{ top, height }}
               >
-                {/* 5-min tick ruler at left edge */}
+                {/* Visual frame — inset for base rows, full width + shadow for custom rows */}
                 <div
-                  aria-hidden
-                  className="absolute left-0 top-1 bottom-1 flex flex-col justify-between items-start pointer-events-none"
-                  style={{ width: 3 }}
-                >
-                  {Array.from({ length: tickCount }).map((_, i) => (
-                    <span
-                      key={i}
-                      className="block bg-stone-300"
-                      style={{ width: i % 2 === 0 ? 3 : 2, height: 1 }}
-                    />
-                  ))}
-                </div>
-                <div className="text-[11px] tabular-nums leading-tight pl-0.5">
-                  {fmt12(it.start)}
-                </div>
-                <div className="flex items-center gap-1.5 min-w-0">
-                  {showThumbs && (
-                    <span className="text-base shrink-0">{displayIcon}</span>
+                  className={cn(
+                    "absolute inset-y-0 rounded-md border-2 border-transparent transition-colors",
+                    it.fromBase
+                      ? "left-[10px] right-[10px] bg-stone-50/80"
+                      : "left-0 right-0 bg-white shadow-[0_2px_10px_-2px_rgba(0,0,0,0.18)]",
+                    isCurrent && "!border-blue-500 !bg-blue-50 shadow-[0_2px_8px_rgba(37,99,235,0.25)]",
+                    isCurrent && nowAnim > 0 && "animate-row-flash",
                   )}
-                  <div className="min-w-0 flex-1">
-                    <ScrubText text={displayName} className="text-xs font-medium" />
-                    {apptOverlap && !(allApptsCollapsed || collapsedAppts[apptOverlap.id]) && (
-                      <div className="flex items-center gap-1">
-                        <ScrubText
-                          text={`🤝 ${apptOverlap.type} · ${apptOverlap.provider}`}
-                          className="text-[10px] text-green-700 flex-1"
-                        />
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setCollapsedAppts((p) => ({ ...p, [apptOverlap.id]: true }));
-                          }}
-                          className="shrink-0 text-green-600 hover:text-green-700"
-                          aria-label="Collapse appointment"
+                />
+                {/* Content grid — columns aligned with header regardless of base/custom */}
+                <div
+                  className={cn(
+                    "relative h-full grid grid-cols-[44px_1fr_88px_36px] gap-1.5 px-2 items-center",
+                    it.fromBase && !isCurrent && "opacity-55",
+                  )}
+                >
+                  <div className="text-[11px] tabular-nums leading-tight pl-0.5">
+                    {fmt12(it.start)}
+                  </div>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {showThumbs && <span className="text-base shrink-0">{displayIcon}</span>}
+                    <ScrubText text={displayName} className="text-xs font-medium flex-1" />
+                  </div>
+                  <div className="flex items-center gap-1 min-w-0">
+                    {showThumbs && (
+                      <span className="text-sm shrink-0">{LOCATION_ICONS[it.location] ?? "📍"}</span>
+                    )}
+                    <ScrubText text={it.location} className="text-xs flex-1" />
+                  </div>
+                  <div className="flex items-center justify-center gap-0.5">
+                    {editMode && !it.fromBase ? (
+                      <>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="size-6 text-blue-600 hover:bg-blue-50 [&_svg]:size-3"
+                          onClick={() => setEditing(it)}
                         >
-                          <EyeOff className="size-3" />
-                        </button>
-                      </div>
+                          <Pencil />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="size-6 text-blue-600 hover:bg-blue-50 [&_svg]:size-3"
+                          onClick={() => setConfirmItemDelete(it)}
+                        >
+                          <Trash2 />
+                        </Button>
+                      </>
+                    ) : (
+                      <AlertCycle mode={alertMode} onChange={(m) => setAlertFor(it, m)} />
                     )}
-                    {apptOverlap && (allApptsCollapsed || collapsedAppts[apptOverlap.id]) && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCollapsedAppts((p) => ({ ...p, [apptOverlap.id]: false }));
-                          setAllApptsCollapsed(false);
-                        }}
-                        className="mt-0.5 h-1 w-full rounded-full bg-green-500 hover:bg-green-600"
-                        aria-label="Expand appointment"
-                      />
-                    )}
-
                   </div>
                 </div>
-                <div className="flex items-center gap-1 min-w-0">
-                  {showThumbs && (
-                    <span className="text-sm shrink-0">{LOCATION_ICONS[it.location] ?? "📍"}</span>
-                  )}
-                  <ScrubText text={it.location} className="text-xs flex-1" />
-                </div>
+              </div>
+            );
+          })}
 
-                <div className="flex items-center justify-center gap-0.5">
-                  {editMode && !it.fromBase ? (
-                    <>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="size-6 text-blue-600 hover:bg-blue-50 [&_svg]:size-3"
-                        onClick={() => setEditing(it)}
-                      >
-                        <Pencil />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="size-6 text-blue-600 hover:bg-blue-50 [&_svg]:size-3"
-                        onClick={() => setConfirmItemDelete(it)}
-                      >
-                        <Trash2 />
-                      </Button>
-                    </>
-                  ) : (
-                    <AlertCycle
-                      mode={it.alert}
-                      onChange={(m) =>
-                        updateActive((items) =>
-                          items.map((x) => (x.id === it.id ? { ...x, alert: m } : x)),
-                        )
-                      }
-                    />
-                  )}
+          {/* Appointment overlays — top layer, on top of activity rows */}
+          {visibleAppts.map((a) => {
+            const top = (toMin(a.start) - dayStart) * PX_PER_MIN;
+            const height = (toMin(a.end) - toMin(a.start)) * PX_PER_MIN;
+            const collapsed = allApptsCollapsed || collapsedAppts[a.id];
+            if (collapsed) {
+              return (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => {
+                    setCollapsedAppts((p) => ({ ...p, [a.id]: false }));
+                    setAllApptsCollapsed(false);
+                  }}
+                  className="absolute left-[6px] right-[6px] z-20 h-1 rounded-full bg-green-500 hover:bg-green-600 shadow-sm"
+                  style={{ top: top + height / 2 - 2 }}
+                  aria-label={`Expand ${a.type}`}
+                  title={`${a.type} · ${a.provider}`}
+                />
+              );
+            }
+            return (
+              <div
+                key={a.id}
+                className="absolute left-[4px] right-[4px] z-20 rounded-md bg-green-50 border-2 border-green-500 shadow-[0_4px_14px_-2px_rgba(34,197,94,0.35)] overflow-hidden"
+                style={{ top, height }}
+              >
+                <div className="relative h-full grid grid-cols-[44px_1fr_36px] gap-1.5 px-2 items-center">
+                  <div className="text-[11px] tabular-nums leading-tight text-green-800 pl-0.5">
+                    {fmt12(a.start)}
+                  </div>
+                  <div className="min-w-0">
+                    <ScrubText text={`🤝 ${a.type}`} className="text-xs font-medium text-green-800" />
+                    <ScrubText text={a.provider} className="text-[10px] text-green-700" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCollapsedAppts((p) => ({ ...p, [a.id]: true }))
+                    }
+                    className="size-6 grid place-items-center rounded-full text-green-700 hover:bg-green-100"
+                    aria-label="Collapse appointment"
+                  >
+                    <EyeOff className="size-3.5" />
+                  </button>
                 </div>
               </div>
             );
           })}
         </div>
       </div>
+
 
       {editMode && (
         <div className="mt-3 px-1 space-y-3">
