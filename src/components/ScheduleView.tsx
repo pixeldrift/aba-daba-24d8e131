@@ -807,8 +807,8 @@ export function ScheduleView() {
       )}
 
       {/* Schedule grid */}
-      <div className="mt-3 mx-1 rounded-xl bg-white border border-stone-200 overflow-hidden">
-        <div className="grid grid-cols-[44px_1fr_88px_36px] gap-1.5 px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground border-b border-stone-300 bg-stone-50">
+      <div className="mt-3 mx-1 rounded-xl bg-white border border-stone-200 relative">
+        <div className="grid grid-cols-[40px_1fr_84px_34px] gap-1 px-1.5 py-1 text-[10px] uppercase tracking-wide text-muted-foreground border-b border-stone-300 bg-stone-50 rounded-t-xl">
           <div className="text-right">Time</div>
           <div>Activity</div>
           <div>Location</div>
