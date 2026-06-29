@@ -560,22 +560,20 @@ export function ScheduleView() {
             <Button
               size="sm"
               className="h-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white px-3 [&_svg]:size-3"
-              onClick={() => {
-                setNewSchedName("");
-                setNewSchedOpen(true);
-              }}
+              onClick={() => setNewSchedOpen(true)}
             >
               <FilePlus className="mr-1" /> New
             </Button>
             <Button
               size="sm"
               variant="ghost"
-              className="h-8 rounded-full text-blue-600 hover:bg-blue-50 px-2 [&_svg]:size-3.5 ml-auto"
+              className="h-8 rounded-full text-blue-600 hover:bg-blue-50 px-3 [&_svg]:size-3 ml-auto"
               onClick={() => setDeleteOpen(true)}
               aria-label="Delete schedule"
             >
-              <Trash2 />
+              <Trash2 className="mr-1" /> Delete
             </Button>
+
           </div>
           <div className="flex items-center gap-2">
             <Label className="text-xs text-stone-600 shrink-0">Base schedule</Label>
