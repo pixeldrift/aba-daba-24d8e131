@@ -598,14 +598,51 @@ export function ScheduleView() {
               <Trash2 /> Delete
             </Button>
           </div>
-          <div className="flex items-center gap-2 text-xs text-stone-600">
-            <span>Based on:</span>
-            <span className="font-medium text-blue-700">
-              {active.baseScheduleName ?? "None (blank)"}
-            </span>
+          <div className="text-xs text-stone-600">
+            <span className="font-medium text-blue-700">{active.name}</span>
           </div>
         </div>
       )}
+
+
+      {/* Toggles row */}
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 px-1 text-xs">
+        <button
+          type="button"
+          onClick={() =>
+            setLayoutMode((m) => (m === "proportional" ? "collapsed" : "proportional"))
+          }
+          className="flex items-center gap-1.5 text-blue-600"
+          title={
+            layoutMode === "proportional"
+              ? "Switch to collapsed (uniform) rows"
+              : "Switch to proportional (time-scaled) rows"
+          }
+        >
+          {layoutMode === "proportional" ? (
+            <AlignVerticalJustifyStart className="size-3.5" />
+          ) : (
+            <Rows3 className="size-3.5" />
+          )}
+          {layoutMode === "proportional" ? "Proportional" : "Collapsed"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setShowAppts((v) => !v);
+            setAllApptsCollapsed(false);
+            setCollapsedAppts({});
+          }}
+          className={cn(
+            "flex items-center gap-1.5",
+            showAppts ? "text-green-700" : "text-stone-400 hover:text-stone-600",
+          )}
+          title="Show or hide appointment overlays"
+        >
+          <HandHelping className="size-3.5" />
+          {showAppts ? "Hide Appointments" : "Show Appointments"}
+        </button>
+      </div>
 
 
       {/* Toggles row */}
