@@ -505,7 +505,17 @@ export function ScheduleView() {
           <SelectContent className="rounded-2xl">
             {schedules.map((s) => (
               <SelectItem key={s.name} value={s.name} className={SELECT_ITEM_CLS}>
-                {s.name}
+                <span className="inline-flex items-center gap-1.5">
+                  {s.name}
+                  {s.name === CLIENT_GROUP && (
+                    <Star
+                      className="size-3.5 text-blue-600"
+                      fill="currentColor"
+                      strokeWidth={0}
+                      aria-label="Client's group"
+                    />
+                  )}
+                </span>
               </SelectItem>
             ))}
           </SelectContent>
