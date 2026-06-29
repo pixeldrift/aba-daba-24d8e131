@@ -680,7 +680,7 @@ export function ScheduleView() {
                   it.fromBase && "opacity-50 pl-5 pr-3",
                   isCurrent && "border-blue-500 rounded-lg bg-blue-50 shadow-[0_2px_8px_rgba(37,99,235,0.18)]",
                   isCurrent && nowAnim > 0 && "animate-row-flash",
-                  apptOverlap && !isCurrent && "border-l-blue-400",
+                  apptOverlap && !isCurrent && "border-l-green-500",
                 )}
               >
                 <div className="text-[11px] tabular-nums leading-tight pl-0.5">
