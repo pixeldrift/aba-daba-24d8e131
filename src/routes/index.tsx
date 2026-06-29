@@ -109,7 +109,9 @@ const cards: CardConfig[] = [
 function Index() {
   return (
     <SessionProvider>
-      <IndexInner />
+      <NotificationProvider>
+        <IndexInner />
+      </NotificationProvider>
     </SessionProvider>
   );
 }
