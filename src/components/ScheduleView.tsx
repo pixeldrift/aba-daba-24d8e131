@@ -17,7 +17,7 @@ import {
   Star,
   Rows3,
   AlignVerticalJustifyStart,
-  ChevronRight,
+  
 } from "lucide-react";
 import {
   Select,
@@ -172,9 +172,9 @@ type Schedule = {
 
 const DAY_START = "08:00";
 const DAY_END = "18:00";
-const PX_PER_MIN = 4.5;       // proportional: 5min smallest row ≈ 22px
+const PX_PER_MIN = 3.6;       // proportional: 5min smallest row ≈ 18px
 const MIN_ROW_MIN = 5;
-const COLLAPSED_ROW_PX = 40;  // uniform row height in collapsed mode
+const COLLAPSED_ROW_PX = 36;  // uniform row height in collapsed mode
 const CLIENT_GROUP = "Group A"; // demo: this client belongs to Group A
 
 // Defaults — TODO: surface in user settings.
@@ -322,6 +322,34 @@ export function ScheduleView() {
   const [confirmItemDelete, setConfirmItemDelete] = useState<ScheduleItem | null>(null);
   const [confirmApptDelete, setConfirmApptDelete] = useState<Appointment | null>(null);
   const [nowAnim, setNowAnim] = useState(0); // bump to retrigger bounce/flash
+  const [stickyTop, setStickyTop] = useState(0);
+  const [stickyCompact, setStickyCompact] = useState(false);
+  const togglesSentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const bar = document.querySelector("[data-status-bar]") as HTMLElement | null;
+    if (!bar) return;
+    const update = () => setStickyTop(bar.getBoundingClientRect().height);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(bar);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  useEffect(() => {
+    const el = togglesSentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setStickyCompact(!entry.isIntersecting),
+      { rootMargin: `-${stickyTop}px 0px 0px 0px`, threshold: 0 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [stickyTop]);
 
   const items = active.items;
   const nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
@@ -519,13 +547,18 @@ export function ScheduleView() {
             onClick={scrollToNow}
             disabled={!currentItem || editMode}
             className={cn(
-              "mt-0.5 h-6 text-[10px] uppercase tracking-wide text-white rounded-full px-2 py-0 gap-1 [&_svg]:size-3",
+              "mt-0.5 h-6 text-[10px] uppercase tracking-wide text-white rounded-full px-2 py-0 gap-1",
               !currentItem || editMode
                 ? "bg-stone-300 hover:bg-stone-300"
                 : "bg-blue-600 hover:bg-blue-700",
             )}
           >
-            <ChevronRight strokeWidth={3} />
+            <svg width="9" height="11" viewBox="0 0 9 11" aria-hidden>
+              <path
+                d="M1.6 1 Q0.6 1 0.6 2 V9 Q0.6 10 1.6 10 L7.6 6.3 Q8.6 5.5 7.6 4.7 Z"
+                fill="white"
+              />
+            </svg>
             Now
           </Button>
         </div>
@@ -641,44 +674,75 @@ export function ScheduleView() {
       )}
 
 
-      {/* Toggles row */}
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 px-1 text-xs">
-        <button
-          type="button"
-          onClick={() =>
-            setLayoutMode((m) => (m === "proportional" ? "collapsed" : "proportional"))
-          }
-          className="flex items-center gap-1.5 text-blue-600"
-          title={
-            layoutMode === "proportional"
-              ? "Switch to collapsed (uniform) rows"
-              : "Switch to proportional (time-scaled) rows"
-          }
-        >
-          {layoutMode === "proportional" ? (
-            <Rows3 className="size-3.5" />
-          ) : (
-            <AlignVerticalJustifyStart className="size-3.5" />
-          )}
-          {layoutMode === "proportional" ? "Show Collapsed" : "Show Proportional"}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setShowAppts((v) => !v);
-            setAllApptsCollapsed(false);
-            setCollapsedAppts({});
-          }}
+      {/* Toggles row — sticky under StatusBar */}
+      <div ref={togglesSentinelRef} className="h-0" aria-hidden />
+      <div
+        className={cn(
+          "sticky z-30 -mx-1 px-1 transition-all duration-300",
+          stickyCompact
+            ? "bg-background/85 backdrop-blur border-b border-stone-200/70 shadow-sm py-1.5"
+            : "bg-transparent py-2 mt-3",
+        )}
+        style={{ top: stickyTop }}
+      >
+        <div
           className={cn(
-            "flex items-center gap-1.5",
-            showAppts ? "text-green-700" : "text-stone-400 hover:text-stone-600",
+            "flex items-center text-xs transition-all duration-300",
+            stickyCompact ? "gap-2" : "gap-x-4 gap-y-2 flex-wrap",
           )}
-          title="Show or hide appointment overlays"
         >
-          <HandHelping className="size-3.5" />
-          {showAppts ? "Hide Appointments" : "Show Appointments"}
-        </button>
+          <button
+            type="button"
+            onClick={() =>
+              setLayoutMode((m) => (m === "proportional" ? "collapsed" : "proportional"))
+            }
+            className="flex items-center gap-1.5 text-blue-600"
+            title={
+              layoutMode === "proportional"
+                ? "Switch to collapsed (uniform) rows"
+                : "Switch to proportional (time-scaled) rows"
+            }
+          >
+            {layoutMode === "proportional" ? (
+              <Rows3 className="size-3.5 shrink-0" />
+            ) : (
+              <AlignVerticalJustifyStart className="size-3.5 shrink-0" />
+            )}
+            <span
+              className={cn(
+                "overflow-hidden whitespace-nowrap transition-all duration-300 ease-out",
+                stickyCompact ? "max-w-0 opacity-0" : "max-w-[140px] opacity-100",
+              )}
+            >
+              {layoutMode === "proportional" ? "Show Collapsed" : "Show Proportional"}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowAppts((v) => !v);
+              setAllApptsCollapsed(false);
+              setCollapsedAppts({});
+            }}
+            className={cn(
+              "flex items-center gap-1.5",
+              showAppts ? "text-green-700" : "text-stone-400 hover:text-stone-600",
+            )}
+            title="Show or hide appointment overlays"
+          >
+            <HandHelping className="size-3.5 shrink-0" />
+            <span
+              className={cn(
+                "overflow-hidden whitespace-nowrap transition-all duration-300 ease-out",
+                stickyCompact ? "max-w-0 opacity-0" : "max-w-[160px] opacity-100",
+              )}
+            >
+              {showAppts ? "Hide Appointments" : "Show Appointments"}
+            </span>
+          </button>
+        </div>
       </div>
+
 
 
       {editMode && (
@@ -743,8 +807,8 @@ export function ScheduleView() {
       )}
 
       {/* Schedule grid */}
-      <div className="mt-3 mx-1 rounded-xl bg-white border border-stone-200 overflow-hidden">
-        <div className="grid grid-cols-[44px_1fr_88px_36px] gap-1.5 px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground border-b border-stone-300 bg-stone-50">
+      <div className="mt-3 mx-1 rounded-xl bg-white border border-stone-200 relative">
+        <div className="grid grid-cols-[40px_1fr_84px_34px] gap-1 px-1.5 py-1 text-[10px] uppercase tracking-wide text-muted-foreground border-b border-stone-300 bg-stone-50 rounded-t-xl">
           <div className="text-right">Time</div>
           <div>Activity</div>
           <div>Location</div>
@@ -801,6 +865,7 @@ export function ScheduleView() {
                 style={{ top, height }}
               >
                 <div
+                  key={isCurrent ? `bg-${nowAnim}` : "bg"}
                   className={cn(
                     "absolute inset-0 rounded-md border border-stone-300 bg-white transition-colors",
                     isCurrent && "!border-2 !border-blue-500 !bg-blue-50",
@@ -814,7 +879,7 @@ export function ScheduleView() {
                     style={{ top: (i + 1) * 5 * PX_PER_MIN }}
                   />
                 ))}
-                <div className="relative h-full grid grid-cols-[44px_1fr_88px_36px] gap-1.5 items-start pt-1.5 px-2">
+                <div className="relative h-full grid grid-cols-[40px_1fr_84px_34px] gap-1 items-start pt-0.5 px-1.5">
                   <div className="text-[11px] tabular-nums leading-tight pl-0.5 pt-0.5">
                     {fmt12(it.start)}
                   </div>
@@ -883,23 +948,25 @@ export function ScheduleView() {
                 className="absolute left-[4px] right-[4px] z-20 rounded-md bg-green-50 border-2 border-green-500 shadow-[0_4px_14px_-2px_rgba(34,197,94,0.35)] overflow-hidden transition-all"
                 style={{ top, height }}
               >
-                <div className="relative h-full grid grid-cols-[44px_1fr_36px] gap-1.5 px-2 pt-1.5 items-start">
+                <div className="relative h-full grid grid-cols-[40px_1fr_30px] gap-1 px-1.5 pt-0.5 items-start">
                   <div className="text-[11px] tabular-nums leading-tight text-green-800 pl-0.5 pt-0.5">
                     {fmt12(a.start)}
                   </div>
                   <div className="min-w-0">
-                    <ScrubText
-                      text={a.type}
-                      className="text-xs font-semibold text-green-800 leading-tight"
-                    />
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <ScrubText
+                        text={a.type}
+                        className="text-xs font-semibold text-green-800 leading-tight truncate"
+                      />
+                      {a.tag && (
+                        <span className="shrink-0 inline-flex items-center rounded-full bg-green-600 text-white text-[9px] uppercase tracking-wide px-1.5 py-px font-semibold">
+                          {a.tag}
+                        </span>
+                      )}
+                    </div>
                     <div className="text-[10px] italic text-green-700/90 leading-tight truncate">
                       {a.provider}
                     </div>
-                    {a.tag && (
-                      <div className="mt-0.5 inline-flex items-center rounded-full bg-green-600 text-white text-[9px] uppercase tracking-wide px-1.5 py-px font-semibold">
-                        {a.tag}
-                      </div>
-                    )}
                   </div>
                   <button
                     type="button"
