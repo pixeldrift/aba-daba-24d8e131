@@ -214,12 +214,12 @@ const PHINEAS: ScheduleItem[] = [
 ];
 
 const PHINEAS_APPTS: Appointment[] = [
-  { id: "ap1", start: "11:00", end: "11:30", days: ["Mon", "Wed"], type: "Speech Therapy", provider: "Dr. Lopez" },
-  { id: "ap2", start: "13:00", end: "13:30", days: ["Tue", "Thu"], type: "Occupational Therapy", provider: "Sam Patel" },
+  { id: "ap1", start: "11:00", end: "11:30", days: ["Mon", "Wed"], type: "Speech Therapy", provider: "Dr. Lopez", tag: "Co-Treat" },
+  { id: "ap2", start: "13:00", end: "13:30", days: ["Tue", "Thu"], type: "Occupational Therapy", provider: "Sam Patel", tag: "Handoff Session" },
 ];
 
 const PRESETS: Schedule[] = [
-  { name: "Phineas' Schedule", items: PHINEAS, appointments: PHINEAS_APPTS, baseScheduleName: "Group A", baseAlertOverrides: {} },
+  { name: "Phineas' Schedule", items: PHINEAS, appointments: PHINEAS_APPTS },
   { name: "Group A", items: GROUP_A, appointments: [], locked: true },
   { name: "Group B", items: GROUP_B, appointments: [], locked: true },
   { name: "Group C", items: GROUP_C, appointments: [], locked: true },
