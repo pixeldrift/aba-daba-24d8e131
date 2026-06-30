@@ -730,7 +730,10 @@ export function ScheduleView() {
       <div className="mt-3" />
       <div ref={togglesSentinelRef} className="h-0" aria-hidden />
       <div
-        className="sticky z-40 w-screen relative left-1/2 -translate-x-1/2 bg-background border-b border-stone-200/70 shadow-sm py-1.5 px-3"
+        className={cn(
+          "sticky z-40 w-full bg-background border-b border-stone-200/70 py-1.5 px-3",
+          stickyCompact ? "shadow-[0_2px_4px_-2px_rgba(0,0,0,0.1)]" : "shadow-none",
+        )}
         style={{ top: stickyTop }}
       >
         <div className="relative flex items-center text-xs gap-2 max-w-3xl mx-auto">
