@@ -89,10 +89,18 @@ export function useNotifications() {
 
 const MAX_RETAINED = 50;
 
-export function NotificationProvider({ children }: { children: ReactNode }) {
+export function NotificationProvider({ children, onActivate }: { children: ReactNode; onActivate?: (n: Notification) => void }) {
   const prefs = useUserPrefs();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const dedupeRef = useRef<Map<string, string>>(new Map()); // dedupeKey -> id
+  const onActivateRef = useRef(onActivate);
+  useEffect(() => { onActivateRef.current = onActivate; }, [onActivate]);
+
+  const activate = useCallback((n: Notification) => {
+    onActivateRef.current?.(n);
+    setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, state: "archived" } : x)));
+  }, []);
+
 
   const archive = useCallback((id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, state: "archived" } : n)));
