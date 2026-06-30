@@ -210,6 +210,7 @@ function IndexInner() {
                   );
               }
             })}
+            </div>
           </div>
         )}
 
