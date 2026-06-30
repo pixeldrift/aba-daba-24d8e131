@@ -43,6 +43,11 @@ export function CardShell({
 }: CardShellProps) {
   const showProgress = typeof progress === "number";
   const pct = showProgress ? Math.min(100, Math.max(0, progress!)) : 0;
+  const barBg = isComplete
+    ? "bg-green-500/30"
+    : pct >= 50
+      ? "bg-yellow-400/30"
+      : "bg-blue-400/30";
 
   return (
     <article
