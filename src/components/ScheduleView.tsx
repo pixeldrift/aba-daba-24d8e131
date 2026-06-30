@@ -1703,10 +1703,9 @@ function AlertsBlock({
           </div>
         </div>
       </div>
-
-      </div>
     </div>
   );
+
 }
 
 function ToggleRow({
