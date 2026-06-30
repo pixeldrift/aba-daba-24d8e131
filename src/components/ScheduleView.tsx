@@ -730,10 +730,10 @@ export function ScheduleView() {
       <div className="mt-3" />
       <div ref={togglesSentinelRef} className="h-0" aria-hidden />
       <div
-        className="sticky z-30 -mx-1 px-1 bg-background border-b border-stone-200/70 shadow-sm py-1.5"
+        className="sticky z-40 w-screen relative left-1/2 -translate-x-1/2 bg-background border-b border-stone-200/70 shadow-sm py-1.5 px-3"
         style={{ top: stickyTop }}
       >
-        <div className="relative flex items-center text-xs gap-2">
+        <div className="relative flex items-center text-xs gap-2 max-w-3xl mx-auto">
           <button
             type="button"
             onClick={() =>
@@ -784,7 +784,20 @@ export function ScheduleView() {
             </span>
           </button>
 
-          {/* Centered time button — fades in when pinned */}
+          {/* Centered schedule name — fades in when pinned */}
+          <div
+            className={cn(
+              "absolute left-1/2 -translate-x-1/2 flex items-center min-w-0 overflow-hidden transition-opacity duration-300 ease-out pointer-events-none",
+              stickyCompact ? "opacity-100" : "opacity-0",
+            )}
+            aria-hidden={!stickyCompact}
+          >
+            <span className="text-xs font-bold text-stone-700 whitespace-nowrap truncate">
+              {active.name}
+            </span>
+          </div>
+
+          {/* Right-aligned time button — fades in when pinned */}
           <button
             type="button"
             onClick={scrollToNow}
@@ -792,7 +805,7 @@ export function ScheduleView() {
             aria-hidden={!stickyCompact}
             tabIndex={stickyCompact ? 0 : -1}
             className={cn(
-              "absolute left-1/2 -translate-x-1/2 inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[11px] font-semibold text-white tabular-nums transition-opacity duration-300 ease-out",
+              "ml-auto inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[11px] font-semibold text-white tabular-nums transition-opacity duration-300 ease-out",
               stickyCompact ? "opacity-100" : "opacity-0 pointer-events-none",
               !currentItem || editMode
                 ? "bg-stone-300"
@@ -811,19 +824,6 @@ export function ScheduleView() {
             </svg>
             {now.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
           </button>
-
-          {/* Schedule name — fades in when pinned */}
-          <div
-            className={cn(
-              "ml-auto flex items-center min-w-0 overflow-hidden transition-all duration-300 ease-out",
-              stickyCompact ? "max-w-[40%] opacity-100" : "max-w-0 opacity-0",
-            )}
-            aria-hidden={!stickyCompact}
-          >
-            <span className="text-xs font-bold text-stone-700 whitespace-nowrap truncate">
-              {active.name}
-            </span>
-          </div>
         </div>
       </div>
 
