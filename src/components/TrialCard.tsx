@@ -399,38 +399,12 @@ export function TrialCard({
                 </span>
               )}
             </div>
-          </div>
-
-          {/* Progress indicator — sits on top of bar, can extend outside card */}
-          <motion.div
-            className="absolute bottom-0 left-0 z-30 pointer-events-none"
-            animate={{ left: `${progress}%` }}
-            transition={{ type: "spring", stiffness: 180, damping: 26 }}
-            style={{ translateX: "-50%" }}
-          >
-            <motion.div
-              animate={isComplete ? { scale: [1, 1.25, 1] } : { scale: 1 }}
-              transition={{ duration: 0.7 }}
-              className="relative flex flex-col items-center"
-            >
-              <div
-                className={cn(
-                  "grid place-items-center h-[18px] min-w-[30px] px-1.5 rounded-md text-[10px] font-semibold leading-none text-white shadow-[0_2px_6px_rgba(0,0,0,0.18)]",
-                  isComplete ? "bg-green-500" : "bg-blue-500",
-                )}
-              >
-                {isComplete ? <Check className="size-3" strokeWidth={3} /> : `${progress}%`}
+            {isComplete && (
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <Check className="size-3.5 text-green-700" strokeWidth={3} />
               </div>
-              <div
-                className={cn(
-                  "w-0 h-0 border-l-[4px] border-r-[4px] border-t-[5px] border-l-transparent border-r-transparent",
-                  isComplete ? "border-t-green-500" : "border-t-blue-500",
-                )}
-                aria-hidden
-              />
-              {isComplete && <Starburst />}
-            </motion.div>
-          </motion.div>
+            )}
+          </div>
         </div>
       )}
 
