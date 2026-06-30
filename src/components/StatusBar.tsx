@@ -617,9 +617,9 @@ function ExpandedSessionBox({
           className="flex flex-col items-center gap-0.5 mt-0.5 leading-tight"
         >
           {contextTime && (
-            <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1 tabular-nums">
-              {formatRelativeFromNow(contextTime)} ({formatMDY(contextTime)}) by
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-200 text-blue-800 text-[10px]">
+            <span className="text-[10px] text-muted-foreground block text-center tabular-nums whitespace-pre-wrap">
+              {formatRelativeFromNow(contextTime)}{"\u00a0"}({formatMDY(contextTime)}) by{"\n"}
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-200 text-blue-800 text-[10px] mt-0.5">
                 <User className="size-2.5" fill="currentColor" strokeWidth={0} />
                 <span>Perry Plat</span>
               </span>
