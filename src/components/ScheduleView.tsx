@@ -41,6 +41,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { ScrubText } from "@/components/ScrubText";
 import { useNotifications } from "@/components/NotificationContext";
+import { TimeOfDayKeypad, formatTimeOfDay } from "@/components/TimeOfDayKeypad";
 
 
 const LOCATIONS = [
@@ -112,6 +113,14 @@ const APPOINTMENT_TYPES = [
   "Behavioral Consult",
   "Parent Meeting",
 ] as const;
+
+const APPOINTMENT_TYPE_ICONS: Record<string, string> = {
+  "Speech Therapy": "🗣️",
+  "Occupational Therapy": "🍳",
+  "Physical Therapy": "💪🏼",
+  "Behavioral Consult": "🧠",
+  "Parent Meeting": "🤝",
+};
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"] as const;
 type Day = (typeof DAYS)[number];
@@ -836,13 +845,6 @@ export function ScheduleView() {
 
       {editMode && (
         <div className="mt-3 px-1 space-y-3">
-          <Button
-            className="w-full rounded-full bg-blue-600 hover:bg-blue-700 text-white"
-            onClick={() => setCreatingNew(true)}
-          >
-            Add activity <Plus className="size-4 ml-1.5" />
-          </Button>
-
           {/* Appointments editor */}
           <div className="rounded-xl border border-stone-200 bg-white p-3">
             <div className="flex items-center justify-between mb-2">
@@ -865,6 +867,7 @@ export function ScheduleView() {
                   <div key={a.id} className="flex items-center gap-2 text-xs">
                     <div className="flex-1 min-w-0">
                       <div className="font-medium truncate">
+                        <span className="mr-1">{APPOINTMENT_TYPE_ICONS[a.type] ?? ""}</span>
                         {a.type} <span className="text-stone-500">· {a.provider}</span>
                       </div>
                       <div className="text-[11px] text-muted-foreground">
@@ -892,6 +895,13 @@ export function ScheduleView() {
               </div>
             )}
           </div>
+
+          <Button
+            className="w-full rounded-full bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={() => setCreatingNew(true)}
+          >
+            Add Activity <Plus className="size-4 ml-1.5" />
+          </Button>
         </div>
       )}
 
@@ -1119,7 +1129,7 @@ export function ScheduleView() {
 
       <PromptDialog
         open={renameOpen}
-        title="Rename schedule"
+        title="Rename Schedule"
         value={renameValue}
         onChange={setRenameValue}
         onCancel={() => setRenameOpen(false)}
@@ -1141,7 +1151,7 @@ export function ScheduleView() {
 
       <ConfirmDialog
         open={deleteOpen}
-        title="Delete schedule?"
+        title="Delete Schedule?"
         body={`“${active.name}” will be removed.`}
         confirmLabel="Delete"
         onCancel={() => setDeleteOpen(false)}
@@ -1153,7 +1163,7 @@ export function ScheduleView() {
 
       <ConfirmDialog
         open={!!confirmItemDelete}
-        title="Delete activity?"
+        title="Delete Activity?"
         body={confirmItemDelete ? `“${confirmItemDelete.activity}” at ${fmt12(confirmItemDelete.start)} will be removed.` : ""}
         confirmLabel="Delete"
         onCancel={() => setConfirmItemDelete(null)}
@@ -1166,7 +1176,7 @@ export function ScheduleView() {
 
       <ConfirmDialog
         open={!!confirmApptDelete}
-        title="Delete appointment?"
+        title="Delete Appointment?"
         body={confirmApptDelete ? `${confirmApptDelete.type} · ${confirmApptDelete.provider}` : ""}
         confirmLabel="Delete"
         onCancel={() => setConfirmApptDelete(null)}
@@ -1363,19 +1373,19 @@ function ItemDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-sm rounded-2xl border-stone-200 shadow-xl">
-        <DialogHeader>
-          <DialogTitle>{item ? "Edit activity" : "Add activity"}</DialogTitle>
+      <DialogContent className="max-w-sm mx-4 rounded-2xl border-2 border-blue-400 shadow-xl">
+        <DialogHeader className="text-left">
+          <DialogTitle className="capitalize">{item ? "Edit Activity" : "Add Activity"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label className="text-xs">Start</Label>
-              <Input type="time" value={start} onChange={(e) => setStart(e.target.value)} className={cn("mt-1", INPUT_BLUE_CLS)} />
+              <TimeField value={start} onChange={setStart} />
             </div>
             <div>
               <Label className="text-xs">End</Label>
-              <Input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className={cn("mt-1", INPUT_BLUE_CLS)} />
+              <TimeField value={end} onChange={setEnd} />
             </div>
           </div>
           <div>
@@ -1520,19 +1530,19 @@ function AppointmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-sm rounded-2xl border-stone-200 shadow-xl">
-        <DialogHeader>
-          <DialogTitle>{appt ? "Edit appointment" : "Add appointment"}</DialogTitle>
+      <DialogContent className="max-w-sm mx-4 rounded-2xl border-2 border-blue-400 shadow-xl">
+        <DialogHeader className="text-left">
+          <DialogTitle className="capitalize">{appt ? "Edit Appointment" : "Add Appointment"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label className="text-xs">Start</Label>
-              <Input type="time" value={start} onChange={(e) => setStart(e.target.value)} className={cn("mt-1", INPUT_BLUE_CLS)} />
+              <TimeField value={start} onChange={setStart} />
             </div>
             <div>
               <Label className="text-xs">End</Label>
-              <Input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className={cn("mt-1", INPUT_BLUE_CLS)} />
+              <TimeField value={end} onChange={setEnd} />
             </div>
           </div>
           <div>
@@ -1565,7 +1575,9 @@ function AppointmentDialog({
               <SelectTrigger className="rounded-full border-2 border-blue-300 text-blue-700"><SelectValue /></SelectTrigger>
               <SelectContent className="rounded-2xl">
                 {APPOINTMENT_TYPES.map((t) => (
-                  <SelectItem key={t} value={t} className={SELECT_ITEM_CLS}>{t}</SelectItem>
+                  <SelectItem key={t} value={t} className={SELECT_ITEM_CLS}>
+                    {(APPOINTMENT_TYPE_ICONS[t] ?? "•") + " " + t}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -1616,7 +1628,7 @@ function AlertModeRow({
   onMode: (m: AlertMode) => void;
 }) {
   return (
-    <div className="space-y-1">
+    <div className="flex items-center gap-1">
       {ALERT_MODE_OPTIONS.map(({ value, label, Icon }) => {
         const active = mode === value;
         return (
@@ -1625,14 +1637,14 @@ function AlertModeRow({
             type="button"
             onClick={() => onMode(value)}
             className={cn(
-              "w-full h-9 px-3 rounded-full border-2 inline-flex items-center gap-2 text-xs transition-colors",
+              "flex-1 min-w-0 h-9 px-2 rounded-full border-2 inline-flex items-center justify-center gap-1 text-[11px] transition-colors",
               active
                 ? "bg-blue-50 border-blue-500 text-blue-700"
                 : "bg-white border-stone-200 text-stone-500 hover:border-blue-200",
             )}
           >
-            <Icon className="size-4" />
-            <span className="font-medium">{label}</span>
+            <Icon className="size-3.5 shrink-0" />
+            <span className="font-medium truncate">{label}</span>
           </button>
         );
       })}
@@ -1657,16 +1669,18 @@ function AlertsBlock({
         <Label className="text-xs">Default Alert</Label>
         <div className="mt-1 space-y-2">
           <AlertModeRow mode={alert.mode} onMode={(m) => setAlert({ ...alert, mode: m })} />
-          <ToggleRow
-            label="Allow Snooze"
-            checked={alert.allowSnooze}
-            onChange={(v) => setAlert({ ...alert, allowSnooze: v })}
-          />
-          <ToggleRow
-            label="Autofade"
-            checked={alert.autofade}
-            onChange={(v) => setAlert({ ...alert, autofade: v })}
-          />
+          <div className="flex items-center justify-between gap-4 pl-1 pr-1">
+            <ToggleRow
+              label="Allow Snooze"
+              checked={alert.allowSnooze}
+              onChange={(v) => setAlert({ ...alert, allowSnooze: v })}
+            />
+            <ToggleRow
+              label="Auto-Dismiss"
+              checked={alert.autofade}
+              onChange={(v) => setAlert({ ...alert, autofade: v })}
+            />
+          </div>
         </div>
       </div>
       <div>
@@ -1686,16 +1700,18 @@ function AlertsBlock({
               className={cn("h-8 w-16 text-center", INPUT_BLUE_CLS)}
             />
           </div>
-          <ToggleRow
-            label="Allow Snooze"
-            checked={priming.allowSnooze}
-            onChange={(v) => setPriming({ ...priming, allowSnooze: v })}
-          />
-          <ToggleRow
-            label="Autofade"
-            checked={priming.autofade}
-            onChange={(v) => setPriming({ ...priming, autofade: v })}
-          />
+          <div className="flex items-center justify-between gap-4 pl-1 pr-1">
+            <ToggleRow
+              label="Allow Snooze"
+              checked={priming.allowSnooze}
+              onChange={(v) => setPriming({ ...priming, allowSnooze: v })}
+            />
+            <ToggleRow
+              label="Auto-Dismiss"
+              checked={priming.autofade}
+              onChange={(v) => setPriming({ ...priming, autofade: v })}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -1712,10 +1728,33 @@ function ToggleRow({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between pl-1 pr-1">
+    <div className="flex items-center gap-2">
+      <Switch
+        checked={checked}
+        onCheckedChange={onChange}
+        className="data-[state=checked]:bg-blue-600"
+      />
       <span className="text-xs text-stone-600">{label}</span>
-      <Switch checked={checked} onCheckedChange={onChange} />
     </div>
+  );
+}
+
+function TimeField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <TimeOfDayKeypad value={value} onChange={onChange}>
+      {({ isEditing, open }) => (
+        <button
+          type="button"
+          onClick={open}
+          className={cn(
+            "mt-1 flex h-9 w-full items-center justify-center rounded-full border-2 bg-white px-4 text-sm tabular-nums shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)] transition-colors",
+            isEditing ? "border-blue-500 text-blue-700" : "border-blue-300 text-blue-700",
+          )}
+        >
+          {formatTimeOfDay(value)}
+        </button>
+      )}
+    </TimeOfDayKeypad>
   );
 }
 
@@ -1747,7 +1786,7 @@ function NewScheduleDialog({
     <Dialog open={open} onOpenChange={(v) => !v && onCancel()}>
       <DialogContent className="max-w-sm rounded-2xl border-stone-200 shadow-xl">
         <DialogHeader>
-          <DialogTitle>New schedule</DialogTitle>
+          <DialogTitle>New Schedule</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div>
