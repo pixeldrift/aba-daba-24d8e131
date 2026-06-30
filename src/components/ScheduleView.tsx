@@ -965,16 +965,16 @@ export function ScheduleView() {
                     style={{ top: (i + 1) * 5 * PX_PER_MIN }}
                   />
                 ))}
-                <div className="relative h-full grid grid-cols-[40px_1fr_84px_34px] gap-1 items-start pt-0.5 px-1.5">
+                <div className="relative h-full grid grid-cols-[40px_1fr_84px_34px] gap-1 items-start pt-1.5 pb-1 px-2">
                   <div className="text-[11px] tabular-nums leading-tight pl-0.5 pt-0.5">
                     {fmt12(it.start)}
                   </div>
                   <div className="flex items-start gap-1.5 min-w-0">
-                    <span className="text-base leading-none shrink-0">{displayIcon}</span>
+                    <span className="text-sm leading-none shrink-0">{displayIcon}</span>
                     <ScrubText text={displayName} className="text-xs font-medium flex-1 leading-tight" />
                   </div>
                   <div className="flex items-start gap-1 min-w-0">
-                    <span className="text-sm leading-none shrink-0">
+                    <span className="text-xs leading-none shrink-0">
                       {LOCATION_ICONS[it.location] ?? "📍"}
                     </span>
                     <ScrubText text={it.location} className="text-xs flex-1 leading-tight" />
