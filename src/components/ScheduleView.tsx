@@ -1379,13 +1379,10 @@ function ItemDialog({
           <DialogTitle className="capitalize">{item ? "Edit Activity" : "Add Activity"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label className="text-xs">Start</Label>
+          <div>
+            <Label className="text-xs">Time</Label>
+            <div className="mt-1 grid grid-cols-2 gap-2">
               <TimeField value={start} onChange={setStart} />
-            </div>
-            <div>
-              <Label className="text-xs">End</Label>
               <TimeField value={end} onChange={setEnd} />
             </div>
           </div>
