@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { motion } from "motion/react";
-import { Info, Sparkles } from "lucide-react";
+import { Check, Info, Sparkles } from "lucide-react";
 import {
   Sheet,
   SheetContent,
