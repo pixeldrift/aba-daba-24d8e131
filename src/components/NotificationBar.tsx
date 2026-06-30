@@ -100,7 +100,8 @@ function vibrate(pattern: number | number[]) {
 }
 
 export function NotificationBar() {
-  const { live, dismiss, snooze, silence, prefs } = useNotifications();
+  const { live, dismiss, snooze, silence, activate } = useNotifications();
+  const { prefs } = useNotifications();
 
   // Newest on top — show up to maxStackVisible.
   const ordered = [...live].sort((a, b) => b.createdAt - a.createdAt);
@@ -115,6 +116,7 @@ export function NotificationBar() {
             <NotificationRow
               key={n.id}
               n={n}
+              onActivate={() => activate(n)}
               onDismiss={() => dismiss(n.id)}
               onSnooze={() => snooze(n.id)}
               onSilence={() => silence(n.id)}
