@@ -563,13 +563,32 @@ export function ScheduleView({
     setNowAnim((n) => n + 1);
   };
 
-  // Auto-scroll to current activity when it changes (or layout/schedule changes).
+  // Auto-scroll only when the current activity actually changes after mount —
+  // do NOT scroll on initial mount / tab switch.
+  const didInitScrollRef = useRef(false);
   useEffect(() => {
+    if (!didInitScrollRef.current) {
+      didInitScrollRef.current = true;
+      return;
+    }
     if (!currentItem) return;
     const el = rowRefs.current.get(currentItem.id);
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentItem?.id, layoutMode, activeName]);
+
+  // Scroll to a notification's source activity when requested from outside.
+  useEffect(() => {
+    if (!scrollTargetId) return;
+    const el = rowRefs.current.get(scrollTargetId);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.remove("animate-row-flash");
+      void el.offsetWidth;
+      el.classList.add("animate-row-flash");
+    }
+    onScrolledToTarget?.();
+  }, [scrollTargetId, onScrolledToTarget]);
 
   const setAlertFor = (it: ScheduleItem, m: AlertMode) => {
     updateActive((list) => list.map((x) => (x.id === it.id ? { ...x, alert: m } : x)));
