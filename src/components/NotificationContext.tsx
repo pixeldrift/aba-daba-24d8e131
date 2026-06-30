@@ -56,6 +56,7 @@ interface NotificationContextValue {
   snooze: (id: string, ms?: number) => void;
   silence: (id: string) => void;
   archive: (id: string) => void;
+  activate: (n: Notification) => void;
   prefs: UserPrefs;
 }
 
