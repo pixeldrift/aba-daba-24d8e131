@@ -97,10 +97,7 @@ export function CardShell({
           <div className="relative h-5 overflow-hidden rounded-b-xl">
             <div className="absolute inset-0 bg-stone-200">
               <motion.div
-                className={cn(
-                  "absolute inset-y-0 left-0",
-                  isComplete ? "bg-green-500/30" : "bg-blue-400/30",
-                )}
+                className={cn("absolute inset-y-0 left-0", barBg)}
                 animate={{ width: `${pct}%` }}
                 transition={{ type: "spring", stiffness: 180, damping: 26 }}
               />
