@@ -1,0 +1,130 @@
+# ABA DaBa
+
+A demo of consistent, animated data-collection cards for ABA-style session
+tracking — percent correct, frequency, rate, duration, and task-analysis
+targets, plus a schedule view with alerts and a live session timer. Built to
+explore UX/UI patterns; not a production data system.
+
+## Tech stack
+
+- [TanStack Start](https://tanstack.com/start) + [TanStack Router](https://tanstack.com/router) (React 19, SSR)
+- [Tailwind CSS v4](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/) (Radix primitives)
+- [Motion](https://motion.dev/) (formerly Framer Motion) for animation
+- [Nitro](https://nitro.build/) for the deployable server build — swappable across hosts, see [Deployment](#deployment)
+
+## Getting started
+
+```bash
+bun install
+bun run dev       # http://localhost:3000
+```
+
+Other scripts:
+
+```bash
+bun run build       # production build (dist/)
+bun run preview     # preview the build with Vite's server
+bun run preview:cf  # preview the build in a real Cloudflare Workers runtime
+bun run lint
+bun run format
+```
+
+## Deployment
+
+The production build targets [Cloudflare Pages](https://pages.cloudflare.com/)
+by default (free tier, no commercial-use restriction, GitHub-integrated
+preview deploys). Deploy target is a one-line swap — no code changes needed:
+
+```bash
+NITRO_PRESET=vercel bun run build     # or netlify, node-server, etc.
+```
+
+To connect this repo to Cloudflare Pages:
+
+1. Cloudflare dashboard → Workers & Pages → Create → Pages → Connect to Git
+2. Build command: `bun install && bun run build`
+3. Build output directory: `dist`
+
+Every push gets a preview URL; your production branch gets the live one.
+
+## Roadmap
+
+Running tracker for UI/UX polish requests, grouped by type and tagged by
+complexity (🟢 Easy · 🟡 Medium · 🔴 Complex). "Later" items are backlog
+features, not sized yet.
+
+### 🎨 Visual Styling
+
+- [x] 🟢 Number pad SVG icon for editable number fields
+- [x] 🟢 Data-type SVG icons (percent, tally/frequency, duration/timer, rate,
+      score/rank, task analysis) + rename "% Correct" → "Percent Correct" +
+      title-case all data type text
+- [x] 🟢 Previous instance bubbles → light blue for duration/frequency
+      (match % correct treatment)
+- [x] 🟢 Reduce spacing between data collection cards
+- [x] 🟢 Schedule header row: round bottom corners, align "Activity"/"Location"
+      headers to their text columns (not emoji column)
+- [x] 🟢 Schedule sticky bar: full width, mini clock uses lowercase `a`/`p`
+      (no space, matches activity times), tighten icon left margin
+- [x] 🟢 Remove blue hover circle on Schedule pencil (edit) button
+- [x] 🟡 Schedule tab: reduce margin above date/time, shrink dropdown/input
+      padding; dropdown options: square top corners, flush/no-gap attachment,
+      slide-down-from-behind animation, same blue border, bold selected option
+- [x] 🟡 Global button bevel: light/dark border (top-left light source),
+      drop shadow, subtle gradient overlay — audit all button variants
+      (disabled/active/colored) for clashes
+
+### 🎬 Animation
+
+- [x] 🟡 Fix Schedule sticky-bar animation trigger timing (fires on wrong
+      event, not exactly on stick/unstick)
+- [x] 🟡 Smooth notification bar + top bar expand/collapse (no abrupt jump)
+- [x] 🟢 "Outside of hours" gray label next to parked Time chevron
+- [ ] 🔴 Session-start animation (odometer digit roll, blue flash, button
+      fade/slide, timer pill shrink+reposition, header collapse) — single
+      fluid tween, reversible for pause
+- [ ] 🔴 "Data Submitted" animation — cards stagger-exit right, blank cards
+      slide in from left as one sheet; reverse on restarting a session
+- [ ] 🔴 Appointment collapse/expand: "roll up/down" height + fade animation;
+      click top border to collapse too
+- [ ] 🔴 Schedule pencil edit-mode animation (icon slides after name, check/X
+      fade in, dropdown border fades without text jump, action-button
+      container expands) — reversible
+- [ ] 🔴 Collapsed/proportional mode transitions for Schedule appointments
+      (fade + slide right, kept snappy)
+- [ ] 🔴 Alert bar swipe gestures (dismiss left / snooze right, icon
+      highlighting incl. conditional silence icon, chime keeps playing until
+      silenced/dismissed, circular buttons, conditional silence button)
+
+### ⚙️ Functionality / Features
+
+- [x] 🟡 Co-treat toggle in appointment add/edit popup
+- [x] 🟡 Data tab: "Start session to record data" → sticky bar (reuse
+      Schedule sticky bar style)
+- [x] 🟡 Schedule sticky bar toggles: Collapse/Expand View, Hide/Show Icons,
+      Hide/Show Appointments
+- [ ] 🔴 Settings tab (gear icon) + audit codebase to link existing static
+      constants as options
+- [ ] 🔴 Rate cards linked to session timer (swap lock→link icon is trivial;
+      actual timer-sync is the real work) — shift link icon a few px left
+      in the pill
+- [ ] 🔴 Master clock: sync all timer ticks + Duration pulse-bubble animation
+      across the whole app to the session timer (single source of truth)
+- [ ] 🔴 Info Drawer redesign: non-modal, opens from right, full tab-pane
+      height, shrinks cards to mini view when room allows, pointer arrow
+      (like number-entry popups) overlapping the target card, drop shadow
+- [ ] 🔴 Left-side target/goal list/tree view mirroring Info Drawer — titles
+      (+ data type?), click scrolls to card + shows pointer arrow
+
+### 🗄️ Later (backlog — not sized)
+
+- [ ] Revision mode for editing a paused, unsubmitted session
+- [ ] Multi-instance Task Analysis entry (step-by-step + trial navigation,
+      dual nav pattern)
+- [ ] Expanded/twirldown view for Percent Correct + other multi-trial cards
+- [ ] Mini card view + multi-column grid dashboard (widget-style)
+- [ ] Custom mixed dashboard layout (standard/mini/expanded per card)
+- [ ] Pinned favorites for frequently-used targets
+- [ ] Edit mode: reorder cards/targets, filter by behavior/goal/data type
+
+*Roadmap last updated: 2026-07-01*
