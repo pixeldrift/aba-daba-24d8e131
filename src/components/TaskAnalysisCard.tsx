@@ -136,7 +136,7 @@ export function TaskAnalysisCard({
                     whileTap={{ scale: 0.9 }}
                     aria-label={opt.value}
                     className={cn(
-                      "size-8 rounded-md border-2 grid place-items-center transition-colors",
+                      "size-8 rounded-full border-2 grid place-items-center transition-colors",
                       opt.classes,
                       selected && cn("btn-bevel", opt.selectedClasses),
                     )}

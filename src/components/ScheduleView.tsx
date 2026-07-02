@@ -300,7 +300,7 @@ function overlaps(aStart: string, aEnd: string, bStart: string, bEnd: string) {
 }
 
 const SELECT_ITEM_CLS =
-  "focus:bg-blue-100 focus:text-blue-900 data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-900 data-[state=checked]:font-bold";
+  "focus:bg-blue-100 focus:text-blue-900 data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-900";
 
 const INPUT_BLUE_CLS = "border-2 border-blue-300 focus-visible:ring-blue-300";
 
@@ -543,15 +543,18 @@ export function ScheduleView({
     if (editMode) return null;
     if (layoutMode === "proportional") {
       if (!outsideSchedule) return (nowMin - dayStart) * PX_PER_MIN;
-      return nowMin < dayStart ? -2 : totalHeight + 2;
+      return nowMin < dayStart ? -2 : totalHeight + 16;
     }
     if (currentItem) {
       const row = rowLayout.find((r) => r.item.id === currentItem.id);
       if (row) return row.top + row.height / 2;
     }
-    return nowMin < dayStart ? -2 : totalHeight + 2;
+    return nowMin < dayStart ? -2 : totalHeight + 16;
   })();
   const arrowGray = outsideSchedule;
+  // Only the "after hours" case has genuine empty space below the last row
+  // to show the label in without overlapping the header or a row.
+  const showOutsideOfHoursLabel = arrowGray && nowMin >= dayEnd;
 
   const listRef = useRef<HTMLDivElement>(null);
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -674,9 +677,9 @@ export function ScheduleView({
       <div className="mt-4 flex items-center gap-2 px-1">
         <Select value={activeName} onValueChange={(v) => { setActiveName(v); setEditMode(false); }} disabled={editMode}>
           <SelectTrigger className={cn(
-            "flex-1 h-11 text-base rounded-full px-4",
+            "flex-1 h-11 text-base rounded-full px-4 font-bold",
             editMode
-              ? "bg-transparent border-0 shadow-none text-stone-800 font-medium disabled:opacity-100 [&>svg]:hidden"
+              ? "bg-transparent border-0 shadow-none text-stone-800 disabled:opacity-100 [&>svg]:hidden"
               : "bg-white border-2 border-blue-500 text-blue-700 focus:ring-blue-300",
           )}>
             <SelectValue />
@@ -703,20 +706,19 @@ export function ScheduleView({
           <div className="flex items-center gap-1">
             <Button
               size="icon"
-              className="h-11 w-11 rounded-full bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={() => setEditMode(false)}
-              aria-label="Save"
-            >
-              <Check className="size-5" />
-            </Button>
-            <Button
-              size="icon"
               variant="ghost"
               className="h-11 w-11 rounded-full text-stone-500 hover:bg-stone-100"
               onClick={() => setEditMode(false)}
               aria-label="Cancel"
             >
               <X className="size-5" />
+            </Button>
+            <Button
+              className="h-11 rounded-full bg-blue-600 hover:bg-blue-700 text-white px-4 gap-1.5"
+              onClick={() => setEditMode(false)}
+              aria-label="Save"
+            >
+              Save <Check className="size-5" />
             </Button>
           </div>
         ) : (
@@ -778,138 +780,6 @@ export function ScheduleView({
           </div>
         </div>
       )}
-
-
-      {/* Toggles row — sticky under StatusBar */}
-      <div className="mt-3" />
-      <div ref={togglesSentinelRef} className="h-0" aria-hidden />
-      <div
-        className={cn(
-          "sticky z-40 w-full bg-background border-b border-stone-200/70 py-1.5 px-8 -mx-5",
-          stickyCompact ? "shadow-[0_2px_4px_-2px_rgba(0,0,0,0.1)]" : "shadow-none",
-        )}
-        style={{ top: stickyTop }}
-      >
-        <div className="relative flex items-center text-xs gap-2 max-w-3xl mx-auto">
-          <button
-            type="button"
-            onClick={() =>
-              setLayoutMode((m) => (m === "proportional" ? "collapsed" : "proportional"))
-            }
-            className="flex items-center gap-1.5 text-blue-600"
-            title={
-              layoutMode === "proportional"
-                ? "Switch to collapsed (uniform) rows"
-                : "Switch to proportional (time-scaled) rows"
-            }
-          >
-            {layoutMode === "proportional" ? (
-              <Rows3 className="size-3.5 shrink-0" />
-            ) : (
-              <AlignVerticalJustifyStart className="size-3.5 shrink-0" />
-            )}
-            <span
-              className={cn(
-                "overflow-hidden whitespace-nowrap transition-all duration-300 ease-out",
-                stickyCompact ? "max-w-0 opacity-0" : "max-w-[140px] opacity-100",
-              )}
-            >
-              {layoutMode === "proportional" ? "Show Collapsed" : "Show Proportional"}
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setShowAppts((v) => !v);
-              setAllApptsCollapsed(false);
-              setCollapsedAppts({});
-            }}
-            className={cn(
-              "flex items-center gap-1.5",
-              showAppts ? "text-green-700" : "text-stone-400 hover:text-stone-600",
-            )}
-            title="Show or hide appointment overlays"
-          >
-            <HandHelping className="size-3.5 shrink-0" />
-            <span
-              className={cn(
-                "overflow-hidden whitespace-nowrap transition-all duration-300 ease-out",
-                stickyCompact ? "max-w-0 opacity-0" : "max-w-[160px] opacity-100",
-              )}
-            >
-              {showAppts ? "Hide Appointments" : "Show Appointments"}
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowIcons((v) => !v)}
-            className={cn(
-              "flex items-center gap-1.5",
-              showIcons ? "text-blue-600" : "text-stone-400 hover:text-stone-600",
-            )}
-            title="Show or hide activity and location icons"
-          >
-            {showIcons ? (
-              <Image className="size-3.5 shrink-0" />
-            ) : (
-              <ImageOff className="size-3.5 shrink-0" />
-            )}
-            <span
-              className={cn(
-                "overflow-hidden whitespace-nowrap transition-all duration-300 ease-out",
-                stickyCompact ? "max-w-0 opacity-0" : "max-w-[120px] opacity-100",
-              )}
-            >
-              {showIcons ? "Hide Icons" : "Show Icons"}
-            </span>
-          </button>
-
-          {/* Centered schedule name — fades in when pinned */}
-          <div
-            className={cn(
-              "absolute left-1/2 -translate-x-1/2 flex items-center min-w-0 overflow-hidden transition-opacity duration-300 ease-out pointer-events-none",
-              stickyCompact ? "opacity-100" : "opacity-0",
-            )}
-            aria-hidden={!stickyCompact}
-          >
-            <span className="text-xs font-bold text-stone-700 whitespace-nowrap truncate">
-              {active.name}
-            </span>
-          </div>
-
-          {/* Right-aligned time button — fades in when pinned */}
-          <button
-            type="button"
-            onClick={scrollToNow}
-            disabled={!currentItem || editMode}
-            aria-hidden={!stickyCompact}
-            tabIndex={stickyCompact ? 0 : -1}
-            className={cn(
-              "btn-bevel ml-auto inline-flex items-center gap-1 h-6 pl-2 pr-2.5 rounded-full text-[11px] font-semibold text-white tabular-nums transition-opacity duration-300 ease-out",
-              stickyCompact ? "opacity-100" : "opacity-0 pointer-events-none",
-              !currentItem || editMode
-                ? "bg-stone-300"
-                : "bg-blue-600 hover:bg-blue-700",
-            )}
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-              <path
-                d="M6 1.5v5.5M3.5 5.5L6 8 8.5 5.5M2.5 9.5h7"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
-            </svg>
-            {fmt12(`${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`)}
-          </button>
-        </div>
-      </div>
-
-
-
-
 
       {editMode && (
         <div className="mt-3 px-1 space-y-3">
@@ -973,10 +843,137 @@ export function ScheduleView({
         </div>
       )}
 
+      {/* Toggles row — sticky under StatusBar */}
+      <div className="mt-3" />
+      <div ref={togglesSentinelRef} className="h-0" aria-hidden />
+      <div
+        className={cn(
+          "sticky z-40 ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] bg-background border-b border-stone-200/70 py-1.5 px-8",
+          stickyCompact ? "shadow-[0_2px_4px_-2px_rgba(0,0,0,0.1)]" : "shadow-none",
+        )}
+        style={{ top: stickyTop }}
+      >
+        <div className="relative flex items-center text-xs gap-2 max-w-3xl mx-auto">
+          <button
+            type="button"
+            onClick={() =>
+              setLayoutMode((m) => (m === "proportional" ? "collapsed" : "proportional"))
+            }
+            className="flex items-center gap-1.5 text-blue-600"
+            title={
+              layoutMode === "proportional"
+                ? "Switch to collapsed (uniform) rows"
+                : "Switch to proportional (time-scaled) rows"
+            }
+          >
+            {layoutMode === "proportional" ? (
+              <Rows3 className="size-3.5 shrink-0" />
+            ) : (
+              <AlignVerticalJustifyStart className="size-3.5 shrink-0" />
+            )}
+            <span
+              className={cn(
+                "overflow-hidden whitespace-nowrap transition-all duration-300 ease-out",
+                stickyCompact ? "max-w-0 opacity-0" : "max-w-[140px] opacity-100",
+              )}
+            >
+              {layoutMode === "proportional" ? "Collapsed" : "Proportional"}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowAppts((v) => !v);
+              setAllApptsCollapsed(false);
+              setCollapsedAppts({});
+            }}
+            className={cn(
+              "flex items-center gap-1.5",
+              showAppts ? "text-green-700" : "text-stone-400 hover:text-stone-600",
+            )}
+            title="Show or hide appointment overlays"
+          >
+            <HandHelping className="size-3.5 shrink-0" />
+            <span
+              className={cn(
+                "overflow-hidden whitespace-nowrap transition-all duration-300 ease-out",
+                stickyCompact ? "max-w-0 opacity-0" : "max-w-[160px] opacity-100",
+              )}
+            >
+              Appointments
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowIcons((v) => !v)}
+            className={cn(
+              "flex items-center gap-1.5",
+              showIcons ? "text-blue-600" : "text-stone-400 hover:text-stone-600",
+            )}
+            title="Show or hide activity and location icons"
+          >
+            {showIcons ? (
+              <Image className="size-3.5 shrink-0" />
+            ) : (
+              <ImageOff className="size-3.5 shrink-0" />
+            )}
+            <span
+              className={cn(
+                "overflow-hidden whitespace-nowrap transition-all duration-300 ease-out",
+                stickyCompact ? "max-w-0 opacity-0" : "max-w-[120px] opacity-100",
+              )}
+            >
+              Icons
+            </span>
+          </button>
+
+          {/* Centered schedule name — fades in when pinned */}
+          <div
+            className={cn(
+              "absolute left-1/2 -translate-x-1/2 flex items-center min-w-0 overflow-hidden transition-opacity duration-300 ease-out pointer-events-none",
+              stickyCompact ? "opacity-100" : "opacity-0",
+            )}
+            aria-hidden={!stickyCompact}
+          >
+            <span className="text-xs font-bold text-stone-700 whitespace-nowrap truncate">
+              {active.name}
+            </span>
+          </div>
+
+          {/* Right-aligned time button — fades in when pinned */}
+          <button
+            type="button"
+            onClick={scrollToNow}
+            disabled={!currentItem || editMode}
+            aria-hidden={!stickyCompact}
+            tabIndex={stickyCompact ? 0 : -1}
+            className={cn(
+              "btn-bevel ml-auto inline-flex items-center gap-1 h-6 pl-2 pr-2.5 rounded-full text-[11px] font-semibold text-white tabular-nums transition-opacity duration-300 ease-out",
+              stickyCompact ? "opacity-100" : "opacity-0 pointer-events-none",
+              !currentItem || editMode
+                ? "bg-stone-300"
+                : "bg-blue-600 hover:bg-blue-700",
+            )}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+              <path
+                d="M6 1.5v5.5M3.5 5.5L6 8 8.5 5.5M2.5 9.5h7"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+            </svg>
+            {fmt12(`${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`)}
+          </button>
+        </div>
+      </div>
+
       {/* Schedule grid */}
-      <div className="mt-3 mx-1 rounded-xl bg-white border border-stone-200 relative">
-        <div className="grid grid-cols-[40px_1fr_84px_34px] gap-1 px-1.5 py-1 text-[10px] uppercase tracking-wide text-muted-foreground border-b border-stone-300 bg-stone-50 rounded-xl">
-          <div className="text-right">Time</div>
+      <div className="mt-3 mx-1 rounded-xl border border-stone-200 relative">
+        <div className="grid grid-cols-[40px_1fr_84px_34px] gap-1 px-1.5 py-1 text-[10px] uppercase tracking-wide text-muted-foreground border-b border-stone-300 bg-stone-200 rounded-xl">
+          <div className="text-right pr-1.5">Time</div>
           <div className="flex items-center gap-1.5">
             <span className="invisible text-sm leading-none shrink-0" aria-hidden>•</span>
             <span>Activity</span>
@@ -985,7 +982,7 @@ export function ScheduleView({
             <span className="invisible text-xs leading-none shrink-0" aria-hidden>•</span>
             <span>Location</span>
           </div>
-          <div className="text-center">Alert</div>
+          <div className="text-center">{editMode ? "Edit" : "Alert"}</div>
         </div>
 
         <div ref={listRef} className="relative" style={{ height: totalHeight }}>
@@ -1010,7 +1007,7 @@ export function ScheduleView({
                   fill={arrowGray ? "#a8a29e" : "#2563eb"}
                 />
               </svg>
-              {arrowGray && (
+              {showOutsideOfHoursLabel && (
                 <span className="ml-1 text-[10px] uppercase tracking-wide text-stone-400 whitespace-nowrap">
                   Outside of hours
                 </span>
@@ -1058,7 +1055,7 @@ export function ScheduleView({
                   />
                 ))}
                 <div className="relative h-full grid grid-cols-[40px_1fr_84px_34px] gap-1 items-start pt-1.5 pb-1 px-2">
-                  <div className="text-[11px] tabular-nums leading-tight pl-0.5 pt-0.5">
+                  <div className="text-[11px] tabular-nums leading-tight text-right pr-1.5 pt-0.5">
                     {fmt12(it.start)}
                   </div>
                   <div className="flex items-start gap-1.5 min-w-0">
