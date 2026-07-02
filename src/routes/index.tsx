@@ -13,6 +13,7 @@ import { SettingsProvider } from "@/components/SettingsContext";
 import { SettingsPane } from "@/components/SettingsPane";
 import { StatusBar, type StatusTab } from "@/components/StatusBar";
 import { NotificationProvider } from "@/components/NotificationContext";
+import { NOTIFICATION_AREA_TRANSITION } from "@/components/NotificationBar";
 import { useStickyTop } from "@/hooks/use-sticky-top";
 import { cn } from "@/lib/utils";
 
@@ -161,7 +162,9 @@ function IndexInner() {
       <StatusBar activeTab={tab} onTabChange={setTab} />
 
 
-      <section
+      <motion.section
+        layout="position"
+        transition={{ layout: NOTIFICATION_AREA_TRANSITION }}
         className={cn(
           "px-5 pb-16 max-w-5xl mx-auto border-t border-stone-200 -mt-px",
           tab === "schedule" ? "pt-2" : "pt-5",
@@ -304,7 +307,7 @@ function IndexInner() {
         )}
         {tab === "notifications" && <PlaceholderPane title="Alerts & announcements" description="Messages, reminders, and supervisor notes will appear here." />}
         {tab === "settings" && <SettingsPane />}
-      </section>
+      </motion.section>
     </main>
     </NotificationProvider>
   );

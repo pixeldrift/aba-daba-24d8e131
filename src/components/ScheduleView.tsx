@@ -362,7 +362,16 @@ export function ScheduleView({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [confirmItemDelete, setConfirmItemDelete] = useState<ScheduleItem | null>(null);
   const [confirmApptDelete, setConfirmApptDelete] = useState<Appointment | null>(null);
-  const [nowAnim, setNowAnim] = useState(0); // bump to retrigger bounce/flash
+  const [nowAnim, setNowAnim] = useState(0); // bump to retrigger the Now-button chevron bounce
+  // Flashes a specific row's own visible box — decoupled from `isCurrent` so
+  // a notification-tap jump can flash whichever activity it points at, not
+  // only the live current one.
+  const [flashRowId, setFlashRowId] = useState<string | null>(null);
+  const [flashGen, setFlashGen] = useState(0);
+  const triggerRowFlash = (id: string) => {
+    setFlashRowId(id);
+    setFlashGen((n) => n + 1);
+  };
   const stickyTop = useStickyTop();
   const [stickyCompact, setStickyCompact] = useState(false);
   const togglesSentinelRef = useRef<HTMLDivElement>(null);
@@ -569,11 +578,7 @@ export function ScheduleView({
     if (!currentItem) return;
     const el = rowRefs.current.get(currentItem.id);
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
-    if (el) {
-      el.classList.remove("animate-row-flash");
-      void el.offsetWidth;
-      el.classList.add("animate-row-flash");
-    }
+    triggerRowFlash(currentItem.id);
     setNowAnim((n) => n + 1);
   };
 
@@ -595,12 +600,8 @@ export function ScheduleView({
   useEffect(() => {
     if (!scrollTargetId) return;
     const el = rowRefs.current.get(scrollTargetId);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      el.classList.remove("animate-row-flash");
-      void el.offsetWidth;
-      el.classList.add("animate-row-flash");
-    }
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    triggerRowFlash(scrollTargetId);
     onScrolledToTarget?.();
   }, [scrollTargetId, onScrolledToTarget]);
 
@@ -1120,11 +1121,11 @@ export function ScheduleView({
                 style={{ top, height }}
               >
                 <div
-                  key={isCurrent ? `bg-${nowAnim}` : "bg"}
+                  key={flashRowId === it.id ? `bg-${flashGen}` : "bg"}
                   className={cn(
                     "absolute inset-0 rounded-md border border-stone-300 bg-white transition-colors",
                     isCurrent && "!border-2 !border-blue-500 !bg-blue-50",
-                    isCurrent && nowAnim > 0 && "animate-row-flash",
+                    flashRowId === it.id && flashGen > 0 && "animate-row-flash",
                   )}
                 />
                 {Array.from({ length: gridLines }, (_, i) => (
