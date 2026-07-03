@@ -14,6 +14,15 @@ export const CARD_EXIT_MS = 350;
 export const HEADER_MORPH_MS = 350;
 export const CARD_ENTER_MS = 350;
 
+// The session box itself waits for the pill's HEADER_MORPH_MS morph to land
+// in the mini slot before it collapses (see StatusBar's boxCollapsed state),
+// so "clock moves, then box closes" reads as two beats instead of one. This
+// extra collapse time is tacked onto stage 2's dwell (below) — but only for
+// kinds that actually collapse the box (not discard) — so `dimmed`/
+// transitionStage don't reset (and card content reappear) before that
+// second beat has actually finished playing out.
+export const BOX_COLLAPSE_MS = 200;
+
 export interface ActiveTimer {
   id: string;
   label: string;
@@ -222,7 +231,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setTransitionStage(0);
         setTransitionKind(null);
         transitionBusyRef.current = false;
-      }, HEADER_MORPH_MS);
+      }, HEADER_MORPH_MS + (kind === "discard" ? 0 : BOX_COLLAPSE_MS));
       transitionTimeoutsRef.current.push(t2);
     }, CARD_EXIT_MS);
     transitionTimeoutsRef.current.push(t1);

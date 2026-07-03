@@ -18,7 +18,7 @@ import {
   Settings as SettingsIcon,
 } from "lucide-react";
 import { InfoIcon } from "./icons/InfoIcon";
-import { useSession, HEADER_MORPH_MS, type SaveStatus, type SessionStatus } from "./SessionContext";
+import { useSession, HEADER_MORPH_MS, BOX_COLLAPSE_MS, type SaveStatus, type SessionStatus } from "./SessionContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { X } from "lucide-react";
@@ -97,6 +97,41 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
   const dimmed = transitionStage > 0;
   const collapsed = isRunning || (transitionStage === 2 && transitionKind !== "discard");
 
+  // The box itself waits for the pill's SESSION_MORPH_MS morph to land in
+  // the mini slot before collapsing, so the two reads as sequential beats
+  // ("clock moves, then box closes") instead of happening at once. A real
+  // state flip (not a Motion `transition.delay`) so it can't be disturbed by
+  // the elapsed-timer's frequent re-renders once the session is running.
+  // SessionContext's stage-2 dwell is extended by BOX_COLLAPSE_MS to match,
+  // so `dimmed` doesn't reset (and box content reappear) before this lands.
+  const [boxCollapsed, setBoxCollapsed] = useState(collapsed);
+  useEffect(() => {
+    if (collapsed) {
+      const id = window.setTimeout(() => setBoxCollapsed(true), SESSION_MORPH_MS);
+      return () => window.clearTimeout(id);
+    }
+    setBoxCollapsed(false);
+  }, [collapsed]);
+
+  // Same "never animate to the literal string auto" fix as actionsHeight
+  // below: without it, whenever the pill itself enters/leaves this box (its
+  // biggest content change), Motion's cached "auto" resolution snaps the
+  // whole box to its new natural height instead of smoothly tracking it,
+  // which was bleeding into the tabs/nav below as a brief desync. A
+  // ResizeObserver keeps this current through any content change, not just
+  // the specific ones a dependency array would need to know about.
+  const boxWrapRef = useRef<HTMLDivElement>(null);
+  const [boxNaturalHeight, setBoxNaturalHeight] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const el = boxWrapRef.current;
+    if (!el) return;
+    const measure = () => setBoxNaturalHeight(el.scrollHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const requestPlay = () => {
     if (status === "paused") requestResume();
     else requestContinuePrevious(previousSessionMs);
@@ -142,37 +177,51 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
                 shared layoutId, letting motion morph cleanly between the two positions. */}
             <motion.div
               initial={false}
-              animate={{ height: collapsed ? 0 : "auto", opacity: collapsed ? 0 : 1 }}
+              animate={{ height: boxCollapsed ? 0 : (boxNaturalHeight ?? "auto"), opacity: boxCollapsed ? 0 : 1 }}
               transition={
-                collapsed
+                boxCollapsed
                   ? {
-                      // Shares SESSION_MORPH_MS/ease with the pill's layoutId
-                      // morph and the tabs/pane's own layout push, so all
-                      // three finish in lockstep as one motion rather than
-                      // three animations of different lengths. Stage 1 (the
-                      // delay before this becomes true) already happened in
-                      // SessionContext, so no extra delay is needed here.
-                      height: { duration: SESSION_MORPH_MS / 1000, ease: SESSION_MORPH_EASE },
-                      opacity: { duration: (SESSION_MORPH_MS / 1000) * 0.6 },
+                      // Quick, decisive snap once it finally starts — by this
+                      // point the pill has already landed in the mini slot and
+                      // the box's own content has long since faded (stage 1's
+                      // `dimmed`), so there's nothing left to see except the
+                      // space closing up.
+                      height: { duration: BOX_COLLAPSE_MS / 1000, ease: SESSION_MORPH_EASE },
+                      opacity: { duration: (BOX_COLLAPSE_MS / 1000) * 0.6 },
                     }
                   : {
-                      height: { duration: 0.45, ease: [0.4, 0, 0.2, 1] },
-                      opacity: { duration: 0.3, delay: 0.3 },
+                      // Mirrors the collapsed branch (same ease, opacity starting
+                      // together with height rather than after a delay) so the
+                      // box's own fade-in and the tabs/nav's layout push — which
+                      // shares SESSION_MORPH_MS via NOTIFICATION_AREA_TRANSITION —
+                      // move as one instead of the box appearing to lag behind.
+                      height: { duration: SESSION_MORPH_MS / 1000, ease: SESSION_MORPH_EASE },
+                      opacity: { duration: (SESSION_MORPH_MS / 1000) * 0.6 },
                     }
               }
               className="flex justify-center overflow-hidden"
             >
-              <ExpandedSessionBox
-                status={status}
-                elapsedMs={pillElapsed}
-                contextTime={status === "paused" ? null : previousSessionEndedAt}
-                showPill={!isRunning}
-                dimmed={dimmed}
-                onPlay={requestPlay}
-                onStartNew={requestStartNew}
-                onEnd={() => setEndOpen(true)}
-                onRequestDiscard={() => setDiscardOpen(true)}
-              />
+              {/* Unstyled, never height-controlled — safe to observe for its
+                  natural content size without the observer feeding back into
+                  its own target (which the outer motion.div's height is).
+                  The parent is a row flex (`flex justify-center`), so its
+                  default align-items:stretch would otherwise force this
+                  child to match the parent's (possibly momentarily-stale)
+                  height instead of sizing to its own content — self-start
+                  opts out of that stretch. */}
+              <div ref={boxWrapRef} className="self-start shrink-0">
+                <ExpandedSessionBox
+                  status={status}
+                  elapsedMs={pillElapsed}
+                  contextTime={status === "paused" ? null : previousSessionEndedAt}
+                  showPill={!isRunning}
+                  dimmed={dimmed}
+                  onPlay={requestPlay}
+                  onStartNew={requestStartNew}
+                  onEnd={() => setEndOpen(true)}
+                  onRequestDiscard={() => setDiscardOpen(true)}
+                />
+              </div>
             </motion.div>
 
 
@@ -652,11 +701,16 @@ function ExpandedSessionBox({
         )}
       </div>
 
-      {/* Stays mounted (no AnimatePresence) and toggles between two measured
-          pixel numbers, never "auto" — see the actionsHeight comment above. */}
+      {/* Stays mounted (no AnimatePresence) and only ever fades for the
+          `dimmed` stage — it does NOT also collapse its height there, so the
+          box's overall size stays put while things fade in place, and the
+          whole (now-blank) box collapses as a single later beat instead of
+          reshuffling mid-fade. Height only changes for genuine content
+          swaps (isPaused's button set), via the measured actionsHeight
+          number — never "auto", see the comment above. */}
       <motion.div
         ref={actionsRef}
-        animate={{ opacity: dimmed ? 0 : 1, height: dimmed ? 0 : (actionsHeight ?? "auto") }}
+        animate={{ opacity: dimmed ? 0 : 1, height: actionsHeight ?? "auto" }}
         transition={{ duration: 0.25, ease }}
         className="flex flex-col gap-1 overflow-hidden"
       >
