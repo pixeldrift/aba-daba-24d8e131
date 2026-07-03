@@ -663,7 +663,7 @@ function ExpandedSessionBox({
         {isPaused ? (
           <button
             onClick={onEnd}
-            className="btn-bevel flex items-center justify-center gap-1.5 rounded-full h-9 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3 w-full transition-colors active:scale-95"
+            className="btn-bevel shrink-0 flex items-center justify-center gap-1.5 rounded-full h-9 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3 w-full transition-colors active:scale-95"
           >
             End & Submit Data
             <Upload className="size-3.5" strokeWidth={2.5} />
@@ -671,7 +671,7 @@ function ExpandedSessionBox({
         ) : (
           <button
             onClick={onStartNew}
-            className="btn-bevel flex items-center justify-center gap-1.5 rounded-full h-9 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3 w-full transition-colors active:scale-95"
+            className="btn-bevel shrink-0 flex items-center justify-center gap-1.5 rounded-full h-9 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3 w-full transition-colors active:scale-95"
           >
             Start New Session
             <RefreshCw className="size-3.5" strokeWidth={2.5} />
@@ -680,7 +680,7 @@ function ExpandedSessionBox({
         {isPaused && (
           <button
             onClick={onRequestDiscard}
-            className="flex items-center justify-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-[10px] px-1.5 py-1 rounded-md transition-colors active:scale-95"
+            className="shrink-0 flex items-center justify-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-[10px] px-1.5 py-1 rounded-md transition-colors active:scale-95"
           >
             End & Discard Session!
             <Trash2 className="size-3" />
