@@ -303,9 +303,6 @@ function overlaps(aStart: string, aEnd: string, bStart: string, bEnd: string) {
   return toMin(aStart) < toMin(bEnd) && toMin(aEnd) > toMin(bStart);
 }
 
-const SELECT_ITEM_CLS =
-  "focus:bg-blue-100 focus:text-blue-900 data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-900";
-
 const INPUT_BLUE_CLS = "border-2 border-blue-300 focus-visible:ring-blue-300";
 
 export function ScheduleView({
@@ -713,7 +710,7 @@ export function ScheduleView({
           </SelectTrigger>
           <SelectContent>
             {schedules.map((s) => (
-              <SelectItem key={s.name} value={s.name} className={SELECT_ITEM_CLS}>
+              <SelectItem key={s.name} value={s.name}>
                 <span className="inline-flex items-center gap-1.5">
                   {s.name}
                   {s.name === CLIENT_GROUP && (
@@ -1499,13 +1496,16 @@ function PromptDialog({
         <DialogFooter className="flex-row justify-end gap-2 space-x-0">
           <Button
             variant="outline"
-            className="rounded-full text-blue-700 hover:bg-blue-50 border-2 border-blue-300"
+            className="rounded-full text-blue-700 hover:bg-blue-50 border-2 border-blue-300 gap-1.5"
             onClick={onCancel}
           >
-            Cancel
+            Cancel <X className="size-4" />
           </Button>
-          <Button className="rounded-full bg-blue-600 hover:bg-blue-700 text-white" onClick={onSave}>
-            Save
+          <Button
+            className="rounded-full bg-blue-600 hover:bg-blue-700 text-white gap-1.5"
+            onClick={onSave}
+          >
+            Save <Check className="size-4" />
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1638,10 +1638,10 @@ function ItemDialog({
           <div>
             <Label className="text-xs">Activity</Label>
             <Select value={activity} onValueChange={setActivity}>
-              <SelectTrigger className="rounded-full border-2 border-blue-300 text-blue-700"><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {ACTIVITIES.map((a) => (
-                  <SelectItem key={a} value={a} className={SELECT_ITEM_CLS}>
+                  <SelectItem key={a} value={a}>
                     {(ACTIVITY_ICONS[a] ?? "•") + " " + a}
                   </SelectItem>
                 ))}
@@ -1673,10 +1673,10 @@ function ItemDialog({
           <div>
             <Label className="text-xs">Location</Label>
             <Select value={location} onValueChange={setLocation}>
-              <SelectTrigger className="rounded-full border-2 border-blue-300 text-blue-700"><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {LOCATIONS.map((l) => (
-                  <SelectItem key={l} value={l} className={SELECT_ITEM_CLS}>
+                  <SelectItem key={l} value={l}>
                     {(LOCATION_ICONS[l] ?? "📍") + " " + l}
                   </SelectItem>
                 ))}
@@ -1820,10 +1820,10 @@ function AppointmentDialog({
           <div>
             <Label className="text-xs">Type</Label>
             <Select value={type} onValueChange={setType}>
-              <SelectTrigger className="rounded-full border-2 border-blue-300 text-blue-700"><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {APPOINTMENT_TYPES.map((t) => (
-                  <SelectItem key={t} value={t} className={SELECT_ITEM_CLS}>
+                  <SelectItem key={t} value={t}>
                     {(APPOINTMENT_TYPE_ICONS[t] ?? "•") + " " + t}
                   </SelectItem>
                 ))}
@@ -1899,12 +1899,12 @@ function AlertModeSelect({
 }) {
   return (
     <Select value={mode} onValueChange={(v) => onMode(v as AlertMode)}>
-      <SelectTrigger className="rounded-full border-2 border-blue-300 text-blue-700 h-9 px-3 text-xs">
+      <SelectTrigger className="h-9 px-3 text-xs">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
         {ALERT_MODE_OPTIONS.map(({ value, label, Icon }) => (
-          <SelectItem key={value} value={value} className={SELECT_ITEM_CLS}>
+          <SelectItem key={value} value={value}>
             <span className="inline-flex items-center gap-2">
               <Icon className="size-3.5" />
               {label}
