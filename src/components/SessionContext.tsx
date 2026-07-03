@@ -67,6 +67,27 @@ export function useSession() {
   return ctx;
 }
 
+// Split out from SessionContextValue: most data cards only need `markDirty`
+// and `resetSignal`, neither of which changes on every tick or transition
+// stage. Reading them through the main context would re-render every card
+// (and its whole subtree, e.g. TrialCard's keypads) on every 250ms timer
+// tick and every stage of a start/pause/resume transition — that render
+// storm was landing right at click time and stealing the frame budget the
+// collapse animation needed to look smooth. Cards that also need live
+// timer state (RateCard, DurationCard) just read both contexts.
+interface CardSessionValue {
+  markDirty: () => void;
+  resetSignal: number;
+}
+
+const CardSessionContext = createContext<CardSessionValue | null>(null);
+
+export function useCardSession() {
+  const ctx = useContext(CardSessionContext);
+  if (!ctx) throw new Error("useCardSession must be used inside SessionProvider");
+  return ctx;
+}
+
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<SessionStatus>("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -278,7 +299,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     ],
   );
 
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+  const cardValue = useMemo(() => ({ markDirty, resetSignal }), [markDirty, resetSignal]);
+
+  return (
+    <SessionContext.Provider value={value}>
+      <CardSessionContext.Provider value={cardValue}>{children}</CardSessionContext.Provider>
+    </SessionContext.Provider>
+  );
 }
 
 export function useRegisterActiveTimer(args: {

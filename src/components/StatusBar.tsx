@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentType } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentType } from "react";
 import { motion, AnimatePresence, LayoutGroup, useMotionValue, useTransform, animate } from "motion/react";
 import {
   Play,
@@ -564,6 +564,21 @@ function ExpandedSessionBox({
   // been pressed (about to become live), it reads as black.
   const digitsGray = status === "idle" && !dimmed;
 
+  // Motion's "auto" height resolution wasn't reliable here (the collapse
+  // kept resolving in under 40ms instead of easing over 250) — measuring
+  // the real pixel height ourselves and animating between two concrete
+  // numbers (never "auto") sidesteps that entirely. scrollHeight reports the
+  // full content size even while overflow-hidden is clipping it to 0, so
+  // this stays accurate regardless of the current animated state.
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const [actionsHeight, setActionsHeight] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    if (actionsRef.current) {
+      setActionsHeight(actionsRef.current.scrollHeight);
+    }
+  }, [isPaused]);
+
+
   // Re-render to refresh "x ago" string.
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -637,45 +652,41 @@ function ExpandedSessionBox({
         )}
       </div>
 
-      <AnimatePresence>
-        {!dimmed && (
-          <motion.div
-            key="actions"
-            initial={{ opacity: 1, scale: 1, y: 0 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.85, y: 6 }}
-            transition={{ duration: 0.25, ease }}
-            className="flex flex-col gap-1"
+      {/* Stays mounted (no AnimatePresence) and toggles between two measured
+          pixel numbers, never "auto" — see the actionsHeight comment above. */}
+      <motion.div
+        ref={actionsRef}
+        animate={{ opacity: dimmed ? 0 : 1, height: dimmed ? 0 : (actionsHeight ?? "auto") }}
+        transition={{ duration: 0.25, ease }}
+        className="flex flex-col gap-1 overflow-hidden"
+      >
+        {isPaused ? (
+          <button
+            onClick={onEnd}
+            className="btn-bevel flex items-center justify-center gap-1.5 rounded-full h-9 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3 w-full transition-colors active:scale-95"
           >
-            {isPaused ? (
-              <button
-                onClick={onEnd}
-                className="btn-bevel flex items-center justify-center gap-1.5 rounded-full h-9 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3 w-full transition-colors active:scale-95"
-              >
-                End & Submit Data
-                <Upload className="size-3.5" strokeWidth={2.5} />
-              </button>
-            ) : (
-              <button
-                onClick={onStartNew}
-                className="btn-bevel flex items-center justify-center gap-1.5 rounded-full h-9 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3 w-full transition-colors active:scale-95"
-              >
-                Start New Session
-                <RefreshCw className="size-3.5" strokeWidth={2.5} />
-              </button>
-            )}
-            {isPaused && (
-              <button
-                onClick={onRequestDiscard}
-                className="flex items-center justify-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-[10px] px-1.5 py-1 rounded-md transition-colors active:scale-95"
-              >
-                End & Discard Session!
-                <Trash2 className="size-3" />
-              </button>
-            )}
-          </motion.div>
+            End & Submit Data
+            <Upload className="size-3.5" strokeWidth={2.5} />
+          </button>
+        ) : (
+          <button
+            onClick={onStartNew}
+            className="btn-bevel flex items-center justify-center gap-1.5 rounded-full h-9 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3 w-full transition-colors active:scale-95"
+          >
+            Start New Session
+            <RefreshCw className="size-3.5" strokeWidth={2.5} />
+          </button>
         )}
-      </AnimatePresence>
+        {isPaused && (
+          <button
+            onClick={onRequestDiscard}
+            className="flex items-center justify-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-[10px] px-1.5 py-1 rounded-md transition-colors active:scale-95"
+          >
+            End & Discard Session!
+            <Trash2 className="size-3" />
+          </button>
+        )}
+      </motion.div>
 
     </div>
   );
