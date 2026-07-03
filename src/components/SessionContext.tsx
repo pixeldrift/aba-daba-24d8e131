@@ -4,12 +4,14 @@ export type SessionStatus = "idle" | "running" | "paused";
 export type SaveStatus = "clean" | "dirty" | "saving";
 export type TransitionKind = "start-new" | "start-previous" | "resume" | "discard" | null;
 
-// Shared 3-stage session-transition timing (ms) — the same values drive the
-// header's pill-morph/collapse (StatusBar) and the data-card list's
-// exit/enter (routes/index.tsx), so "old stuff exits, then the timer/header
-// morphs, then new stuff enters" reads as one coordinated sequence instead
-// of pieces moving on their own schedules. 350ms matches the notification
-// area's own transition elsewhere in the app.
+// Shared 3-stage session-transition timing (ms) — CARD_EXIT_MS is stage 1's
+// dwell (below), which also drives the header's own dimming (StatusBar).
+// The card list's own slide animation is intentionally SLOWER than this
+// (see routes/index.tsx's CARD_SLIDE_EXIT_MS) — new cards start entering
+// the instant stage 2 commits (fresh data is ready), which lands partway
+// through the old cards' own slide-out, so the two overlap into one
+// continuous relay instead of "exit, dead pause, enter." HEADER_MORPH_MS
+// matches the notification area's own transition elsewhere in the app.
 export const CARD_EXIT_MS = 350;
 export const HEADER_MORPH_MS = 350;
 export const CARD_ENTER_MS = 350;

@@ -56,17 +56,20 @@ export function DurationIcon(props: IconProps) {
   );
 }
 
-/** Rate ("how many times per") — a number sign inside a stopwatch. */
+/** Rate ("how many times per") — a clock face whose last quarter (9 o'clock
+ * to 12 o'clock) is drawn as dots instead of a solid arc, distinguishing it
+ * from Duration's plain stopwatch at a glance. */
 export function RateIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>
       <line x1="10" y1="2" x2="14" y2="2" />
       <line x1="12" y1="2" x2="12" y2="4.5" />
-      <circle cx="12" cy="14" r="8" />
-      <line x1="9.5" y1="11" x2="9.5" y2="17" />
-      <line x1="14.5" y1="11" x2="14.5" y2="17" />
-      <line x1="8" y1="12.5" x2="16" y2="12.5" />
-      <line x1="8" y1="15.5" x2="16" y2="15.5" />
+      {/* Solid three quarters, 12 o'clock clockwise around to 9 o'clock. */}
+      <path d="M12,6 A8,8 0 1 1 4,14" />
+      {/* Last quarter, 9 o'clock to 12 o'clock, as dots. */}
+      <path d="M4,14 A8,8 0 0 1 12,6" strokeDasharray="0.01 3.15" />
+      <line x1="12" y1="14" x2="12" y2="9.5" />
+      <line x1="12" y1="14" x2="15.5" y2="16.5" />
     </svg>
   );
 }

@@ -158,7 +158,7 @@ export function DurationCard({
     <CardShell
       title={title}
       phase={phase}
-      dataType="Frequency / Duration"
+      dataType="Duration"
       dataTypeIcon={<DurationIcon />}
       description={description}
       isActive={isActive}
