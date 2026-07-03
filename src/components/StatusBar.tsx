@@ -51,7 +51,15 @@ const TABS: { id: StatusTab; label: string; icon: ComponentType<{ className?: st
 ];
 
 // Session-start sequence timing — TODO: surface in user settings.
-const SESSION_START_DURATION_MS = 900;
+// 1. Buttons/context fade out (near-instant).
+// 2. The odometer rolls to zero and settles from gray to black.
+// 3. One synchronized motion: the pill shrinks/moves into the mini slot, the
+//    session box collapses, and the tabs/pane get pushed up — all share
+//    NOTIFICATION_AREA_TRANSITION's duration/ease so they read as a single
+//    movement instead of three animations racing each other.
+const SESSION_ROLL_MS = 450;
+const SESSION_MORPH_MS = NOTIFICATION_AREA_TRANSITION.duration * 1000;
+const SESSION_MORPH_EASE = NOTIFICATION_AREA_TRANSITION.ease;
 const SESSION_START_STAGGER_MS = 80;
 
 export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Data Sheet" }: StatusBarProps) {
@@ -90,7 +98,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
   // timer hasn't started yet — gives a smooth, jank-free transition.
   const [pendingStart, setPendingStart] = useState<null | "resume" | "previous" | "new">(null);
   const collapsed = isRunning || pendingStart !== null;
-  const TRANSITION_MS = SESSION_START_DURATION_MS;
+  const TRANSITION_MS = SESSION_ROLL_MS;
 
   // A brief blue flash the instant the session actually goes live (i.e. right
   // as pendingStart resolves into isRunning), landing slightly after the
@@ -194,8 +202,12 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
               transition={
                 collapsed
                   ? {
-                      height: { duration: 0.45, ease: [0.4, 0, 0.2, 1], delay: TRANSITION_MS / 1000 },
-                      opacity: { duration: 0.2, delay: TRANSITION_MS / 1000 },
+                      // Shares SESSION_MORPH_MS/ease with the pill's layoutId
+                      // morph and the tabs/pane's own layout push, so all
+                      // three finish in lockstep as one motion rather than
+                      // three animations of different lengths.
+                      height: { duration: SESSION_MORPH_MS / 1000, ease: SESSION_MORPH_EASE, delay: TRANSITION_MS / 1000 },
+                      opacity: { duration: (SESSION_MORPH_MS / 1000) * 0.6, delay: TRANSITION_MS / 1000 },
                     }
                   : {
                       height: { duration: 0.45, ease: [0.4, 0, 0.2, 1] },
@@ -229,7 +241,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
               role="tablist"
               aria-label="Session sections"
             >
-              <div className="flex items-end gap-1 -ml-1">
+              <div className="flex items-end gap-1 -ml-3">
                 {TABS.map((t) => {
                   const Icon = t.icon;
                   const isActive = t.id === activeTab;
@@ -258,7 +270,10 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
               </div>
 
               {isRunning && (
-                <div className="pb-1.5 sm:pb-2 -mr-1">
+                // -mr-4 cancels the header's own px-4 edge padding, then
+                // pr-1.5/pr-2 re-adds it to match pb-1.5/pb-2 exactly — same
+                // clearance on the right as there is below the pill.
+                <div className="pb-1.5 sm:pb-2 pr-1.5 sm:pr-2 -mr-4">
                   <MiniSession elapsedMs={pillElapsed} onPause={pause} disabled={!isRunning} />
                 </div>
               )}
@@ -597,7 +612,11 @@ function ExpandedSessionBox({
 }) {
   const isPaused = status === "paused";
   const label = isPaused ? "Session Paused" : "Previous Session";
-  const ease = [0.4, 0, 0.2, 1] as const;
+  const ease = SESSION_MORPH_EASE;
+  // Gray only while genuinely idle and showing a leftover previous-session
+  // value — once paused (this session's own time) or once a start/resume has
+  // been pressed (about to become live), it reads as black.
+  const digitsGray = status === "idle" && !dimmed;
 
   // Re-render to refresh "x ago" string.
   const [, setTick] = useState(0);
@@ -642,13 +661,17 @@ function ExpandedSessionBox({
         {showPill && (
           <motion.div
             layoutId="session-pill"
-            transition={{ duration: 0.7, ease, layout: { duration: 0.7, ease } }}
+            transition={{ duration: SESSION_MORPH_MS / 1000, ease, layout: { duration: SESSION_MORPH_MS / 1000, ease } }}
             className="flex items-stretch rounded-full overflow-hidden border-2 border-stone-300 bg-white w-full h-12"
           >
             <motion.span
               layoutId="session-pill-time"
-              transition={{ duration: 0.7, ease }}
-              className="flex-1 flex items-center justify-center text-3xl leading-none text-stone-800 font-medium px-3"
+              transition={{ duration: SESSION_MORPH_MS / 1000, ease }}
+              className={cn(
+                "flex-1 flex items-center justify-center text-3xl leading-none font-medium px-3 transition-colors",
+                digitsGray ? "text-stone-400" : "text-stone-800",
+              )}
+              style={{ transitionDuration: `${SESSION_ROLL_MS}ms` }}
             >
               <OdometerDigits text={formatTime(elapsedMs)} />
             </motion.span>
@@ -656,7 +679,7 @@ function ExpandedSessionBox({
               layoutId="session-pill-toggle"
               onClick={onPlay}
               whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
-              transition={{ duration: 0.7, ease, layout: { duration: 0.7, ease } }}
+              transition={{ duration: SESSION_MORPH_MS / 1000, ease, layout: { duration: SESSION_MORPH_MS / 1000, ease } }}
               aria-label={isPaused ? "Resume session" : "Continue session"}
               className="btn-bevel grid place-items-center w-14 bg-blue-500 hover:bg-blue-600 text-white transition-colors shrink-0"
             >
@@ -817,17 +840,18 @@ function DiscardAction({ onConfirm }: { onConfirm: () => void }) {
 
 
 function MiniSession({ elapsedMs, onPause, disabled = false }: { elapsedMs: number; onPause: () => void; disabled?: boolean }) {
-  const ease = [0.4, 0, 0.2, 1] as const;
+  const ease = SESSION_MORPH_EASE;
+  const dur = SESSION_MORPH_MS / 1000;
   return (
     <motion.div
       layoutId="session-pill"
-      transition={{ duration: 0.7, ease, layout: { duration: 0.7, ease } }}
+      transition={{ duration: dur, ease, layout: { duration: dur, ease } }}
       className="flex items-stretch rounded-full overflow-hidden border-2 border-blue-500 bg-white h-7"
     >
       <motion.span
         layoutId="session-pill-time"
-        transition={{ duration: 0.7, ease }}
-        className="flex items-center px-2.5 text-sm leading-none text-blue-700 font-medium"
+        transition={{ duration: dur, ease }}
+        className="flex items-center px-2 text-sm leading-none text-blue-700 font-medium"
       >
         <OdometerDigits text={formatTime(elapsedMs)} />
       </motion.span>
@@ -836,10 +860,10 @@ function MiniSession({ elapsedMs, onPause, disabled = false }: { elapsedMs: numb
         onClick={disabled ? undefined : onPause}
 
         whileTap={{ scale: 0.95, filter: "brightness(0.9)" }}
-        transition={{ duration: 0.7, ease, layout: { duration: 0.7, ease } }}
+        transition={{ duration: dur, ease, layout: { duration: dur, ease } }}
         aria-label="Pause session"
         title="Pause session"
-        className="btn-bevel grid place-items-center w-8 bg-blue-500 hover:bg-blue-600 text-white transition-colors shrink-0"
+        className="btn-bevel grid place-items-center w-7 bg-blue-500 hover:bg-blue-600 text-white transition-colors shrink-0"
       >
         <motion.span layoutId="session-pill-icon" className="grid place-items-center">
           <Pause className="size-3 -translate-x-0.5" fill="currentColor" strokeWidth={0} />

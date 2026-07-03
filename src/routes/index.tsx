@@ -144,7 +144,14 @@ function IndexInner() {
     prevStatusRef.current = status;
     const justSubmitted = prev === "paused" && status === "idle";
     const justWentLive = status === "running" && prev !== "running";
-    if (justSubmitted || justWentLive) setCardsGen((n) => n + 1);
+    if (!justSubmitted && !justWentLive) return;
+    // Remounting all 7 cards (each with its own staggered entrance) is heavy
+    // enough to blow past a frame budget on its own — doing it in the exact
+    // same tick as the StatusBar's pill-morph/collapse animation contends
+    // for the main thread with it, which is what was making that animation
+    // stutter. Letting the morph finish first avoids the overlap.
+    const id = window.setTimeout(() => setCardsGen((n) => n + 1), NOTIFICATION_AREA_TRANSITION.duration * 1000);
+    return () => window.clearTimeout(id);
   }, [status]);
 
   const handleNotificationActivate = (n: { sourceRef?: { type: string; id: string } }) => {
