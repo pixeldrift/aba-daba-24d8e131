@@ -39,32 +39,39 @@ const ICON_MAP: Record<NotificationIcon, typeof Bell> = {
   megaphone: Megaphone,
 };
 
-// Tint per kind — semantic-ish colors using existing palette.
-const KIND_STYLES: Record<NotificationKind, { ring: string; iconFg: string; accent: string }> = {
+// Tint per kind — semantic-ish colors using existing palette. `button` matches
+// the same hue as `ring`/`iconFg` so a row's action buttons read as part of
+// the same alert, not a generic fixed blue/gray.
+const KIND_STYLES: Record<NotificationKind, { ring: string; iconFg: string; accent: string; button: string }> = {
   "alert-now": {
     ring: "border-red-300 bg-red-50",
     iconFg: "text-red-700",
     accent: "bg-red-500",
+    button: "bg-red-500 hover:bg-red-600 active:bg-red-700",
   },
   "alert-priming": {
     ring: "border-amber-300 bg-amber-50",
     iconFg: "text-amber-700",
     accent: "bg-amber-500",
+    button: "bg-amber-500 hover:bg-amber-600 active:bg-amber-700",
   },
   "goal-change": {
     ring: "border-blue-300 bg-blue-50",
     iconFg: "text-blue-700",
     accent: "bg-blue-500",
+    button: "bg-blue-500 hover:bg-blue-600 active:bg-blue-700",
   },
   message: {
     ring: "border-emerald-300 bg-emerald-50",
     iconFg: "text-emerald-700",
     accent: "bg-emerald-500",
+    button: "bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700",
   },
   announcement: {
     ring: "border-violet-300 bg-violet-50",
     iconFg: "text-violet-700",
     accent: "bg-violet-500",
+    button: "bg-violet-500 hover:bg-violet-600 active:bg-violet-700",
   },
 };
 
@@ -119,7 +126,10 @@ export function NotificationBar() {
   const overflow = ordered.length - visible.length;
 
   return (
-    <div className="px-3 pt-2 overflow-x-hidden pointer-events-none">
+    // Full viewport width (not the centered max-w column) so a row has room
+    // to actually slide off the edge of the screen when dragged/committed,
+    // instead of getting clipped by a narrow centered container.
+    <div className="px-3 pt-2 overflow-x-hidden pointer-events-none ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] w-screen">
       <motion.div layout transition={{ layout: NOTIFICATION_AREA_TRANSITION }} className="max-w-2xl mx-auto flex flex-col gap-2">
         <AnimatePresence initial={false}>
           {visible.map((n) => (
@@ -191,10 +201,6 @@ function NotificationRow({
   const threshold = SWIPE_THRESHOLD_PX;
   const dragX = useMotionValue(0);
   const wasDragging = useRef(false);
-  const leftOpacity = useTransform(dragX, [-threshold, 0], [1, 0]);
-  const leftScale = useTransform(dragX, [-threshold * 1.4, -threshold, 0], [1.15, 1, 0.6]);
-  const rightOpacity = useTransform(dragX, [0, threshold], [0, 1]);
-  const rightScale = useTransform(dragX, [0, threshold, threshold * 1.4], [0.6, 1, 1.15]);
   // The bubble itself fades out as it clears the threshold, so it's already
   // invisible well before the (larger) offscreen travel finishes.
   const bubbleOpacity = useTransform(dragX, [-threshold * 2.5, -threshold, 0, threshold, threshold * 2.5], [0, 1, 1, 1, 0]);
@@ -214,26 +220,31 @@ function NotificationRow({
   const openOpacity = useTransform(dragX, [-threshold, 0, threshold], [0, 1, 0]);
   const openScale = useTransform(dragX, [-threshold, 0, threshold], [0.5, 1, 0.5]);
 
+  // Shared by both a completed drag-past-threshold and a direct button tap —
+  // either way the row should fling off in the matching direction the same
+  // way, continuing from wherever it currently sits (0 for a tap) rather than
+  // a button-tap just teleporting the row away with a plain fade.
+  const commit = (direction: 1 | -1, action: () => void, velocity = 0) => {
+    const val = dragX.get();
+    const target = direction * 500;
+    const remaining = target - val;
+    const fastFlick = Math.abs(velocity) > 800;
+    animate(dragX, target, {
+      type: "tween",
+      ease: "easeIn",
+      duration: fastFlick ? 0.12 : Math.min(0.28, Math.max(0.16, Math.abs(remaining) / 1400)),
+    }).then(action);
+  };
+
   const handleDragEnd = (_e: unknown, info: { velocity: { x: number } }) => {
     const val = dragX.get();
     const vx = info.velocity.x;
     const commitLeft = val <= -threshold;
     const commitRight = val >= threshold && !!rightAction;
-    if (commitLeft || commitRight) {
-      // Continues from the drag's current position (and, loosely, its
-      // direction/speed) rather than restarting a fresh, disconnected
-      // slide — a fast, fixed-duration tween keeps this snappy regardless
-      // of exactly how fast the release was; an underdamped spring aimed
-      // at a point this far away can take over a second to actually settle.
-      const remaining = commitLeft ? -500 - val : 500 - val;
-      const fastFlick = Math.abs(vx) > 800;
-      animate(dragX, commitLeft ? -500 : 500, {
-        type: "tween",
-        ease: "easeIn",
-        duration: fastFlick ? 0.12 : Math.min(0.28, Math.max(0.16, Math.abs(remaining) / 1400)),
-      }).then(() => {
-        (commitLeft ? onDismiss : rightAction!)();
-      });
+    if (commitLeft) {
+      commit(-1, onDismiss, vx);
+    } else if (commitRight) {
+      commit(1, rightAction!, vx);
     } else {
       animate(dragX, 0, {
         type: "spring",
@@ -262,33 +273,6 @@ function NotificationRow({
       }}
       className="pointer-events-auto relative"
     >
-      {/* Swipe reveal layers — sit behind the draggable row. Sliding the row
-          left exposes the strip it just vacated on the RIGHT, and sliding it
-          right exposes the strip on the LEFT — so each icon sits on the side
-          that becomes visible, not the side the row is heading toward. */}
-      <motion.div
-        className="absolute inset-0 flex items-center justify-end pr-4 rounded-full bg-stone-700"
-        style={{ opacity: leftOpacity }}
-      >
-        <motion.div style={{ scale: leftScale }}>
-          <X className="size-5 text-white" />
-        </motion.div>
-      </motion.div>
-      {canSwipeRight && (
-        <motion.div
-          className="absolute inset-0 flex items-center justify-start pl-4 rounded-full bg-blue-600"
-          style={{ opacity: rightOpacity }}
-        >
-          <motion.div style={{ scale: rightScale }}>
-            {showSnooze ? (
-              <ZzIcon className="size-5 text-white" />
-            ) : (
-              <VolumeX className="size-5 text-white" />
-            )}
-          </motion.div>
-        </motion.div>
-      )}
-
       <motion.div
         drag="x"
         dragConstraints={
@@ -343,22 +327,22 @@ function NotificationRow({
         {alert ? (
           <>
             {showSilence && (
-              <RowButton label="Silence" tone="primary" style={{ opacity: silenceOpacity, scale: silenceScale }} onClick={onSilence}>
+              <RowButton label="Silence" colorClass={styles.button} style={{ opacity: silenceOpacity, scale: silenceScale }} onClick={() => commit(1, onSilence)}>
                 <VolumeX className="size-4" />
               </RowButton>
             )}
             {showSnooze && (
-              <RowButton label="Snooze" tone="primary" style={{ opacity: snoozeOpacity, scale: snoozeScale }} onClick={onSnooze}>
+              <RowButton label="Snooze" colorClass={styles.button} style={{ opacity: snoozeOpacity, scale: snoozeScale }} onClick={() => commit(1, onSnooze)}>
                 <ZzIcon className="size-4" />
               </RowButton>
             )}
           </>
         ) : (
-          <RowButton label="Open" tone="primary" style={{ opacity: openOpacity, scale: openScale }} onClick={onActivate}>
+          <RowButton label="Open" colorClass={styles.button} style={{ opacity: openOpacity, scale: openScale }} onClick={() => commit(1, onActivate)}>
             <ArrowRight className="size-4" />
           </RowButton>
         )}
-        <RowButton label="Dismiss" tone="neutral" style={{ opacity: dismissOpacity, scale: dismissScale }} onClick={onDismiss}>
+        <RowButton label="Dismiss" colorClass={styles.button} style={{ opacity: dismissOpacity, scale: dismissScale }} onClick={() => commit(-1, onDismiss)}>
           <X className="size-4" />
         </RowButton>
       </div>
@@ -369,13 +353,13 @@ function NotificationRow({
 function RowButton({
   label,
   onClick,
-  tone,
+  colorClass,
   style,
   children,
 }: {
   label: string;
   onClick: () => void;
-  tone: "neutral" | "primary";
+  colorClass: string;
   style?: MotionStyle;
   children: React.ReactNode;
 }) {
@@ -388,9 +372,7 @@ function RowButton({
       style={style}
       className={cn(
         "inline-flex items-center justify-center size-8 rounded-full text-white shadow-sm transition-colors",
-        tone === "primary"
-          ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
-          : "bg-stone-700 hover:bg-stone-800 active:bg-stone-900",
+        colorClass,
       )}
     >
       {children}

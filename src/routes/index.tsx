@@ -13,6 +13,7 @@ import { SettingsProvider } from "@/components/SettingsContext";
 import { SettingsPane } from "@/components/SettingsPane";
 import { StatusBar, type StatusTab } from "@/components/StatusBar";
 import { NotificationProvider } from "@/components/NotificationContext";
+import { NOTIFICATION_AREA_TRANSITION } from "@/components/NotificationBar";
 import { useStickyTop } from "@/hooks/use-sticky-top";
 import { cn } from "@/lib/utils";
 
@@ -143,7 +144,14 @@ function IndexInner() {
     prevStatusRef.current = status;
     const justSubmitted = prev === "paused" && status === "idle";
     const justWentLive = status === "running" && prev !== "running";
-    if (justSubmitted || justWentLive) setCardsGen((n) => n + 1);
+    if (!justSubmitted && !justWentLive) return;
+    // Remounting all 7 cards (each with its own staggered entrance) is heavy
+    // enough to blow past a frame budget on its own — doing it in the exact
+    // same tick as the StatusBar's pill-morph/collapse animation contends
+    // for the main thread with it, which is what was making that animation
+    // stutter. Letting the morph finish first avoids the overlap.
+    const id = window.setTimeout(() => setCardsGen((n) => n + 1), NOTIFICATION_AREA_TRANSITION.duration * 1000);
+    return () => window.clearTimeout(id);
   }, [status]);
 
   const handleNotificationActivate = (n: { sourceRef?: { type: string; id: string } }) => {
@@ -161,24 +169,48 @@ function IndexInner() {
       <StatusBar activeTab={tab} onTabChange={setTab} />
 
 
-      <section
+      <motion.section
+        layout="position"
+        transition={{ layout: NOTIFICATION_AREA_TRANSITION }}
         className={cn(
           "px-5 pb-16 max-w-5xl mx-auto border-t border-stone-200 -mt-px",
           tab === "schedule" ? "pt-2" : "pt-5",
         )}
       >
         {tab === "data" && (
-          <div className="flex flex-col items-center">
-            <div
-              className={cn(
-                "sticky z-40 w-full bg-background border-b border-stone-200/70 py-1.5 px-8 -mx-5 mb-5 text-center transition-[opacity,padding,margin] duration-500",
-                sessionActive ? "opacity-0 h-0 mb-0 overflow-hidden py-0 border-b-0" : "opacity-100",
+          <>
+            {/* Direct child of the section (not the flex/align-items:center
+                wrapper below) — negative margins used to break a flex child
+                out to full width get silently ignored by that container's
+                centering, so this uses the viewport-relative breakout
+                instead, same as the notification bar / schedule toggles. */}
+            <AnimatePresence initial={false}>
+              {!sessionActive && (
+                <motion.div
+                  key="start-session-banner"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{
+                    height: { duration: 0.4, ease: [0.4, 0, 0.2, 1] },
+                    opacity: { duration: 0.25 },
+                  }}
+                  className="sticky z-40 mb-5 overflow-hidden bg-background border-b border-stone-200/70 ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] w-screen"
+                  style={{ top: stickyTop }}
+                >
+                  <motion.div
+                    initial={{ y: -16 }}
+                    animate={{ y: 0 }}
+                    exit={{ y: -16 }}
+                    transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                    className="py-1.5 px-8 text-center"
+                  >
+                    <span className="text-sm text-muted-foreground">Start session to record data.</span>
+                  </motion.div>
+                </motion.div>
               )}
-              style={{ top: stickyTop }}
-              aria-hidden={sessionActive}
-            >
-              <span className="text-sm text-muted-foreground">Start session to record data.</span>
-            </div>
+            </AnimatePresence>
+          <div className="flex flex-col items-center">
             <div
               className={cn(
                 "w-full flex flex-col items-center gap-3 transition-opacity duration-300",
@@ -293,6 +325,7 @@ function IndexInner() {
             </AnimatePresence>
             </div>
           </div>
+          </>
         )}
 
         {tab === "info" && <InfoPane />}
@@ -304,7 +337,7 @@ function IndexInner() {
         )}
         {tab === "notifications" && <PlaceholderPane title="Alerts & announcements" description="Messages, reminders, and supervisor notes will appear here." />}
         {tab === "settings" && <SettingsPane />}
-      </section>
+      </motion.section>
     </main>
     </NotificationProvider>
   );
