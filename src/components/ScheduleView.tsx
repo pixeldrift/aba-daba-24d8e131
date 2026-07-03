@@ -191,8 +191,6 @@ const CLIENT_GROUP = "Group A"; // demo: this client belongs to Group A
 
 // Defaults — TODO: surface in user settings.
 const DEFAULT_PRIMING_MINUTES = 5;
-const SNOOZE_MINUTES = 1;
-const AUTOFADE_SECONDS = 7;
 
 // Animation timing — TODO: surface in user settings.
 const EDIT_MODE_DURATION_MS = 350;
@@ -413,7 +411,7 @@ export function ScheduleView({
 
   // ---- Alert firing: when `now` crosses an item's priming or start time,
   // push a notification. Idempotent per (itemId, kind, day) via dedupeKey.
-  const { push: pushNotification } = useNotifications();
+  const { push: pushNotification, prefs: notificationPrefs } = useNotifications();
   const lastNowMinRef = useRef<number>(nowMin);
   useEffect(() => {
     const prevMin = lastNowMinRef.current;
@@ -432,7 +430,7 @@ export function ScheduleView({
           title: `${it.customName ?? it.activity}`,
           body: it.location,
           icon: alertCfg.mode === "audio" ? "bell-chime" : "bell",
-          autofadeMs: alertCfg.autofade ? AUTOFADE_SECONDS * 1000 : undefined,
+          autofadeMs: alertCfg.autofade ? notificationPrefs.notificationDurationMs : undefined,
           allowSnooze: alertCfg.allowSnooze,
           sourceRef: { type: "activity", id: it.id },
         });
@@ -447,14 +445,14 @@ export function ScheduleView({
             title: `In ${priming.minutesPrior} min: ${it.customName ?? it.activity}`,
             body: it.location,
             icon: priming.mode === "audio" ? "bell-chime" : "bell",
-            autofadeMs: priming.autofade ? AUTOFADE_SECONDS * 1000 : undefined,
+            autofadeMs: priming.autofade ? notificationPrefs.notificationDurationMs : undefined,
             allowSnooze: priming.allowSnooze,
             sourceRef: { type: "activity", id: it.id },
           });
         }
       }
     }
-  }, [nowMin, items, now, pushNotification]);
+  }, [nowMin, items, now, pushNotification, notificationPrefs]);
 
 
 
@@ -1414,6 +1412,34 @@ function AlertCycle({ mode, onChange }: { mode: AlertMode; onChange: (m: AlertMo
   );
 }
 
+// Tracks how much the OS on-screen keyboard has eaten into the viewport
+// (window.innerHeight minus the visualViewport's visible height/offset), so
+// a centered modal can shift itself up to stay clear of it — the keyboard
+// resizes/offsets the visualViewport but not the fixed-position layout
+// viewport a centered dialog is normally positioned against.
+function useKeyboardInset(active: boolean) {
+  const [inset, setInset] = useState(0);
+  useEffect(() => {
+    if (!active) {
+      setInset(0);
+      return;
+    }
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      setInset(Math.max(0, window.innerHeight - vv.height - vv.offsetTop));
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, [active]);
+  return inset;
+}
+
 function PromptDialog({
   open,
   title,
@@ -1431,41 +1457,57 @@ function PromptDialog({
   onCancel: () => void;
   onSave: () => void;
 }) {
+  // Shifts the modal up by half the keyboard's height so it stays centered
+  // in the space actually left visible above it, instead of being covered.
+  const keyboardInset = useKeyboardInset(open);
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onCancel()}>
-      <DialogContent className="max-w-sm rounded-2xl border-stone-200 shadow-xl">
+      <DialogContent
+        className="max-w-sm rounded-2xl border-stone-200 shadow-xl transition-[translate] duration-150"
+        style={
+          // The base DialogContent centers via Tailwind's `translate-x-[-50%]
+          // translate-y-[-50%]` classes — Tailwind v4 compiles those to the
+          // standalone CSS `translate` property, not `transform`, so an
+          // inline `transform` here would compose with (not replace) it and
+          // double the offset. Overriding the same `translate` property is
+          // what actually wins.
+          keyboardInset > 0
+            ? { translate: `-50% calc(-50% - ${keyboardInset / 2}px)` }
+            : undefined
+        }
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="flex items-center gap-2">
-          <Input
-            autoFocus
-            placeholder={placeholder}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") onSave();
-            }}
-            className={cn("flex-1 rounded-full px-4", INPUT_BLUE_CLS)}
-          />
+        {/* Full-width input on its own row — the icon buttons that used to
+            sit inline ate into the room available to type, so Cancel/Save
+            move to a labeled row underneath instead, matching ConfirmDialog's
+            footer pattern (Save on the right). */}
+        <Input
+          autoFocus
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onSave();
+          }}
+          className={cn("w-full rounded-full px-4", INPUT_BLUE_CLS)}
+        />
+        {/* DialogFooter's default stacks full-width at narrow widths
+            (flex-col-reverse below `sm:`) — this app is mobile-width, so
+            forcing a row here keeps Cancel/Save side by side as asked. */}
+        <DialogFooter className="flex-row justify-end gap-2 space-x-0">
           <Button
-            size="icon"
-            className="h-9 w-9 rounded-full bg-blue-600 hover:bg-blue-700 text-white shrink-0"
-            onClick={onSave}
-            aria-label="Save"
-          >
-            <Check className="size-4" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-9 w-9 rounded-full border-2 border-stone-200 text-stone-500 hover:bg-stone-100 shrink-0"
+            variant="outline"
+            className="rounded-full text-blue-700 hover:bg-blue-50 border-2 border-blue-300"
             onClick={onCancel}
-            aria-label="Cancel"
           >
-            <X className="size-4" />
+            Cancel
           </Button>
-        </div>
+          <Button className="rounded-full bg-blue-600 hover:bg-blue-700 text-white" onClick={onSave}>
+            Save
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

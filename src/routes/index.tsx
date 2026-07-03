@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { memo, useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, LayoutGroup } from "motion/react";
 import { User } from "lucide-react";
 import { TrialCard } from "@/components/TrialCard";
 import { FrequencyCard } from "@/components/FrequencyCard";
@@ -229,6 +229,12 @@ function IndexInner() {
   return (
     <NotificationProvider onActivate={handleNotificationActivate}>
     <main className="min-h-screen bg-background">
+      {/* Shared across StatusBar's tab nav and this section's panel so their
+          `layout="position"` FLIPs are batched into one coordinated motion
+          instead of two independent trees that can drift a frame apart —
+          see LayoutGroup's docs on coordinating layout detection across
+          separate components. */}
+      <LayoutGroup id="session-bar">
       <StatusBar activeTab={tab} onTabChange={setTab} />
 
 
@@ -302,6 +308,7 @@ function IndexInner() {
         {tab === "notifications" && <PlaceholderPane title="Alerts & announcements" description="Messages, reminders, and supervisor notes will appear here." />}
         {tab === "settings" && <SettingsPane />}
       </motion.section>
+      </LayoutGroup>
     </main>
     </NotificationProvider>
   );

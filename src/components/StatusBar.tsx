@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ComponentType } from "react";
-import { motion, AnimatePresence, LayoutGroup, useMotionValue, useTransform, animate } from "motion/react";
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "motion/react";
 import {
   Play,
   Pause,
@@ -247,7 +247,11 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
             </div>
           </div>
 
-          <LayoutGroup id="session-bar">
+          {/* LayoutGroup for this box/notification-bar/nav trio now lives in
+              routes/index.tsx, wrapping this whole StatusBar plus the panel
+              section below it, so the tabs and the panel FLIP in the same
+              batch instead of drifting apart — see that file's comment. */}
+          <>
             {/* Session box area — always rendered; height animates symmetrically both ways.
                 The pill inside is hidden when running so only the mini pill carries the
                 shared layoutId, letting motion morph cleanly between the two positions. */}
@@ -363,7 +367,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
             </motion.nav>
 
 
-          </LayoutGroup>
+          </>
         </div>
       </div>
       {/* The pill's own travel shape — carries real digits (not an empty
