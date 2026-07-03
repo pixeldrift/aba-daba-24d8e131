@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentType } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentType } from "react";
 import { motion, AnimatePresence, LayoutGroup, useMotionValue, useTransform, animate } from "motion/react";
 import {
   Play,
@@ -56,7 +56,6 @@ const TABS: { id: StatusTab; label: string; icon: ComponentType<{ className?: st
 // sharing HEADER_MORPH_MS/this ease so they read as a single movement.
 const SESSION_MORPH_MS = HEADER_MORPH_MS;
 const SESSION_MORPH_EASE = NOTIFICATION_AREA_TRANSITION.ease;
-const SESSION_START_STAGGER_MS = 80;
 
 export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Data Sheet" }: StatusBarProps) {
   const {
@@ -98,25 +97,6 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
   const dimmed = transitionStage > 0;
   const collapsed = isRunning || (transitionStage === 2 && transitionKind !== "discard");
 
-  // A brief blue flash the instant the session actually goes live (i.e. right
-  // as the transition resolves into isRunning), landing slightly after the
-  // collapse/morph so it reads as the sequence's punctuation, not its start.
-  const [justStarted, setJustStarted] = useState(false);
-  const wasRunningRef = useRef(isRunning);
-  useEffect(() => {
-    const wasRunning = wasRunningRef.current;
-    wasRunningRef.current = isRunning;
-    if (isRunning && !wasRunning) {
-      const id = window.setTimeout(() => setJustStarted(true), SESSION_START_STAGGER_MS);
-      return () => window.clearTimeout(id);
-    }
-  }, [isRunning]);
-  useEffect(() => {
-    if (!justStarted) return;
-    const id = window.setTimeout(() => setJustStarted(false), 450);
-    return () => window.clearTimeout(id);
-  }, [justStarted]);
-
   const requestPlay = () => {
     if (status === "paused") requestResume();
     else requestContinuePrevious(previousSessionMs);
@@ -136,19 +116,6 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
   return (
     <>
       <div data-status-bar className="relative overflow-hidden sticky top-0 z-40 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b border-stone-200">
-        <AnimatePresence>
-          {justStarted && (
-            <motion.div
-              key="session-start-flash"
-              initial={{ opacity: 0.55 }}
-              animate={{ opacity: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.45, ease: "easeOut" }}
-              className="pointer-events-none absolute inset-0 z-50 bg-blue-400"
-              aria-hidden
-            />
-          )}
-        </AnimatePresence>
         <div className={cn("max-w-5xl mx-auto px-4", isRunning ? "pt-1" : "pt-2")}>
           {/* Title row — static, never scales or layout-animates */}
           <div className="flex items-start justify-between gap-3">
@@ -214,7 +181,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
 
             {/* Tabs row + mini session (when running) */}
             <motion.nav
-              layout
+              layout="position"
               transition={{ layout: NOTIFICATION_AREA_TRANSITION }}
               className={cn("flex items-end justify-between gap-2 -mb-px", isRunning ? "mt-1" : "mt-2")}
               role="tablist"
@@ -597,6 +564,21 @@ function ExpandedSessionBox({
   // been pressed (about to become live), it reads as black.
   const digitsGray = status === "idle" && !dimmed;
 
+  // Motion's "auto" height resolution wasn't reliable here (the collapse
+  // kept resolving in under 40ms instead of easing over 250) — measuring
+  // the real pixel height ourselves and animating between two concrete
+  // numbers (never "auto") sidesteps that entirely. scrollHeight reports the
+  // full content size even while overflow-hidden is clipping it to 0, so
+  // this stays accurate regardless of the current animated state.
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const [actionsHeight, setActionsHeight] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    if (actionsRef.current) {
+      setActionsHeight(actionsRef.current.scrollHeight);
+    }
+  }, [isPaused]);
+
+
   // Re-render to refresh "x ago" string.
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -670,45 +652,41 @@ function ExpandedSessionBox({
         )}
       </div>
 
-      <AnimatePresence>
-        {!dimmed && (
-          <motion.div
-            key="actions"
-            initial={{ opacity: 1, scale: 1, y: 0 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.85, y: 6 }}
-            transition={{ duration: 0.25, ease }}
-            className="flex flex-col gap-1"
+      {/* Stays mounted (no AnimatePresence) and toggles between two measured
+          pixel numbers, never "auto" — see the actionsHeight comment above. */}
+      <motion.div
+        ref={actionsRef}
+        animate={{ opacity: dimmed ? 0 : 1, height: dimmed ? 0 : (actionsHeight ?? "auto") }}
+        transition={{ duration: 0.25, ease }}
+        className="flex flex-col gap-1 overflow-hidden"
+      >
+        {isPaused ? (
+          <button
+            onClick={onEnd}
+            className="btn-bevel flex items-center justify-center gap-1.5 rounded-full h-9 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3 w-full transition-colors active:scale-95"
           >
-            {isPaused ? (
-              <button
-                onClick={onEnd}
-                className="btn-bevel flex items-center justify-center gap-1.5 rounded-full h-9 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3 w-full transition-colors active:scale-95"
-              >
-                End & Submit Data
-                <Upload className="size-3.5" strokeWidth={2.5} />
-              </button>
-            ) : (
-              <button
-                onClick={onStartNew}
-                className="btn-bevel flex items-center justify-center gap-1.5 rounded-full h-9 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3 w-full transition-colors active:scale-95"
-              >
-                Start New Session
-                <RefreshCw className="size-3.5" strokeWidth={2.5} />
-              </button>
-            )}
-            {isPaused && (
-              <button
-                onClick={onRequestDiscard}
-                className="flex items-center justify-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-[10px] px-1.5 py-1 rounded-md transition-colors active:scale-95"
-              >
-                End & Discard Session!
-                <Trash2 className="size-3" />
-              </button>
-            )}
-          </motion.div>
+            End & Submit Data
+            <Upload className="size-3.5" strokeWidth={2.5} />
+          </button>
+        ) : (
+          <button
+            onClick={onStartNew}
+            className="btn-bevel flex items-center justify-center gap-1.5 rounded-full h-9 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-3 w-full transition-colors active:scale-95"
+          >
+            Start New Session
+            <RefreshCw className="size-3.5" strokeWidth={2.5} />
+          </button>
         )}
-      </AnimatePresence>
+        {isPaused && (
+          <button
+            onClick={onRequestDiscard}
+            className="flex items-center justify-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-[10px] px-1.5 py-1 rounded-md transition-colors active:scale-95"
+          >
+            End & Discard Session!
+            <Trash2 className="size-3" />
+          </button>
+        )}
+      </motion.div>
 
     </div>
   );

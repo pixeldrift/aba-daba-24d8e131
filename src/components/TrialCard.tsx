@@ -11,7 +11,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useSession } from "./SessionContext";
+import { useCardSession } from "./SessionContext";
 import { cn } from "@/lib/utils";
 
 export type TrialResult = "correct" | "incorrect" | null;
@@ -72,7 +72,7 @@ export function TrialCard({
   const isMaxReached = maxTrials !== undefined && completedCount >= maxTrials;
   const remaining = Math.max(0, minTrials - completedCount);
 
-  const { markDirty, resetSignal } = useSession();
+  const { markDirty, resetSignal } = useCardSession();
 
   useEffect(() => {
     if (resetSignal === 0) return;

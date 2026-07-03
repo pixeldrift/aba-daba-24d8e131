@@ -4,7 +4,7 @@ import { Minus, Plus } from "lucide-react";
 import { CardShell } from "./CardShell";
 import { FrequencyIcon, NumberPadIcon } from "./icons/DataTypeIcons";
 import { NumberKeypad } from "./NumberKeypad";
-import { useSession } from "./SessionContext";
+import { useCardSession } from "./SessionContext";
 import { cn } from "@/lib/utils";
 
 export interface FrequencyCardProps {
@@ -29,7 +29,7 @@ export function FrequencyCard({
   const [dir, setDir] = useState<1 | -1>(1);
   const [flash, setFlash] = useState(false);
   const [editing, setEditing] = useState(false);
-  const { markDirty, resetSignal } = useSession();
+  const { markDirty, resetSignal } = useCardSession();
 
   useEffect(() => {
     if (resetSignal === 0) return;

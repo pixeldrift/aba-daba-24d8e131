@@ -4,7 +4,7 @@ import { Play, Pause } from "lucide-react";
 import { CardShell } from "./CardShell";
 import { DurationIcon } from "./icons/DataTypeIcons";
 import { TimeKeypad } from "./TimeKeypad";
-import { useRegisterActiveTimer, useSession } from "./SessionContext";
+import { useCardSession, useRegisterActiveTimer, useSession } from "./SessionContext";
 import { cn } from "@/lib/utils";
 
 const PULSE_BEAT_MS = 1000;
@@ -38,7 +38,8 @@ export function DurationCard({
   const [running, setRunning] = useState(false);
   const runningIdxRef = useRef<number | null>(null);
   const cardRef = useRef<HTMLElement | null>(null);
-  const { sessionRunning, getElapsedMsNow, subscribeTick, markDirty, resetSignal } = useSession();
+  const { sessionRunning, getElapsedMsNow, subscribeTick } = useSession();
+  const { markDirty, resetSignal } = useCardSession();
   useRegisterActiveTimer({ id: `duration:${title}`, label: title, active: running && sessionRunning, elementRef: cardRef, source: "duration", onActivate });
 
   // The pulse beat should read as one continuous heartbeat tied to the

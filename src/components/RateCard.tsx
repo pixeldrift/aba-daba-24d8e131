@@ -5,7 +5,7 @@ import { CardShell } from "./CardShell";
 import { NumberPadIcon, RateIcon } from "./icons/DataTypeIcons";
 import { NumberKeypad } from "./NumberKeypad";
 import { TimeKeypad } from "./TimeKeypad";
-import { useRegisterActiveTimer, useSession } from "./SessionContext";
+import { useCardSession, useRegisterActiveTimer, useSession } from "./SessionContext";
 import { cn } from "@/lib/utils";
 
 export interface RateCardProps {
@@ -37,7 +37,8 @@ export function RateCard({
   const [elapsed, setElapsed] = useState(0); // ms
   const [running, setRunning] = useState(true);
   const cardRef = useRef<HTMLDivElement | null>(null);
-  const { sessionRunning, subscribeTick, markDirty, resetSignal } = useSession();
+  const { sessionRunning, subscribeTick } = useSession();
+  const { markDirty, resetSignal } = useCardSession();
 
   useEffect(() => {
     if (resetSignal === 0) return;

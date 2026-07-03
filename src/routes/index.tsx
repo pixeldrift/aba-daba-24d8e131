@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { User } from "lucide-react";
 import { TrialCard } from "@/components/TrialCard";
@@ -221,7 +221,7 @@ function IndexInner() {
                     height: { duration: 0.4, ease: [0.4, 0, 0.2, 1] },
                     opacity: { duration: 0.25 },
                   }}
-                  className="sticky z-40 mb-5 overflow-hidden bg-background border-b border-stone-200/70 ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] w-screen"
+                  className="sticky z-40 -mt-5 mb-5 overflow-hidden bg-background border-b border-stone-200/70 ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] w-screen"
                   style={{ top: stickyTop }}
                 >
                   <motion.div
@@ -350,7 +350,12 @@ const SINGLE_UNIT_VARIANTS = {
   },
 } as const;
 
-function DataCardList({
+// Memoized so a resume/pause transition — which re-renders IndexInner via
+// `status`/`transitionKind` but leaves every prop below unchanged — doesn't
+// cascade a re-render through all five data cards (each a fairly heavy
+// subtree, e.g. TrialCard's keypads). That cascade was landing as a ~90ms
+// main-thread task right at click time, stalling the collapse animation.
+const DataCardList = memo(function DataCardList({
   cardsGen,
   cardsAnimKind,
   activeIndex,
@@ -426,7 +431,7 @@ function DataCardList({
       )}
     </AnimatePresence>
   );
-}
+});
 
 function InfoPane() {
   const { lastUpdated } = useSession();
