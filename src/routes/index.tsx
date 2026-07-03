@@ -8,7 +8,7 @@ import { RateCard } from "@/components/RateCard";
 import { DurationCard } from "@/components/DurationCard";
 import { TaskAnalysisCard } from "@/components/TaskAnalysisCard";
 import { ScheduleView } from "@/components/ScheduleView";
-import { SessionProvider, useSession, CARD_EXIT_MS, CARD_ENTER_MS, type TransitionKind } from "@/components/SessionContext";
+import { SessionProvider, useSession } from "@/components/SessionContext";
 import { SettingsProvider } from "@/components/SettingsContext";
 import { SettingsPane } from "@/components/SettingsPane";
 import { StatusBar, type StatusTab } from "@/components/StatusBar";
@@ -111,9 +111,9 @@ const cards: CardConfig[] = [
 ];
 
 // Data-submitted animation timing — TODO: surface in user settings.
-const DATA_SUBMIT_STAGGER_MS = 60;
-const DATA_SUBMIT_ENTER_DURATION_MS = 450;
-const DATA_SUBMIT_EXIT_DURATION_MS = 400;
+const DATA_SUBMIT_STAGGER_MS = 90;
+const DATA_SUBMIT_ENTER_DURATION_MS = 550;
+const DATA_SUBMIT_EXIT_DURATION_MS = 550;
 
 function Index() {
   return (
@@ -129,7 +129,7 @@ function IndexInner() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [tab, setTab] = useState<StatusTab>("data");
   const [scheduleScrollId, setScheduleScrollId] = useState<string | null>(null);
-  const { status, transitionKind } = useSession();
+  const { status, transitionStage, transitionKind } = useSession();
   const sessionActive = status === "running";
   const stickyTop = useStickyTop();
 
@@ -144,25 +144,31 @@ function IndexInner() {
 
   // Stage 1 (old stuff exits) needs the card list to unmount the INSTANT
   // transitionKind is set (not one effect-tick later), so the exit and the
-  // header dimming start together; stage 3 (new stuff enters) needs the
-  // fresh cardsGen/cardsAnimKind ready the instant the list re-mounts. Both
-  // are handled with React's "adjust state during render" pattern (comparing
-  // against a ref of the previous value) instead of useEffect, so there's no
-  // one-tick lag or intermediate stale-content flash.
-  const prevKindRef = useRef<TransitionKind>(null);
-  if (transitionKind !== prevKindRef.current) {
-    const prevKind = prevKindRef.current;
-    prevKindRef.current = transitionKind;
-    if (!transitionKind && (prevKind === "start-new" || prevKind === "discard")) {
-      setCardsAnimKind(prevKind);
+  // header dimming start together. The new cards remount and start entering
+  // the instant stage 2 commits — not once the whole sequence finishes —
+  // since that's when the fresh data actually lands (SessionContext's
+  // startFresh/resetSignal), and it happens well before the old cards'
+  // own (slower, CARD_EXIT_MS-long) exit is done: the two overlap into one
+  // continuous relay instead of "exit, dead pause, enter." Handled with
+  // React's "adjust state during render" pattern (comparing against a ref
+  // of the previous value) instead of useEffect, so there's no one-tick lag
+  // or intermediate stale-content flash.
+  const prevStageRef = useRef(transitionStage);
+  if (transitionStage !== prevStageRef.current) {
+    prevStageRef.current = transitionStage;
+    if (transitionStage === 2 && (transitionKind === "start-new" || transitionKind === "discard")) {
+      setCardsAnimKind(transitionKind);
       setCardsGen((n) => n + 1);
     }
   }
-  // For start-new/discard, hide the card list entirely while stages 1-2 are
-  // in progress (it re-mounts fresh, per above, once stage 2 finishes) —
+  // For start-new/discard, hide the card list only during stage 1 (old stuff
+  // exiting) — it re-mounts fresh, per above, the instant stage 2 commits,
+  // so its own (slower) exit animation keeps playing out, overlapping with
+  // the new cards' entrance, rather than being cut short by the hide.
   // resume/start-previous are untouched by this, they just keep the same
   // cards mounted and let the opacity-50 wrapper below fade them.
-  const hideCardsForTransition = transitionKind === "start-new" || transitionKind === "discard";
+  const hideCardsForTransition =
+    (transitionKind === "start-new" || transitionKind === "discard") && transitionStage === 1;
 
   // Submit doesn't go through the shared transition stages above (it's a
   // direct, unstaged action) — detected the same way as before, just guarded
@@ -331,6 +337,15 @@ function renderCard(
   }
 }
 
+// The card list's own slide is deliberately SLOWER than CARD_EXIT_MS (stage
+// 1's dwell, which is when the new cards' remount actually fires — see
+// IndexInner). That gap is what makes the two overlap: the old cards are
+// still most of the way through sliding out (not gone yet) when the new
+// ones start sliding in, so it reads as one continuous relay — "one set
+// leaving as the other enters" — instead of "exit, dead pause, enter."
+const CARD_SLIDE_EXIT_MS = 560;
+const CARD_SLIDE_ENTER_MS = 560;
+
 // Single-unit variants for start-new/discard — the WHOLE list moves as one
 // element (not per-card), which is both simpler and much cheaper than
 // animating each card individually: only one Motion component is tracked
@@ -338,15 +353,15 @@ function renderCard(
 const SINGLE_UNIT_VARIANTS = {
   "start-new": {
     initial: { x: "-100%" },
-    animate: { x: 0, transition: { duration: CARD_ENTER_MS / 1000, ease: [0, 0, 0.2, 1] } },
-    exit: { x: "100%", transition: { duration: CARD_EXIT_MS / 1000, ease: [0.4, 0, 1, 1] } },
+    animate: { x: 0, transition: { duration: CARD_SLIDE_ENTER_MS / 1000, ease: [0, 0, 0.2, 1] } },
+    exit: { x: "100%", transition: { duration: CARD_SLIDE_EXIT_MS / 1000, ease: [0.4, 0, 1, 1] } },
   },
   discard: {
     initial: { x: "100%", opacity: 0 },
-    animate: { x: 0, opacity: 1, transition: { duration: CARD_ENTER_MS / 1000, ease: [0, 0, 0.2, 1] } },
+    animate: { x: 0, opacity: 1, transition: { duration: CARD_SLIDE_ENTER_MS / 1000, ease: [0, 0, 0.2, 1] } },
     // A gentle deflate-and-sink reads as "being discarded" without a
     // literal trash/shred effect.
-    exit: { opacity: 0, scale: 0.92, y: 10, transition: { duration: CARD_EXIT_MS / 1000, ease: [0.4, 0, 1, 1] } },
+    exit: { opacity: 0, scale: 0.92, y: 10, transition: { duration: CARD_SLIDE_EXIT_MS / 1000, ease: [0.4, 0, 1, 1] } },
   },
 } as const;
 
