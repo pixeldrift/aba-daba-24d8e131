@@ -167,9 +167,11 @@ export function TrialCard({
           }}
           aria-expanded={expanded}
           aria-label={expanded ? "Show standard view" : "Show all trials"}
-          className="-ml-1.5 mt-1 shrink-0 grid place-items-center rounded-md p-0.5 text-blue-500 transition-colors hover:bg-blue-50 hover:text-blue-600"
+          className="-ml-1.5 mt-0.5 shrink-0 grid place-items-center rounded-md p-0.5 text-blue-500 transition-colors hover:bg-blue-50 hover:text-blue-600"
         >
-          <TimeChevronIcon className={cn("size-4 transition-transform duration-200", expanded && "rotate-90")} />
+          <TimeChevronIcon
+            className={cn("size-4 transition-transform duration-200", expanded && "-translate-y-0.5 rotate-90")}
+          />
         </button>
         <h2 className="font-display text-xl leading-tight flex-1 mr-auto">{title}</h2>
         <div className="text-right leading-tight">
