@@ -13,6 +13,12 @@ export interface RatingCardProps {
   min?: number;
   /** Inclusive high end — also the number of stars shown. */
   max: number;
+  /**
+   * One line per star describing what that level of quality looks like in
+   * practice — in a real goal these would be authored by the BCBA when the
+   * target is created; a placeholder is used here if omitted.
+   */
+  levelDescriptions?: string[];
   isActive?: boolean;
   onActivate?: () => void;
 }
@@ -29,6 +35,7 @@ export function RatingCard({
   description,
   min = 0,
   max,
+  levelDescriptions,
   isActive = true,
   onActivate,
 }: RatingCardProps) {
@@ -37,6 +44,7 @@ export function RatingCard({
   // types there's no running count or trial list to fill in, just one value
   // that later interactions simply overwrite.
   const [rating, setRating] = useState(0);
+  const [expanded, setExpanded] = useState(false);
   const { markDirty, resetSignal } = useCardSession();
 
   useEffect(() => {
@@ -59,6 +67,8 @@ export function RatingCard({
       isActive={isActive}
       onActivate={onActivate}
       progress={null}
+      expanded={expanded}
+      onToggleExpanded={() => setExpanded((v) => !v)}
       details={
         <dl className="space-y-3">
           <Row label="Phase" value={phase} />
@@ -67,6 +77,30 @@ export function RatingCard({
           <Row label="Current rating" value={rating > 0 ? String(rating) : "Not yet rated"} />
         </dl>
       }
+      expandedView={
+        <ol className="px-4 pt-1 pb-3 space-y-2.5">
+          {Array.from({ length: numStars }, (_, i) => {
+            const value = min + i + 1;
+            const desc = levelDescriptions?.[i] ?? `Describe what a rating of ${value} looks like.`;
+            const isCurrent = value === rating;
+            return (
+              <li key={value} className="flex items-start gap-2.5">
+                <span
+                  className={cn(
+                    "grid place-items-center size-6 rounded-full text-[11px] font-medium shrink-0 mt-0.5 transition-colors",
+                    isCurrent ? "bg-blue-500 text-white" : "bg-stone-100 text-foreground/60",
+                  )}
+                >
+                  {value}
+                </span>
+                <span className={cn("flex-1 text-sm leading-snug pt-0.5", isCurrent ? "text-foreground" : "text-foreground/70")}>
+                  {desc}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      }
     >
       <div className="px-5 pt-3 pb-4 flex flex-col items-center gap-2">
         <div className="flex items-end justify-center gap-1.5">
@@ -74,12 +108,14 @@ export function RatingCard({
             const value = min + i + 1;
             const size = BASE_STAR_SIZE + i * STAR_SIZE_STEP;
             const filled = rating >= value;
+            const isTop = filled && value === rating;
             return (
               <RatingStar
                 key={value}
                 value={value}
                 size={size}
                 filled={filled}
+                isTop={isTop}
                 onClick={() => pick(value)}
               />
             );
@@ -99,15 +135,26 @@ export function RatingCard({
   );
 }
 
+// Custom star path (not lucide's <Star>, so we can mark the outline with
+// vector-effect="non-scaling-stroke") — each star's rendered box grows with
+// its value, but the SVG viewBox-to-viewport scale that growth implies would
+// otherwise scale the stroke right along with it. non-scaling-stroke cancels
+// that scale component for the stroke specifically, so line weight stays
+// constant across every star regardless of size, like the trial bubbles'
+// border thickness (2px on the emphasized one, 1px on the rest).
 function RatingStar({
   value,
   size,
   filled,
+  isTop,
   onClick,
 }: {
   value: number;
   size: number;
   filled: boolean;
+  /** The topmost filled star — i.e. the one matching the current rating —
+   *  gets the bold "selected" treatment; stars below it just read as filled. */
+  isTop: boolean;
   onClick: () => void;
 }) {
   return (
@@ -119,19 +166,29 @@ function RatingStar({
       transition={{ duration: 0.3 }}
       aria-label={`Rate ${value}`}
       aria-pressed={filled}
-      className="relative shrink-0"
+      className={cn("relative shrink-0", isTop && "btn-bevel rounded-full")}
       style={{ width: size, height: size }}
     >
-      <Star
+      <svg
+        viewBox="0 0 24 24"
         style={{ width: size, height: size }}
-        fill={filled ? "currentColor" : "none"}
-        strokeWidth={filled ? 1.5 : 1.75}
-        className={cn("transition-colors", filled ? "text-amber-400" : "text-stone-300")}
-      />
+        className={cn(
+          "transition-colors",
+          isTop ? "fill-blue-500 stroke-blue-600" : filled ? "fill-blue-100 stroke-blue-300" : "fill-none stroke-stone-300",
+        )}
+      >
+        <polygon
+          points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+          strokeWidth={isTop ? 2 : 1}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
       <span
         className={cn(
           "absolute inset-0 flex items-center justify-center pt-1 font-display font-semibold leading-none tabular-nums transition-colors",
-          filled ? "text-white" : "text-stone-400",
+          isTop ? "text-white" : filled ? "text-blue-700" : "text-stone-400",
         )}
         style={{ fontSize: Math.max(10, size * 0.32) }}
       >

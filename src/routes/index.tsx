@@ -49,7 +49,15 @@ type CardConfig =
   | { kind: "rate"; title: string; phase: string; description: string; minDurationSec: number; locked?: boolean }
   | { kind: "duration"; title: string; phase: string; description: string; minDurationSec: number }
   | { kind: "task-analysis"; title: string; phase: string; description: string; steps: string[] }
-  | { kind: "rating"; title: string; phase: string; description: string; min?: number; max: number };
+  | {
+      kind: "rating";
+      title: string;
+      phase: string;
+      description: string;
+      min?: number;
+      max: number;
+      levelDescriptions?: string[];
+    };
 
 const cards: CardConfig[] = [
   {
@@ -139,6 +147,13 @@ const cards: CardConfig[] = [
     description:
       "A holistic, end-of-session quality rating capturing overall engagement and cooperation. Unlike the other cards, this is scored once — later interactions simply update the same score rather than adding new entries.",
     max: 5,
+    levelDescriptions: [
+      "Highly resistant; required significant redirection throughout the session.",
+      "Engaged briefly; needed frequent prompts to reorient to tasks.",
+      "Adequate engagement with occasional prompting.",
+      "Consistently engaged with minimal prompting.",
+      "Fully engaged and cooperative throughout the session.",
+    ],
   },
 ];
 
@@ -424,6 +439,7 @@ function renderCard(
           description={card.description}
           min={card.min}
           max={card.max}
+          levelDescriptions={card.levelDescriptions}
           {...common}
         />
       );

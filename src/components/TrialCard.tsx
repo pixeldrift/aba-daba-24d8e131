@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useMotionValue, animate, type PanInfo } from "motion/react";
 import { Check, X, CircleSlash2 } from "lucide-react";
-import { PercentCorrectIcon } from "./icons/DataTypeIcons";
+import { PercentCorrectIcon, PhaseIcon } from "./icons/DataTypeIcons";
 import { DetailsIcon } from "./icons/DetailsIcon";
 import { TimeChevronIcon } from "./icons/TimeChevronIcon";
 import {
@@ -211,7 +211,7 @@ export function TrialCard({
       )}
     >
       {/* Header */}
-      <header className="flex items-start gap-1 pl-5 pr-9 pt-3 pb-0">
+      <header className="flex items-center gap-1 pl-5 pr-9 pt-2 pb-0">
         <button
           type="button"
           onClick={(e) => {
@@ -220,15 +220,18 @@ export function TrialCard({
           }}
           aria-expanded={expanded}
           aria-label={expanded ? "Show standard view" : "Show all trials"}
-          className="-ml-1.5 mt-0.5 shrink-0 grid place-items-center rounded-md p-0.5 text-blue-500 transition-colors hover:bg-blue-50 hover:text-blue-600"
+          className="-ml-1.5 shrink-0 grid place-items-center rounded-md p-0.5 text-blue-500 transition-colors hover:bg-blue-50 hover:text-blue-600"
         >
           <TimeChevronIcon
-            className={cn("size-4 transition-transform duration-200", expanded && "-translate-y-0.5 rotate-90")}
+            className={cn("size-4 transition-transform duration-200", expanded && "translate-y-0.5 rotate-90")}
           />
         </button>
         <h2 className="font-display text-xl leading-tight flex-1 mr-auto">{title}</h2>
         <div className="text-right leading-tight">
-          <div className="text-xs font-medium text-blue-400">{phase}</div>
+          <div className="flex items-center justify-end gap-1 text-xs font-medium italic text-muted-foreground">
+            <PhaseIcon className="size-3 shrink-0" />
+            <span>{phase}</span>
+          </div>
           <div className="flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
             <PercentCorrectIcon className="size-3 shrink-0" />
             <span>{dataType}</span>
@@ -242,9 +245,9 @@ export function TrialCard({
         <SheetTrigger asChild>
           <button
             aria-label="Trial details"
-            className="absolute top-2 right-2 grid size-6 place-items-center rounded-full border-2 border-current text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="absolute top-2 right-2 grid size-6 place-items-center rounded-full border border-current text-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
           >
-            <DetailsIcon className="size-4" />
+            <DetailsIcon className="size-4" strokeWidth={1.5} />
           </button>
         </SheetTrigger>
         <SheetContent side="right" className="w-[88%] sm:max-w-md">
@@ -534,14 +537,14 @@ export function TrialCard({
                     <button
                       type="button"
                       onClick={() => applyResult(i, "no-response", false)}
-                      aria-label="No response"
                       className={cn(
-                        "size-7 rounded-full border-2 grid place-items-center transition-colors shrink-0",
+                        "h-7 rounded-full border-2 flex items-center justify-center gap-1 px-2.5 text-[11px] font-semibold transition-colors",
                         "border-amber-300 text-amber-700 hover:bg-amber-50",
                         t === "no-response" && "btn-bevel bg-amber-500 border-amber-600 text-white",
                       )}
                     >
-                      <CircleSlash2 className="size-3" strokeWidth={2.25} />
+                      <CircleSlash2 className="size-2.5" strokeWidth={2.5} />
+                      No Response
                     </button>
                   )}
                   <button
@@ -706,7 +709,10 @@ function ActionButton({
         selected && selectedClasses,
       )}
     >
-      <Icon className="size-4 shrink-0" strokeWidth={variant === "no-response" ? 2.25 : 3} />
+      <Icon
+        className={cn("shrink-0", variant === "no-response" ? "size-3" : "size-4")}
+        strokeWidth={variant === "no-response" ? 2.5 : 3}
+      />
       <span className={cn("font-medium truncate", dense ? "text-[13px]" : "text-sm")}>{label}</span>
     </motion.button>
   );
@@ -751,6 +757,12 @@ function PromptLevelButton({
           <span className="flex items-center gap-1.5">
             <X className="size-4 shrink-0" strokeWidth={3} />
             <span className="text-sm font-medium">Error</span>
+            <TimeChevronIcon
+              className={cn(
+                "size-2.5 shrink-0 transition-transform duration-200",
+                open && "-rotate-90",
+              )}
+            />
           </span>
           {selectedLevel && (
             <span className={cn("text-[10px] leading-none -mt-0.5", selected ? "text-white/80" : "text-red-600/70")}>
@@ -823,6 +835,9 @@ function RowPromptLevelButton({
         >
           <X className="size-3" strokeWidth={3} />
           {selectedLevel ?? "Error"}
+          <TimeChevronIcon
+            className={cn("size-2 shrink-0 transition-transform duration-200", open && "-rotate-90")}
+          />
         </button>
       </PopoverAnchor>
       <PopoverContent
