@@ -286,7 +286,10 @@ function IndexInner() {
                 </motion.div>
               )}
             </AnimatePresence>
-          <div className="flex flex-col items-center">
+          {/* -mx-2 cancels 8px of the section's px-5, so the cards sit 12px
+              from the viewport edge — the same as the gap-3 between them,
+              instead of the wider 20px inherited from the shared tab padding. */}
+          <div className="flex flex-col items-center -mx-2">
             <div
               className={cn(
                 "w-full flex flex-col items-center gap-3 transition-opacity duration-300",

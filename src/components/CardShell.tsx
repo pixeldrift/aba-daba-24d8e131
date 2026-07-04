@@ -80,7 +80,7 @@ export function CardShell({
           : "border-stone-200 opacity-80 hover:opacity-95",
       )}
     >
-      <header className="flex items-start gap-2 pl-5 pr-9 pt-3 pb-0">
+      <header className="flex items-start gap-1 pl-5 pr-9 pt-3 pb-0">
         {hasExpandedView && (
           <button
             type="button"
@@ -90,7 +90,7 @@ export function CardShell({
             }}
             aria-expanded={expanded}
             aria-label={expanded ? "Show standard view" : "Show all"}
-            className="mt-1 shrink-0 grid place-items-center rounded-md p-0.5 text-blue-500 transition-colors hover:bg-blue-50 hover:text-blue-600"
+            className="-ml-1.5 mt-1 shrink-0 grid place-items-center rounded-md p-0.5 text-blue-500 transition-colors hover:bg-blue-50 hover:text-blue-600"
           >
             <TimeChevronIcon
               className={cn("size-4 transition-transform duration-200", expanded && "rotate-90")}
