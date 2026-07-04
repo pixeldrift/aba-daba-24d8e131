@@ -7,6 +7,7 @@ import { FrequencyCard } from "@/components/FrequencyCard";
 import { RateCard } from "@/components/RateCard";
 import { DurationCard } from "@/components/DurationCard";
 import { TaskAnalysisCard } from "@/components/TaskAnalysisCard";
+import { RatingCard } from "@/components/RatingCard";
 import { ScheduleView } from "@/components/ScheduleView";
 import { SessionProvider, useSession, PILL_LAND_MS, type TransitionKind } from "@/components/SessionContext";
 import { SettingsProvider } from "@/components/SettingsContext";
@@ -47,7 +48,8 @@ type CardConfig =
   | { kind: "frequency"; title: string; phase: string; description: string; minCount: number }
   | { kind: "rate"; title: string; phase: string; description: string; minDurationSec: number; locked?: boolean }
   | { kind: "duration"; title: string; phase: string; description: string; minDurationSec: number }
-  | { kind: "task-analysis"; title: string; phase: string; description: string; steps: string[] };
+  | { kind: "task-analysis"; title: string; phase: string; description: string; steps: string[] }
+  | { kind: "rating"; title: string; phase: string; description: string; min?: number; max: number };
 
 const cards: CardConfig[] = [
   {
@@ -129,6 +131,14 @@ const cards: CardConfig[] = [
       "Turn off water",
       "Dry hands",
     ],
+  },
+  {
+    kind: "rating",
+    title: "Overall session engagement",
+    phase: "Intervention",
+    description:
+      "A holistic, end-of-session quality rating capturing overall engagement and cooperation. Unlike the other cards, this is scored once — later interactions simply update the same score rather than adding new entries.",
+    max: 5,
   },
 ];
 
@@ -403,6 +413,17 @@ function renderCard(
           phase={card.phase}
           description={card.description}
           steps={card.steps}
+          {...common}
+        />
+      );
+    case "rating":
+      return (
+        <RatingCard
+          title={card.title}
+          phase={card.phase}
+          description={card.description}
+          min={card.min}
+          max={card.max}
           {...common}
         />
       );
