@@ -119,6 +119,11 @@ export function DurationCard({
       runningIdxRef.current = null;
       if (wasLast) {
         setInstances((arr) => [...arr, 0]);
+        // Only auto-advance the view when the paused instance was the last
+        // one — pausing an earlier instance (after navigating back to fix
+        // up its time) shouldn't yank the view forward past instances that
+        // already have their own data.
+        setViewIdx(idx + 1);
       }
     } else {
       if (running) flushLive();

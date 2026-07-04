@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { DetailsIcon } from "./icons/DetailsIcon";
 import { TimeChevronIcon } from "./icons/TimeChevronIcon";
+import { PhaseIcon } from "./icons/DataTypeIcons";
 import { cn } from "@/lib/utils";
 
 export interface CardShellProps {
@@ -80,7 +81,7 @@ export function CardShell({
           : "border-stone-200 opacity-80 hover:opacity-95",
       )}
     >
-      <header className="flex items-start gap-1 pl-5 pr-9 pt-3 pb-0">
+      <header className="flex items-center gap-1 pl-5 pr-9 pt-2 pb-0">
         {hasExpandedView && (
           <button
             type="button"
@@ -95,14 +96,17 @@ export function CardShell({
             <TimeChevronIcon
               className={cn(
                 "size-4 transition-transform duration-200",
-                expanded && "-translate-y-0.5 rotate-90",
+                expanded && "translate-y-0.5 rotate-90",
               )}
             />
           </button>
         )}
         <h2 className="font-display text-lg leading-tight flex-1 mr-auto">{title}</h2>
         <div className="text-right leading-tight">
-          <div className="text-xs font-medium text-blue-400">{phase}</div>
+          <div className="flex items-center justify-end gap-1 text-xs font-medium italic text-muted-foreground">
+            <PhaseIcon className="size-3 shrink-0" />
+            <span>{phase}</span>
+          </div>
           {dataType && (
             <div className="flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
               {dataTypeIcon && (
@@ -124,9 +128,9 @@ export function CardShell({
         <SheetTrigger asChild>
           <button
             aria-label="Card details"
-            className="absolute top-2 right-2 grid size-6 place-items-center rounded-full border-2 border-current text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="absolute top-2 right-2 grid size-6 place-items-center rounded-full border border-current text-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
           >
-            <DetailsIcon className="size-4" />
+            <DetailsIcon className="size-4" strokeWidth={1.5} />
           </button>
         </SheetTrigger>
         <SheetContent side="right" className="w-[88%] sm:max-w-md">
