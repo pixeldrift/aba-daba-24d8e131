@@ -174,10 +174,14 @@ const STAR_CENTROID_FRACTION = 12.51 / 24;
 // formula predicts this; it's a per-size optical call.)
 const STAR_UP_SHIFT_EXCEPTIONS = new Set([1, 4]);
 
-// "1" reads as sitting slightly off-true even once mathematically
-// centered — same family of illusion as Apple's famously-adjusted iOS
-// Calendar icon digit. A hair of extra correction, not a full nudge.
-const STAR_ONE_TINY_NUDGE = { x: -1, y: 0 };
+// A couple of stars still read as slightly off-true even once
+// mathematically centered — the same family of illusion as Apple's
+// famously-adjusted iOS Calendar icon digit. A hair of extra correction
+// on top of the computed shift above, not a full nudge in its own right.
+const STAR_TINY_NUDGE: Record<number, { x: number; y: number }> = {
+  1: { x: -1, y: -1 },
+  3: { x: 0, y: -1 },
+};
 
 function RatingStar({
   value,
@@ -214,7 +218,7 @@ function RatingStar({
   // line for every value except the two exceptions.
   const starUpShift = STAR_UP_SHIFT_EXCEPTIONS.has(value) ? 0 : 1;
   const starShiftY = centroidGapFromDigitLine - starUpShift;
-  const starTinyNudge = value === 1 ? STAR_ONE_TINY_NUDGE : { x: 0, y: 0 };
+  const starTinyNudge = STAR_TINY_NUDGE[value] ?? { x: 0, y: 0 };
 
   return (
     <motion.button
