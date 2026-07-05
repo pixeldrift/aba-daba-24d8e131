@@ -777,7 +777,20 @@ export function ScheduleView({
             </SelectContent>
           </Select>
         )}
-        <div className="flex items-center gap-1 overflow-hidden">
+        {/* `relative` is load-bearing, not decorative: the exiting child
+            below gets `position: absolute` from AnimatePresence's
+            `popLayout` (so it stops taking up flex space once it starts
+            leaving), and an absolutely-positioned element's containing
+            block is its nearest *positioned* ancestor — skipping straight
+            past this `overflow-hidden` div if it were left `static`, all
+            the way up to the viewport. That let the sliding Cancel/Save
+            pair render fully unclipped past the right edge, inflating
+            `document.documentElement.scrollWidth` for the ~300ms of the
+            exit — which is exactly the class of bug the "now" button fix
+            elsewhere in this file also guards against: mobile browsers
+            shrink-to-fit the *entire page* to accommodate that overflow,
+            reading as the whole schedule visibly scaling down and back. */}
+        <div className="relative flex items-center gap-1 overflow-hidden">
           {/* No `layout` on this wrapper — a layout-animated parent scales
               its whole subtree during the FLIP transition, which visibly
               stretches children that aren't themselves layout-aware. Each
@@ -1111,8 +1124,8 @@ export function ScheduleView({
       </div>
 
       {/* Schedule grid */}
-      <div className="mt-3 mx-1 rounded-xl border border-stone-200 relative">
-        <div className="grid grid-cols-[40px_1fr_84px_34px] gap-1 px-1.5 py-1 text-[10px] uppercase tracking-wide text-muted-foreground border-b border-stone-300 bg-stone-200 rounded-xl">
+      <div className="mt-3 mx-1 rounded-md border border-stone-200 relative">
+        <div className="grid grid-cols-[40px_1fr_84px_34px] gap-1 px-1.5 py-1 text-[10px] uppercase tracking-wide text-muted-foreground border-b border-stone-300 bg-stone-200 rounded-t-md">
           <div className="text-right pr-1.5">Time</div>
           <div className="flex items-center gap-1.5">
             <span className="invisible text-sm leading-none shrink-0" aria-hidden>•</span>

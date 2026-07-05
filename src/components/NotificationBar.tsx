@@ -264,6 +264,21 @@ function NotificationRow({
     }).then(action);
   };
 
+  // Silencing doesn't remove the notification from the list (it stays,
+  // just muted — see NotificationContext's silence()), so unlike the other
+  // actions the row must settle back to its resting position instead of
+  // flinging off: committing it off-screen left the row's own content gone
+  // but its action-button layer (which isn't part of the draggable bubble,
+  // and clamps to full opacity past the drag threshold) stranded in view.
+  const silenceInPlace = (action: () => void) => {
+    action();
+    animate(dragX, 0, {
+      type: "spring",
+      stiffness: SWIPE_SPRING_STIFFNESS,
+      damping: SWIPE_SPRING_DAMPING,
+    });
+  };
+
   const handleDragEnd = (_e: unknown, info: { velocity: { x: number } }) => {
     const val = dragX.get();
     const vx = info.velocity.x;
@@ -272,7 +287,11 @@ function NotificationRow({
     if (commitLeft) {
       commit(-1, onDismiss, vx);
     } else if (commitRight) {
-      commit(1, rightAction!, vx);
+      if (rightIsSilence) {
+        silenceInPlace(rightAction!);
+      } else {
+        commit(1, rightAction!, vx);
+      }
     } else {
       animate(dragX, 0, {
         type: "spring",
@@ -355,7 +374,7 @@ function NotificationRow({
         {alert ? (
           <>
             {showSilence && (
-              <RowButton label="Silence" colorClass={styles.button} style={{ opacity: silenceOpacity, scale: silenceScale }} onClick={() => commit(1, onSilence)}>
+              <RowButton label="Silence" colorClass={styles.button} style={{ opacity: silenceOpacity, scale: silenceScale }} onClick={() => silenceInPlace(onSilence)}>
                 <VolumeX className="size-4" />
               </RowButton>
             )}

@@ -215,7 +215,7 @@ function RatingStar({
     >
       <svg
         viewBox="0 0 24 24"
-        style={{ width: size, height: size }}
+        style={{ width: size, height: size, transform: `translate(${nudge.x}px, ${nudge.y}px)` }}
         className={cn(
           "transition-colors",
           isTop
@@ -243,7 +243,12 @@ function RatingStar({
         style={{
           fontSize: Math.max(10, size * 0.32),
           top: `${NUMBER_LINE_FRACTION * 100}%`,
-          transform: `translate(${nudge.x}px, calc(-50% + ${nudge.y}px))`,
+          // The star shape shifts by `nudge` to compensate for that
+          // numeral's glyph quirks; the number shifts by the exact
+          // opposite so its own absolute position — and thus the shared
+          // alignment line across every star — never moves. Only the star
+          // moves relative to the number, not the number itself.
+          transform: `translate(${-nudge.x}px, calc(-50% + ${-nudge.y}px))`,
         }}
       >
         {value}
