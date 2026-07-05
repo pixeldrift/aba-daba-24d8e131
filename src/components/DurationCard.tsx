@@ -248,7 +248,8 @@ export function DurationCard({
               </li>
             );
           })}
-          <li className="flex items-center justify-between gap-2 px-2 py-2 mt-1 border-t border-dashed border-stone-200">
+          <li className="flex items-center gap-2 px-2 py-2 mt-1 border-t border-dashed border-stone-200">
+            <span className="size-6 shrink-0" aria-hidden />
             <span className="tabular-nums text-sm text-foreground">{formatTime(totalMs)}</span>
             <span className="text-sm font-bold text-foreground">Total</span>
           </li>
