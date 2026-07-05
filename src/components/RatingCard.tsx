@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { Star } from "lucide-react";
-import { CardShell } from "./CardShell";
+import { CardShell, type CardEditAndDrawerProps } from "./CardShell";
 import { useCardSession } from "./SessionContext";
+import { useReportCardStatus } from "./DataToolbarContext";
 import { cn } from "@/lib/utils";
 
-export interface RatingCardProps {
+export interface RatingCardProps extends CardEditAndDrawerProps {
+  id?: string;
   title: string;
   phase?: string;
   description?: string;
@@ -34,6 +36,7 @@ const STAR_SIZE_STEP = 7;
 const ROW_STAR_SIZE = 30;
 
 export function RatingCard({
+  id,
   title,
   phase = "Intervention",
   description,
@@ -42,6 +45,16 @@ export function RatingCard({
   levelDescriptions,
   isActive = true,
   onActivate,
+  reorderEditing,
+  favorited,
+  onToggleFavorite,
+  cardHidden,
+  onToggleHidden,
+  dragControls,
+  detailsOpen,
+  onDetailsOpenChange,
+  onOpenDetails,
+  drawerTop,
 }: RatingCardProps) {
   const numStars = max - min;
   // A single subjective score for the whole session — unlike the other card
@@ -50,6 +63,7 @@ export function RatingCard({
   const [rating, setRating] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const { markDirty, resetSignal } = useCardSession();
+  useReportCardStatus(id ?? title, rating > 0, rating > 0);
 
   useEffect(() => {
     if (resetSignal === 0) return;
@@ -70,6 +84,16 @@ export function RatingCard({
       description={description}
       isActive={isActive}
       onActivate={onActivate}
+      reorderEditing={reorderEditing}
+      favorited={favorited}
+      onToggleFavorite={onToggleFavorite}
+      cardHidden={cardHidden}
+      onToggleHidden={onToggleHidden}
+      dragControls={dragControls}
+      detailsOpen={detailsOpen}
+      onDetailsOpenChange={onDetailsOpenChange}
+      onOpenDetails={onOpenDetails}
+      drawerTop={drawerTop}
       progress={null}
       expanded={expanded}
       onToggleExpanded={() => setExpanded((v) => !v)}

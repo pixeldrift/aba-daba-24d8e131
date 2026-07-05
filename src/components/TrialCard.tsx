@@ -4,16 +4,12 @@ import { Check, X, CircleSlash2 } from "lucide-react";
 import { PercentCorrectIcon } from "./icons/DataTypeIcons";
 import { DetailsIcon } from "./icons/DetailsIcon";
 import { TimeChevronIcon } from "./icons/TimeChevronIcon";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import { CardEditControls } from "./CardEditControls";
+import { DataDetailsDrawer } from "./DataDetailsDrawer";
+import { type CardEditAndDrawerProps } from "./CardShell";
 import { useCardSession } from "./SessionContext";
+import { useReportCardStatus } from "./DataToolbarContext";
 import { cn } from "@/lib/utils";
 
 export type TrialResult = "correct" | "incorrect" | "no-response" | null;
@@ -23,7 +19,8 @@ export type TrialResult = "correct" | "incorrect" | "no-response" | null;
 // ever populating `promptLevel`, so the Error button shows no sub-text.
 const UNSPECIFIED_LEVEL = "-unspecified-";
 
-export interface TrialCardProps {
+export interface TrialCardProps extends CardEditAndDrawerProps {
+  id?: string;
   title: string;
   phase?: string;
   dataType?: string;
@@ -45,6 +42,7 @@ const BUBBLE_CENTER = 56; // center bubble diameter
 const GAP = 6; // tighter spacing
 
 export function TrialCard({
+  id,
   title,
   phase = "Intervention",
   dataType = "Percent Correct",
@@ -53,9 +51,20 @@ export function TrialCard({
   maxTrials,
   isActive = true,
   onActivate,
+  reorderEditing = false,
+  favorited = false,
+  onToggleFavorite,
+  cardHidden = false,
+  onToggleHidden,
+  dragControls,
+  detailsOpen = false,
+  onDetailsOpenChange,
+  onOpenDetails,
+  drawerTop = 0,
   noResponse = false,
   promptLevels,
 }: TrialCardProps) {
+  const articleRef = useRef<HTMLElement | null>(null);
   // Keyed by trial index rather than a parallel array — entries just don't
   // exist for trials that aren't "incorrect" (or don't have a level yet),
   // so it never needs to stay in sync/length with the trials array.
@@ -106,6 +115,7 @@ export function TrialCard({
   const remaining = Math.max(0, minTrials - completedCount);
 
   const { markDirty, resetSignal } = useCardSession();
+  useReportCardStatus(id ?? title, completedCount > 0, isComplete);
 
   useEffect(() => {
     if (resetSignal === 0) return;
@@ -213,6 +223,7 @@ export function TrialCard({
 
   return (
     <article
+      ref={articleRef}
       onClick={onActivate}
       className={cn(
         "relative w-full max-w-md rounded-xl overflow-hidden bg-card text-card-foreground transition-all duration-200",
@@ -238,59 +249,80 @@ export function TrialCard({
           />
         </button>
         <h2 className="font-display text-lg leading-[1.05] flex-1 mr-auto mt-0.5">{title}</h2>
-        <div className="text-right leading-tight -mt-0.5">
-          <div className="text-xs font-medium italic text-muted-foreground">{phase}</div>
-          <div className="flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
-            <PercentCorrectIcon className="size-3 shrink-0" />
-            <span>{dataType}</span>
+        {reorderEditing ? (
+          <CardEditControls
+            favorited={favorited}
+            onToggleFavorite={onToggleFavorite ?? (() => {})}
+            cardHidden={cardHidden}
+            onToggleHidden={onToggleHidden ?? (() => {})}
+            dragControls={dragControls}
+          />
+        ) : (
+          <div className="text-right leading-tight -mt-0.5">
+            <div className="text-xs font-medium italic text-muted-foreground">{phase}</div>
+            <div className="flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
+              <PercentCorrectIcon className="size-3 shrink-0" />
+              <span>{dataType}</span>
+            </div>
           </div>
-        </div>
+        )}
       </header>
 
       {/* Positioned so the circle's center sits at the card's own corner-radius
-          center (rounded-xl = 20px), rather than in the header's flex flow. */}
-      <Sheet>
-        <SheetTrigger asChild>
-          <button
-            aria-label="Trial details"
-            className="absolute top-2 right-2 grid size-6 place-items-center rounded-full border border-current text-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-          >
-            <DetailsIcon className="size-4" strokeWidth={1.5} />
-          </button>
-        </SheetTrigger>
-        <SheetContent side="right" className="w-[88%] sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle className="font-display">{title}</SheetTitle>
-            <SheetDescription>{description}</SheetDescription>
-          </SheetHeader>
-          <dl className="mt-6 space-y-3 px-4 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Phase</dt>
-              <dd className="font-medium">{phase}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Data type</dt>
-              <dd className="font-medium">{dataType}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Minimum trials</dt>
-              <dd className="font-medium">{minTrials}</dd>
-            </div>
-            {maxTrials && (
+          center (rounded-xl = 20px), rather than in the header's flex flow.
+          Hidden in edit mode along with the phase/data-type label. */}
+      {!reorderEditing && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenDetails?.();
+          }}
+          aria-label="Trial details"
+          className="absolute top-2 right-2 grid size-6 place-items-center rounded-full border border-current text-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+        >
+          <DetailsIcon className="size-4" strokeWidth={1.5} />
+        </button>
+      )}
+
+      {isActive && (
+        <DataDetailsDrawer
+          open={detailsOpen ?? false}
+          onOpenChange={onDetailsOpenChange ?? (() => {})}
+          title={title}
+          description={description}
+          details={
+            <dl className="space-y-3">
               <div className="flex justify-between">
-                <dt className="text-muted-foreground">Maximum trials</dt>
-                <dd className="font-medium">{maxTrials}</dd>
+                <dt className="text-muted-foreground">Phase</dt>
+                <dd className="font-medium">{phase}</dd>
               </div>
-            )}
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Correct so far</dt>
-              <dd className="font-medium">
-                {correctCount} / {completedCount || 0}
-              </dd>
-            </div>
-          </dl>
-        </SheetContent>
-      </Sheet>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Data type</dt>
+                <dd className="font-medium">{dataType}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Minimum trials</dt>
+                <dd className="font-medium">{minTrials}</dd>
+              </div>
+              {maxTrials && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Maximum trials</dt>
+                  <dd className="font-medium">{maxTrials}</dd>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Correct so far</dt>
+                <dd className="font-medium">
+                  {correctCount} / {completedCount || 0}
+                </dd>
+              </div>
+            </dl>
+          }
+          top={drawerTop}
+          cardRef={articleRef}
+        />
+      )}
 
       {/* Universal header/body divider — present in both the standard and
           expanded views, not just faded in while expanded. */}

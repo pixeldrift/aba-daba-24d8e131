@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { Check, HandHelping, X } from "lucide-react";
-import { CardShell } from "./CardShell";
+import { CardShell, type CardEditAndDrawerProps } from "./CardShell";
 import { TaskAnalysisIcon } from "./icons/DataTypeIcons";
 import { useCardSession } from "./SessionContext";
+import { useReportCardStatus } from "./DataToolbarContext";
 import { cn } from "@/lib/utils";
 
 export type StepStatus = "independent" | "prompted" | "error" | null;
 
-export interface TaskAnalysisCardProps {
+export interface TaskAnalysisCardProps extends CardEditAndDrawerProps {
+  id?: string;
   title: string;
   phase?: string;
   description?: string;
@@ -54,12 +56,23 @@ const BUBBLE_CENTER = 54;
 const GAP = 6;
 
 export function TaskAnalysisCard({
+  id,
   title,
   phase = "Intervention",
   description,
   steps,
   isActive = true,
   onActivate,
+  reorderEditing,
+  favorited,
+  onToggleFavorite,
+  cardHidden,
+  onToggleHidden,
+  dragControls,
+  detailsOpen,
+  onDetailsOpenChange,
+  onOpenDetails,
+  drawerTop,
 }: TaskAnalysisCardProps) {
   const [statuses, setStatuses] = useState<StepStatus[]>(() => steps.map(() => null));
   const [current, setCurrent] = useState(0);
@@ -101,6 +114,7 @@ export function TaskAnalysisCard({
   const progress = steps.length > 0 ? Math.round((completed / steps.length) * 100) : 0;
   const isComplete = completed >= steps.length;
   const remaining = Math.max(0, steps.length - completed);
+  useReportCardStatus(id ?? title, completed > 0, isComplete);
 
   const stepWidth = BUBBLE + GAP;
   const trackOffset = useMemo(
@@ -117,6 +131,16 @@ export function TaskAnalysisCard({
       description={description}
       isActive={isActive}
       onActivate={onActivate}
+      reorderEditing={reorderEditing}
+      favorited={favorited}
+      onToggleFavorite={onToggleFavorite}
+      cardHidden={cardHidden}
+      onToggleHidden={onToggleHidden}
+      dragControls={dragControls}
+      detailsOpen={detailsOpen}
+      onDetailsOpenChange={onDetailsOpenChange}
+      onOpenDetails={onOpenDetails}
+      drawerTop={drawerTop}
       progress={progress}
       isComplete={isComplete}
       expanded={expanded}

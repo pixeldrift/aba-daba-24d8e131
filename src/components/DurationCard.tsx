@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Play, Pause } from "lucide-react";
-import { CardShell } from "./CardShell";
+import { CardShell, type CardEditAndDrawerProps } from "./CardShell";
 import { DurationIcon } from "./icons/DataTypeIcons";
 import { TimeKeypad } from "./TimeKeypad";
 import { useCardSession, useRegisterActiveTimer, useSession } from "./SessionContext";
+import { useReportCardStatus } from "./DataToolbarContext";
 import { cn } from "@/lib/utils";
 
 const PULSE_BEAT_MS = 1000;
 
-export interface DurationCardProps {
+export interface DurationCardProps extends CardEditAndDrawerProps {
+  id?: string;
   title: string;
   phase?: string;
   description?: string;
@@ -25,12 +27,23 @@ const CENTER_H = 52;
 const GAP = 8;
 
 export function DurationCard({
+  id,
   title,
   phase = "Intervention",
   description,
   minDurationSec = 30,
   isActive = true,
   onActivate,
+  reorderEditing,
+  favorited,
+  onToggleFavorite,
+  cardHidden,
+  onToggleHidden,
+  dragControls,
+  detailsOpen,
+  onDetailsOpenChange,
+  onOpenDetails,
+  drawerTop,
 }: DurationCardProps) {
   const [instances, setInstances] = useState<number[]>([0]);
   const [viewIdx, setViewIdx] = useState(0);
@@ -96,6 +109,7 @@ export function DurationCard({
   const totalSec = totalMs / 1000;
   const isComplete = totalSec >= minDurationSec;
   const remaining = Math.max(0, Math.ceil(minDurationSec - totalSec));
+  useReportCardStatus(id ?? title, totalMs > 0, isComplete);
 
   const flushLive = () => {
     if (running && runningIdxRef.current !== null) {
@@ -205,6 +219,16 @@ export function DurationCard({
       description={description}
       isActive={isActive}
       onActivate={onActivate}
+      reorderEditing={reorderEditing}
+      favorited={favorited}
+      onToggleFavorite={onToggleFavorite}
+      cardHidden={cardHidden}
+      onToggleHidden={onToggleHidden}
+      dragControls={dragControls}
+      detailsOpen={detailsOpen}
+      onDetailsOpenChange={onDetailsOpenChange}
+      onOpenDetails={onOpenDetails}
+      drawerTop={drawerTop}
       progress={null}
       isComplete={isComplete}
       expanded={expanded}
