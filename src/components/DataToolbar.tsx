@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Heart, EyeOff, Pencil, Search, Star, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
@@ -62,6 +62,40 @@ export function DataToolbar({
     clearFilters,
   } = useDataToolbar();
   const [filterOpen, setFilterOpen] = useState(false);
+  const filterBtnRef = useRef<HTMLButtonElement>(null);
+  const filterContentRef = useRef<HTMLDivElement>(null);
+  const [filterArrowLeft, setFilterArrowLeft] = useState(16);
+
+  // Re-centers the popover horizontally on the viewport after Radix
+  // positions it (which otherwise hugs the button's own left-of-center
+  // spot) by overriding the position wrapper's own transform directly —
+  // `alignOffset` can't get it there: Radix clamps that so the popover
+  // always keeps some overlap with whatever it's anchored to, nowhere near
+  // enough to reach screen-center from here. The vertical offset Radix
+  // already computed is preserved; only the horizontal one is replaced.
+  // Since the box's horizontal position is no longer tied to the button,
+  // the arrow's own offset is measured against the button's real position
+  // rather than using a fixed value.
+  useEffect(() => {
+    if (!filterOpen) return;
+    const update = () => {
+      const btn = filterBtnRef.current;
+      const content = filterContentRef.current;
+      const wrapper = content?.parentElement;
+      if (!btn || !content || !wrapper) return;
+      const currentTransform = new DOMMatrixReadOnly(getComputedStyle(wrapper).transform);
+      const centeredLeft = window.innerWidth / 2 - content.offsetWidth / 2;
+      wrapper.style.transform = `translate(${centeredLeft}px, ${currentTransform.m42}px)`;
+      const btnRect = btn.getBoundingClientRect();
+      setFilterArrowLeft(btnRect.left + btnRect.width / 2 - centeredLeft);
+    };
+    const raf = requestAnimationFrame(update);
+    window.addEventListener("resize", update);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", update);
+    };
+  }, [filterOpen]);
 
   const activeFilterCount =
     filters.kinds.size +
@@ -107,6 +141,7 @@ export function DataToolbar({
         <Popover open={filterOpen} onOpenChange={setFilterOpen}>
           <PopoverTrigger asChild>
             <button
+              ref={filterBtnRef}
               type="button"
               aria-label="Filter cards"
               title="Filter cards"
@@ -130,7 +165,13 @@ export function DataToolbar({
               z-[60] (see its own className comment), so the popover needs to
               paint above that or the sticky bar's opaque background hides
               the arrow (and the top sliver of the box) behind it. */}
-          <PopoverContent side="bottom" align="start" sideOffset={8} className="group z-[70] w-72 p-3">
+          <PopoverContent
+            ref={filterContentRef}
+            side="bottom"
+            align="center"
+            sideOffset={8}
+            className="group z-[70] w-72 p-3"
+          >
             <FilterPopoverContent
               availableKinds={availableKinds}
               availablePhases={availablePhases}
@@ -144,17 +185,18 @@ export function DataToolbar({
               clearFilters={clearFilters}
             />
             {/* Arrow — points back at the filter button, same rotated-square
-                idiom as NumberKeypad's popup. Positioned near the trigger's
-                own width (align="start" keeps the popover's left edge on the
-                trigger's) rather than centered. */}
+                idiom as NumberKeypad's popup. Since the box is no longer
+                positioned relative to the button, its left offset is
+                measured (see the effect above) rather than a fixed value. */}
             <div
               className={cn(
-                "absolute left-4 h-3 w-3 -translate-x-1/2 rotate-45 border-blue-400/80 bg-popover",
+                "absolute h-3 w-3 -translate-x-1/2 rotate-45 border-stone-300 bg-popover",
                 "-top-[7px] border-l-2 border-t-2",
                 "group-data-[side=top]:top-auto group-data-[side=top]:-bottom-[7px]",
                 "group-data-[side=top]:border-l-0 group-data-[side=top]:border-t-0",
                 "group-data-[side=top]:border-r-2 group-data-[side=top]:border-b-2",
               )}
+              style={{ left: filterArrowLeft }}
             />
           </PopoverContent>
         </Popover>
@@ -176,8 +218,10 @@ export function DataToolbar({
           <Pencil className="size-3.5" />
         </button>
 
-        {/* Search */}
-        <div className="relative flex-1 min-w-0">
+        {/* Search — trimmed a bit short of the row's full width (mr-6) so
+            the details drawer's tab, now pinned to the top of the drawer
+            and overlapping this row, has clear space to sit in. */}
+        <div className="relative flex-1 min-w-0 mr-6">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-stone-400 pointer-events-none" />
           <input
             type="text"
