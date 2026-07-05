@@ -173,7 +173,7 @@ export function NumberKeypad({
               type="button"
               onClick={() => handleOpenChange(false)}
               whileTap={{ scale: 0.92 }}
-              className="grid size-8 place-items-center rounded-full border border-stone-200 text-muted-foreground transition-colors hover:bg-stone-100 hover:text-foreground"
+              className="btn-bevel grid size-8 place-items-center rounded-full border border-stone-200 text-muted-foreground transition-colors hover:bg-stone-100 hover:text-foreground"
               aria-label="Close"
             >
               <X className="size-4" />
@@ -267,7 +267,7 @@ function ActionButton({
         "grid size-8 place-items-center rounded-lg transition-colors disabled:opacity-40 disabled:pointer-events-none",
         tone === "solid"
           ? "btn-bevel bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700"
-          : "border-2 border-blue-500 text-blue-600 hover:bg-blue-50 active:bg-blue-100",
+          : "btn-bevel border-2 border-blue-500 text-blue-600 hover:bg-blue-50 active:bg-blue-100",
       )}
     >
       {icon}

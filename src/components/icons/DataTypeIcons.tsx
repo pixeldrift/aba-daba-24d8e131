@@ -85,11 +85,11 @@ export function ScoreIcon(props: IconProps) {
   );
 }
 
-/** Task Analysis — three large ascending steps. */
+/** Task Analysis — two large ascending steps. */
 export function TaskAnalysisIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>
-      <path d="M4 19v-5h5v-5h5v-5h5" />
+      <path d="M4 19v-5h5v-5h10" />
     </svg>
   );
 }

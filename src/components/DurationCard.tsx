@@ -222,14 +222,28 @@ export function DurationCard({
                 {/* The instance actually running gets bold blue text — every
                     other row (including ones with recorded time) stays
                     regular weight, so there's exactly one obvious highlight. */}
-                <span
-                  className={cn(
-                    "flex-1 tabular-nums text-sm",
-                    isRunning ? "font-bold text-blue-600" : "font-normal text-foreground/80",
-                  )}
+                <TimeKeypad
+                  valueMs={instanceMs(i)}
+                  onReplace={(next) => setInstanceMs(i, next)}
+                  onAdd={(delta) => setInstanceMs(i, instanceMs(i) + delta)}
                 >
-                  {formatTime(instanceMs(i))}
-                </span>
+                  {({ open }) => (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        open();
+                      }}
+                      aria-label={`Edit time for instance ${i + 1}`}
+                      className={cn(
+                        "flex-1 text-left tabular-nums text-sm rounded-md transition-colors hover:text-blue-600",
+                        isRunning ? "font-bold text-blue-600" : "font-normal text-foreground/80",
+                      )}
+                    >
+                      {formatTime(instanceMs(i))}
+                    </button>
+                  )}
+                </TimeKeypad>
                 <button
                   type="button"
                   onClick={() => toggleInstance(i)}
@@ -242,12 +256,17 @@ export function DurationCard({
                   {isRunning ? (
                     <Pause className="size-3.5" fill="currentColor" strokeWidth={0} />
                   ) : (
-                    <Play className="size-3.5 -translate-x-px" fill="currentColor" strokeWidth={0} />
+                    <Play className="size-3.5 translate-x-px" fill="currentColor" strokeWidth={0} />
                   )}
                 </button>
               </li>
             );
           })}
+          <li className="flex items-center gap-2 px-2 py-2 mt-1 border-t border-dashed border-stone-200">
+            <span className="size-6 shrink-0" aria-hidden />
+            <span className="tabular-nums text-sm font-bold text-foreground">{formatTime(totalMs)}</span>
+            <span className="text-sm font-bold text-foreground">Total</span>
+          </li>
         </ol>
       }
     >
@@ -330,6 +349,10 @@ export function DurationCard({
             <span className="normal-case tracking-normal tabular-nums text-foreground">
               {instances.filter((v, i) => v > 0 || (running && runningIdxRef.current === i)).length}
             </span>
+            , total{" "}
+            <strong className="font-semibold normal-case tracking-normal tabular-nums text-foreground">
+              {formatShortTime(totalMs)}
+            </strong>
           </span>
         </div>
       </div>
@@ -526,4 +549,12 @@ function formatTime(ms: number) {
   const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
+function formatShortTime(ms: number) {
+  const total = Math.floor(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`;
 }
