@@ -25,19 +25,6 @@ export function CardEditControls({
 }: CardEditControlsProps) {
   return (
     <div className="flex items-center gap-0.5 shrink-0 -mt-0.5" onClick={(e) => e.stopPropagation()}>
-      <span
-        className="cursor-grab touch-none select-none grid place-items-center size-6 rounded-full text-stone-400 hover:text-stone-600 active:cursor-grabbing"
-        onPointerDown={(e) => {
-          // Without this, a mouse-based (non-touch) drag also kicks off the
-          // browser's native text-selection drag as the pointer crosses
-          // over other cards' text while reordering.
-          e.preventDefault();
-          dragControls?.start(e);
-        }}
-        aria-label="Drag to reorder"
-      >
-        <GripVertical className="size-4" />
-      </span>
       <button
         type="button"
         onClick={onToggleFavorite}
@@ -62,6 +49,21 @@ export function CardEditControls({
       >
         <EyeOff className="size-4" />
       </button>
+      {/* Last in the row so it lands in the card's far right corner —
+          matching where the (now-hidden) details button sits in view mode. */}
+      <span
+        className="cursor-grab touch-none select-none grid place-items-center size-6 rounded-full text-stone-400 hover:text-stone-600 active:cursor-grabbing"
+        onPointerDown={(e) => {
+          // Without this, a mouse-based (non-touch) drag also kicks off the
+          // browser's native text-selection drag as the pointer crosses
+          // over other cards' text while reordering.
+          e.preventDefault();
+          dragControls?.start(e);
+        }}
+        aria-label="Drag to reorder"
+      >
+        <GripVertical className="size-4" />
+      </span>
     </div>
   );
 }

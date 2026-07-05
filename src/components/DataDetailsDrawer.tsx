@@ -2,7 +2,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { motion } from "motion/react";
 import { X } from "lucide-react";
-import { DrawerHandleIcon } from "./icons/ToolbarIcons";
+import { TimeChevronIcon } from "./icons/TimeChevronIcon";
 import { cn } from "@/lib/utils";
 
 export interface DataDetailsDrawerProps {
@@ -78,21 +78,27 @@ export function DataDetailsDrawer({ open, onOpenChange, title, description, deta
       {/* Pull tab — attached to the panel's own left edge (a child of the
           same animated element) so it rides along with the slide instead of
           staying fixed in the toolbar while the panel moves out from under
-          it. Mirrors the per-card details button, but in reverse: pressing
-          it again pulls the drawer back off screen. */}
+          it. Pinned to the panel's own top edge (straddling the seam with
+          the sticky toolbar above, the same idiom as the filter popover's
+          arrow) rather than mid-height, and raised above the toolbar's own
+          z-[60] so it isn't painted over where it overlaps that row. */}
       <button
         type="button"
         onClick={() => onOpenChange(!open)}
         aria-label={open ? "Close details drawer" : "Open details drawer"}
         aria-expanded={open}
-        className="btn-bevel absolute -left-7 top-1/2 -translate-y-1/2 grid place-items-center h-10 w-7 rounded-l-lg border border-r-0 border-blue-500 bg-blue-500 text-white"
+        className="absolute -left-7 top-0 -translate-y-1/2 z-[65] grid place-items-center h-10 w-7 rounded-l-lg border border-r-0 border-stone-200/70 bg-background text-stone-500 hover:text-stone-800 transition-colors"
       >
-        <DrawerHandleIcon className={cn("size-3.5 transition-transform duration-200", open && "rotate-180")} />
+        {/* Base orientation points right; always faces the direction the
+            drawer will slide if pressed again — left (toward opening) while
+            closed, right (toward closing) while open — and animates between
+            the two as the drawer itself slides. */}
+        <TimeChevronIcon className={cn("size-3.5 transition-transform duration-300", !open && "rotate-180")} />
       </button>
 
       {/* Arrow — points at the card this drawer's contents belong to. */}
       <div
-        className="absolute -left-[7px] size-3 -translate-y-1/2 rotate-45 border-l-2 border-b-2 border-blue-400/80 bg-background shadow-[-2px_2px_3px_-1px_rgba(0,0,0,0.15)]"
+        className="absolute -left-[9px] size-4 -translate-y-1/2 rotate-45 border-l-2 border-b-2 border-blue-400/80 bg-background shadow-[-2px_2px_3px_-1px_rgba(0,0,0,0.15)]"
         style={{ top: clampedArrowTop }}
         aria-hidden
       />
