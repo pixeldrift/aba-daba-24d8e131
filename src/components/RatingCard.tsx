@@ -82,14 +82,14 @@ export function RatingCard({
         </dl>
       }
       expandedView={
-        <ol className="px-4 pt-1 pb-3 space-y-2">
+        <ol className="px-4 pt-1 pb-3 space-y-1">
           {Array.from({ length: numStars }, (_, i) => {
             const value = min + i + 1;
             const desc = levelDescriptions?.[i] ?? `Describe what a rating of ${value} looks like.`;
             const filled = rating >= value;
             const isTop = filled && value === rating;
             return (
-              <li key={value} className="flex items-center gap-2.5">
+              <li key={value} className="flex items-start gap-2.5">
                 <RatingStar
                   value={value}
                   size={ROW_STAR_SIZE}
@@ -98,7 +98,7 @@ export function RatingCard({
                   isTop={isTop}
                   onClick={() => pick(value)}
                 />
-                <span className={cn("flex-1 text-sm leading-snug", isTop ? "text-foreground" : "text-foreground/70")}>
+                <span className={cn("flex-1 text-sm leading-tight", isTop ? "text-foreground" : "text-foreground/70")}>
                   {desc}
                 </span>
               </li>
