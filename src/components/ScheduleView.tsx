@@ -1346,17 +1346,22 @@ export function ScheduleView({
                   ))}
                   {layoutMode === "collapsed" ? (
                     <>
-                      <span className="text-[11px] tabular-nums leading-tight text-right pr-1.5">
+                      {/* Positioned (relative z-10) so it paints above the
+                          divider lines above — those are `absolute`, and an
+                          absolutely-positioned sibling paints after in-flow
+                          content by default regardless of DOM order, so
+                          without this the lines would draw over the label. */}
+                      <span className="relative z-10 text-[11px] tabular-nums leading-tight text-right pr-1.5">
                         {fmt12(fromMin(gap.startMin))}
                       </span>
-                      <span className="flex items-center gap-1.5 text-xs font-medium">
+                      <span className="relative z-10 flex items-center gap-1.5 text-xs font-medium">
                         <Plus className="size-3.5" /> Add Activity
                       </span>
                     </>
                   ) : (
-                    <>
+                    <span className="relative z-10 flex items-center gap-1.5">
                       <Plus className="size-3.5" /> Add Activity
-                    </>
+                    </span>
                   )}
                 </button>
               );
