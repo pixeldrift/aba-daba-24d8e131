@@ -517,41 +517,33 @@ function IndexInner() {
                 displayMode === "list" && drawerOpen ? "w-[55%] self-start" : "w-full",
               )}
             >
-              {/* Keyed on displayMode (not cardsGen — that's the separate
-                  session-lifecycle transition below) so switching card/list/
-                  grid crossfades the whole list out and back in, instead of
-                  each card silently swapping its rendered content in place. */}
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={displayMode}
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
-                  transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-                >
-                  <DataCardList
-                    cardsGen={cardsGen}
-                    cardsAnimKind={cardsAnimKind}
-                    transitionHidden={cardsHidden}
-                    visibleCards={visibleCards}
-                    activeId={activeId}
-                    setActiveId={setActiveId}
-                    cardRefs={cardRefs}
-                    editMode={editMode}
-                    favorites={favorites}
-                    toggleFavorite={toggleFavorite}
-                    hidden={hidden}
-                    toggleHidden={toggleHidden}
-                    order={order}
-                    setOrder={setOrder}
-                    displayMode={displayMode}
-                    drawerOpen={drawerOpen}
-                    onDrawerOpenChange={setDrawerOpen}
-                    stickyTop={stickyTop}
-                    toolbarHeight={toolbarHeight}
-                  />
-                </motion.div>
-              </AnimatePresence>
+              {/* Each card's own wrapper carries `layout` (see DataCardList)
+                  so switching card/list/grid morphs every box from one
+                  size/shape to the other in place, rather than either
+                  snapping instantly or crossfading the whole list as one
+                  flat unit — that requires the wrapper to persist across
+                  the switch, which an outer keyed remount here would break. */}
+              <DataCardList
+                cardsGen={cardsGen}
+                cardsAnimKind={cardsAnimKind}
+                transitionHidden={cardsHidden}
+                visibleCards={visibleCards}
+                activeId={activeId}
+                setActiveId={setActiveId}
+                cardRefs={cardRefs}
+                editMode={editMode}
+                favorites={favorites}
+                toggleFavorite={toggleFavorite}
+                hidden={hidden}
+                toggleHidden={toggleHidden}
+                order={order}
+                setOrder={setOrder}
+                displayMode={displayMode}
+                drawerOpen={drawerOpen}
+                onDrawerOpenChange={setDrawerOpen}
+                stickyTop={stickyTop}
+                toolbarHeight={toolbarHeight}
+              />
             </div>
           </div>
           </>
@@ -693,6 +685,12 @@ function renderCard(
 // leaving as the other enters" — instead of "exit, dead pause, enter."
 const CARD_SLIDE_EXIT_MS = 560;
 const CARD_SLIDE_ENTER_MS = 560;
+
+// Shared by every per-card wrapper's `layout` animation (see DataCardList) —
+// switching card/list/grid resizes each card in place via Motion's FLIP
+// technique instead of an instant snap, using the same eased-duration feel
+// as the rest of the app's non-spring transitions.
+const CARD_MORPH_TRANSITION = { duration: 0.3, ease: [0.4, 0, 0.2, 1] } as const;
 
 // Single-unit variants for start-new/discard — the WHOLE list moves as one
 // element (not per-card), which is both simpler and much cheaper than
@@ -836,6 +834,7 @@ const DataCardList = memo(function DataCardList({
           {visibleCards.map((card) => (
             <motion.div
               key={card.id}
+              layout
               ref={setCardRef(card.id)}
               className="w-full flex justify-center"
               variants={{
@@ -843,6 +842,7 @@ const DataCardList = memo(function DataCardList({
                 center: { opacity: 1, x: 0, transition: { duration: DATA_SUBMIT_ENTER_DURATION_MS / 1000 } },
                 exit: { opacity: 0, x: 80, transition: { duration: DATA_SUBMIT_EXIT_DURATION_MS / 1000 } },
               }}
+              transition={{ layout: CARD_MORPH_TRANSITION }}
             >
               {renderOne(card)}
             </motion.div>
@@ -864,9 +864,15 @@ const DataCardList = memo(function DataCardList({
           variants={SINGLE_UNIT_VARIANTS[cardsAnimKind]}
         >
           {visibleCards.map((card) => (
-            <div key={card.id} ref={setCardRef(card.id)} className="w-full flex justify-center">
+            <motion.div
+              key={card.id}
+              layout
+              transition={{ layout: CARD_MORPH_TRANSITION }}
+              ref={setCardRef(card.id)}
+              className="w-full flex justify-center"
+            >
               {renderOne(card)}
-            </div>
+            </motion.div>
           ))}
         </motion.div>
       )}
@@ -893,6 +899,8 @@ function EditableCardItem({
   return (
     <Reorder.Item
       value={card.id}
+      layout
+      transition={{ layout: CARD_MORPH_TRANSITION }}
       ref={setCardRef(card.id)}
       dragListener={false}
       dragControls={dragControls}
