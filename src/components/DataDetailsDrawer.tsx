@@ -158,7 +158,7 @@ export function DataDetailsDrawer({
           // corner's sharp square edge behind the panel rather than
           // leaving it exposed. 2px blue borders to match the panel/tab's
           // own outline.
-          className="absolute -left-[15px] size-6 -translate-y-1/2 rotate-45 border-l-2 border-b-2 border-blue-400/80 bg-background shadow-[-2px_2px_3px_-1px_rgba(0,0,0,0.15)]"
+          className="absolute -left-[13px] size-6 -translate-y-1/2 rotate-45 border-l-2 border-b-2 border-blue-400/80 bg-background shadow-[-2px_2px_3px_-1px_rgba(0,0,0,0.15)]"
           style={{ top: clampedArrowTop }}
           aria-hidden
         />
