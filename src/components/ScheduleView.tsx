@@ -687,14 +687,22 @@ export function ScheduleView({
   const arrowTop = (() => {
     if (editMode) return null;
     if (layoutMode === "proportional") {
-      if (!outsideSchedule) return (nowMin - renderOriginMin) * PX_PER_MIN;
-      return nowMin < dayStart ? -2 : totalHeight + 16;
+      // renderOriginMin/renderEndMin (non-edit) are exactly the first
+      // item's start and the last item's end — comparing against those
+      // (not the real, possibly much wider, clinic-hours dayStart/dayEnd)
+      // is what correctly parks the arrow before the first item rather
+      // than at the bottom when "now" is earlier than everything on the
+      // schedule. Anywhere in between maps straight to its real proportional
+      // position, whether that's inside an item or a blank gap between two.
+      if (nowMin < renderOriginMin) return -2;
+      if (nowMin >= renderEndMin) return totalHeight + 16;
+      return (nowMin - renderOriginMin) * PX_PER_MIN;
     }
     if (currentItem) {
       const row = itemRowLayout.find((r) => r.item.id === currentItem.id);
       if (row) return row.top + row.height / 2;
     }
-    return nowMin < dayStart ? -2 : totalHeight + 16;
+    return nowMin < firstBoundaryMin ? -2 : totalHeight + 16;
   })();
   const arrowGray = outsideSchedule;
   // Only the "after hours" case has genuine empty space below the last row
@@ -1290,8 +1298,7 @@ export function ScheduleView({
                 // own box, so it's left without a border/background of its
                 // own; only the divider lines (same ones an activity would
                 // show) mark off the time increments within it.
-                const gapDurMin = gap.endMin - gap.startMin;
-                const gapGridLines = Math.max(0, Math.floor((gapDurMin - 1) / 5));
+                const gapGridLines = Math.max(0, Math.floor((height / PX_PER_MIN - 1) / 5));
                 return (
                   <div key={`gap-${gap.startMin}`} className="absolute left-0 right-0 z-10" style={{ top, height }}>
                     {Array.from({ length: gapGridLines }, (_, i) => (
@@ -1304,6 +1311,19 @@ export function ScheduleView({
                   </div>
                 );
               }
+              // Same 5-minute divider lines a real activity's box would
+              // show, so a gap's own duration still reads at a glance in
+              // edit mode — light blue rather than the non-edit view's gray
+              // to match the "Add Activity" affordance's own color. Derived
+              // from the rendered `height`, not the gap's raw duration: edge
+              // gaps (before the first item / after the last) are capped to
+              // EDGE_ADD_ACTIVITY_PX regardless of how much dead time they
+              // actually span, so lines must match the capped box, not spill
+              // past it.
+              const gapGridLines =
+                layoutMode === "proportional"
+                  ? Math.max(0, Math.floor((height / PX_PER_MIN - 1) / 5))
+                  : 0;
               return (
                 <button
                   key={`gap-${gap.startMin}`}
@@ -1317,6 +1337,13 @@ export function ScheduleView({
                   )}
                   style={{ top, height }}
                 >
+                  {Array.from({ length: gapGridLines }, (_, i) => (
+                    <div
+                      key={`gg-${i}`}
+                      className="absolute left-1 right-1 border-t border-blue-100"
+                      style={{ top: (i + 1) * 5 * PX_PER_MIN }}
+                    />
+                  ))}
                   {layoutMode === "collapsed" ? (
                     <>
                       <span className="text-[11px] tabular-nums leading-tight text-right pr-1.5">
