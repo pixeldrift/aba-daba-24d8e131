@@ -97,7 +97,11 @@ export function DataDetailsDrawer({
       // it, which means it has to out-stack the toolbar, not just sit next
       // to it.
       className={cn(
-        "fixed right-0 z-[62] bg-background border border-stone-200/70 shadow-[-8px_0_30px_-8px_rgba(0,0,0,0.25)]",
+        "fixed right-0 z-[62] bg-background shadow-[-8px_0_30px_-8px_rgba(0,0,0,0.25)]",
+        // Matches the active card's own border while open — same blue,
+        // same 2px weight — so the drawer visibly reads as "this card,
+        // pulled out," not a generic unrelated panel.
+        open ? "border-2 border-blue-400/80" : "border border-stone-200/70",
         widthClassName,
       )}
       style={{ top, bottom: 0 }}
@@ -120,7 +124,10 @@ export function DataDetailsDrawer({
         onClick={() => onOpenChange(!open)}
         aria-label={open ? "Close details drawer" : "Open details drawer"}
         aria-expanded={open}
-        className="absolute -left-7 top-0 h-10 w-7 grid place-items-center rounded-l-lg border border-r-0 border-stone-200/70 bg-background text-stone-500 hover:text-stone-800 transition-colors"
+        className={cn(
+          "absolute -left-7 top-0 h-10 w-7 grid place-items-center rounded-l-lg border-r-0 bg-background text-stone-500 hover:text-stone-800 transition-colors",
+          open ? "border-2 border-blue-400/80" : "border border-stone-200/70",
+        )}
       >
         {/* Base orientation points right; always faces the direction the
             drawer will slide if pressed again — left (toward opening) while
@@ -136,7 +143,11 @@ export function DataDetailsDrawer({
           edge instead of leaving with the rest of the panel. */}
       {open && (
         <div
-          className="absolute -left-[9px] size-4 -translate-y-1/2 rotate-45 border-l border-b border-stone-300 bg-background shadow-[-2px_2px_3px_-1px_rgba(0,0,0,0.15)]"
+          // size-6 (24px) is size-4 (16px) scaled by 1.5x — the -left offset
+          // scales with it so the diamond's outer corner still just touches
+          // the panel's left edge rather than sitting proud of or sunk into
+          // it. 2px blue borders to match the panel/tab's own outline.
+          className="absolute -left-[13.5px] size-6 -translate-y-1/2 rotate-45 border-l-2 border-b-2 border-blue-400/80 bg-background shadow-[-2px_2px_3px_-1px_rgba(0,0,0,0.15)]"
           style={{ top: clampedArrowTop }}
           aria-hidden
         />
@@ -152,7 +163,7 @@ export function DataDetailsDrawer({
       </button>
 
       <div className="h-full overflow-y-auto p-6">
-        <h2 className="font-display text-lg pr-8">{title}</h2>
+        <h2 className="font-display text-lg leading-[1.05] pr-8">{title}</h2>
         {description && <p className="text-sm text-muted-foreground mt-1">{description}</p>}
         {details && <div className="mt-6 text-sm">{details}</div>}
       </div>

@@ -249,6 +249,26 @@ function getVisibleCards(
   });
 }
 
+// Native `scrollIntoView({block: "center"})` centers an element against the
+// FULL viewport, with no notion of the sticky status bar + data toolbar
+// (and, when idle, the "Start session" banner inside it) covering the top
+// of it — headerHeight px are visually spoken for whether or not the
+// browser knows it. That's the gap: idle and running headers are different
+// heights, so a naive center leaves the card's own top/title tucked behind
+// the sticky header in whichever state has the taller one. Centering
+// within the space actually left below the header fixes both, and the
+// clamp keeps a card taller than that space from having its own top
+// (title) pushed up out of view in the process.
+function scrollActiveCardIntoView(el: HTMLElement, headerHeight: number) {
+  const rect = el.getBoundingClientRect();
+  const availableHeight = window.innerHeight - headerHeight;
+  const desiredCenterY = headerHeight + availableHeight / 2;
+  const currentCenterY = rect.top + rect.height / 2;
+  const maxDelta = rect.top - headerHeight;
+  const delta = Math.min(currentCenterY - desiredCenterY, maxDelta);
+  window.scrollBy({ top: delta, behavior: "smooth" });
+}
+
 const DISPLAY_MODE_GRID_CLASSES: Record<DisplayMode, string> = {
   // Tighter than card/grid's gap-3 — a condensed list reads better with its
   // rows sitting close together rather than spaced like full cards.
@@ -309,7 +329,7 @@ function IndexInner() {
   useEffect(() => {
     if (!keepActiveCardCentered) return;
     const el = cardRefs.current.get(activeId);
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (el) scrollActiveCardIntoView(el, stickyTop + toolbarHeight);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, keepActiveCardCentered]);
 
@@ -318,7 +338,7 @@ function IndexInner() {
     if (prevDisplayModeRef.current === displayMode) return;
     prevDisplayModeRef.current = displayMode;
     const el = cardRefs.current.get(activeId);
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (el) scrollActiveCardIntoView(el, stickyTop + toolbarHeight);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayMode]);
 
