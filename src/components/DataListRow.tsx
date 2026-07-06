@@ -1,4 +1,5 @@
 import { useRef, type ReactNode } from "react";
+import { DetailsIcon } from "./icons/DetailsIcon";
 import { CardEditControls } from "./CardEditControls";
 import { DataDetailsDrawer } from "./DataDetailsDrawer";
 import { type CardEditAndDrawerProps } from "./CardShell";
@@ -7,24 +8,27 @@ import { cn } from "@/lib/utils";
 export interface DataListRowProps extends CardEditAndDrawerProps {
   title: string;
   description?: string;
-  /** Shown alone (no label) at the row's far right — phase and the
-   *  data-type name itself aren't worth the space in a condensed list. */
+  /** Shown alone (no label), ahead of the title — phase and the data-type
+   *  name itself aren't worth the space in a condensed list. */
   dataTypeIcon: ReactNode;
   dataTypeLabel: string;
   isActive?: boolean;
+  onActivate?: () => void;
 }
 
-/** The list `displayMode`'s row: title plus a bare data-type icon, no phase,
- *  no inline data-entry controls — there's no room for those in a single
- *  line, so a tap opens the same shared details drawer every other card
- *  kind's own "info" button opens, rather than just toggling `isActive`
- *  with nothing else visibly changing. */
+/** The list `displayMode`'s row: a bare data-type icon then the title, no
+ *  phase, no inline data-entry controls — there's no room for those in a
+ *  single line. A tap just selects the row (matching every other card
+ *  kind's own whole-card click); its own "info" button — same circle/border
+ *  style as a full card's — is what opens the shared details drawer, rather
+ *  than the row itself auto-opening it. */
 export function DataListRow({
   title,
   description,
   dataTypeIcon,
   dataTypeLabel,
   isActive = true,
+  onActivate,
   reorderEditing = false,
   favorited = false,
   onToggleFavorite,
@@ -42,6 +46,7 @@ export function DataListRow({
   return (
     <article
       ref={rowRef}
+      onClick={onActivate}
       className={cn(
         "relative w-full max-w-md rounded-xl bg-card text-card-foreground border-2 transition-all duration-200",
         isActive
@@ -49,15 +54,7 @@ export function DataListRow({
           : "border-stone-200 opacity-80 hover:opacity-95",
       )}
     >
-      <button
-        type="button"
-        // Suppressed while editing — same as every other card kind's own
-        // "info" button, which reorderEditing hides outright rather than
-        // leave reachable alongside the drag handle.
-        onClick={reorderEditing ? undefined : onOpenDetails}
-        className="flex w-full items-center gap-2 pl-4 pr-3 py-2.5 text-left"
-      >
-        <h2 className="font-display text-sm leading-tight flex-1 min-w-0 truncate mr-auto">{title}</h2>
+      <div className={cn("flex items-center gap-2 pl-3 py-2", reorderEditing ? "pr-3" : "pr-9")}>
         {reorderEditing ? (
           <CardEditControls
             favorited={favorited}
@@ -75,7 +72,25 @@ export function DataListRow({
             {dataTypeIcon}
           </span>
         )}
-      </button>
+        <h2 className="font-display text-sm leading-[1.15] flex-1 min-w-0">{title}</h2>
+      </div>
+
+      {/* Same circle/border "info" button every full card shows — hidden in
+          edit mode along with the drag/favorite/hide row it'd otherwise sit
+          alongside, same as CardShell. */}
+      {!reorderEditing && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenDetails?.();
+          }}
+          aria-label="Card details"
+          className="absolute right-2 top-1/2 -translate-y-1/2 grid size-6 place-items-center rounded-full border border-current text-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+        >
+          <DetailsIcon className="size-4" strokeWidth={1.5} />
+        </button>
+      )}
 
       {isActive && (
         <DataDetailsDrawer
@@ -86,6 +101,7 @@ export function DataListRow({
           top={stickyTop}
           toolbarHeight={toolbarHeight}
           cardRef={rowRef}
+          widthClassName="w-1/2"
         />
       )}
     </article>

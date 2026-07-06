@@ -23,6 +23,11 @@ export interface DataDetailsDrawerProps {
   /** The card this drawer's contents describe — its on-screen position
    *  drives the arrow pointing back at it. */
   cardRef: RefObject<HTMLElement | null>;
+  /** Overrides the panel's own width classes (default: the card views'
+   *  narrow `w-[88%] sm:max-w-md`) — the list view's much wider row needs a
+   *  proportionally wider drawer (half the viewport) to actually look like
+   *  a paired side-by-side layout rather than a narrow strip. */
+  widthClassName?: string;
 }
 
 /** A single shared, non-modal details panel — mounted only by whichever card
@@ -31,7 +36,17 @@ export interface DataDetailsDrawerProps {
  *  layout tracking elsewhere in the card list). The pull tab and arrow are
  *  children of the same animated element, so they slide and reposition
  *  together with the panel instead of living separately in the toolbar. */
-export function DataDetailsDrawer({ open, onOpenChange, title, description, details, top, toolbarHeight, cardRef }: DataDetailsDrawerProps) {
+export function DataDetailsDrawer({
+  open,
+  onOpenChange,
+  title,
+  description,
+  details,
+  top,
+  toolbarHeight,
+  cardRef,
+  widthClassName = "w-[88%] sm:max-w-md",
+}: DataDetailsDrawerProps) {
   const [mounted, setMounted] = useState(false);
   const [arrowTop, setArrowTop] = useState(0);
 
@@ -81,7 +96,10 @@ export function DataDetailsDrawer({ open, onOpenChange, title, description, deta
       // the filter/sort/search row instead of only covering the pane below
       // it, which means it has to out-stack the toolbar, not just sit next
       // to it.
-      className="fixed right-0 z-[62] w-[88%] sm:max-w-md bg-background border border-stone-200/70 shadow-[-8px_0_30px_-8px_rgba(0,0,0,0.25)]"
+      className={cn(
+        "fixed right-0 z-[62] bg-background border border-stone-200/70 shadow-[-8px_0_30px_-8px_rgba(0,0,0,0.25)]",
+        widthClassName,
+      )}
       style={{ top, bottom: 0 }}
       initial={false}
       animate={{ x: open ? 0 : "100%" }}

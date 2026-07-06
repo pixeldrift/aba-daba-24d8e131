@@ -250,9 +250,11 @@ function getVisibleCards(
 }
 
 const DISPLAY_MODE_GRID_CLASSES: Record<DisplayMode, string> = {
-  list: "grid-cols-1",
-  card: "grid-cols-1 sm:grid-cols-2",
-  grid: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+  // Tighter than card/grid's gap-3 — a condensed list reads better with its
+  // rows sitting close together rather than spaced like full cards.
+  list: "grid-cols-1 gap-1.5",
+  card: "grid-cols-1 sm:grid-cols-2 gap-3",
+  grid: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3",
 };
 
 function IndexInner() {
@@ -485,8 +487,14 @@ function IndexInner() {
           <div className="flex flex-col items-center -mx-2 mt-5">
             <div
               className={cn(
-                "w-full transition-opacity duration-300",
+                "transition-[opacity,width] duration-300",
                 !sessionActive && "opacity-50",
+                // List view's own drawer is half the viewport wide (see
+                // DataListRow) — left-anchored and just over half width
+                // itself (rather than the usual full width, centered) so
+                // both the list and the open drawer stay visible side by
+                // side instead of the drawer covering the list entirely.
+                displayMode === "list" && drawerOpen ? "w-[55%] self-start" : "w-full",
               )}
             >
               <DataCardList
@@ -759,7 +767,7 @@ const DataCardList = memo(function DataCardList({
         axis="y"
         values={visibleCards.map((c) => c.id)}
         onReorder={setOrder}
-        className={cn("grid gap-3 w-full", DISPLAY_MODE_GRID_CLASSES[displayMode])}
+        className={cn("grid w-full", DISPLAY_MODE_GRID_CLASSES[displayMode])}
       >
         {visibleCards.map((card) => (
           <EditableCardItem
@@ -781,7 +789,7 @@ const DataCardList = memo(function DataCardList({
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.div
           key={cardsGen}
-          className={cn("grid gap-3 w-full", DISPLAY_MODE_GRID_CLASSES[displayMode])}
+          className={cn("grid w-full", DISPLAY_MODE_GRID_CLASSES[displayMode])}
           initial="enter"
           animate="center"
           exit="exit"
@@ -815,7 +823,7 @@ const DataCardList = memo(function DataCardList({
       {!transitionHidden && (
         <motion.div
           key={cardsGen}
-          className={cn("grid gap-3 w-full", DISPLAY_MODE_GRID_CLASSES[displayMode])}
+          className={cn("grid w-full", DISPLAY_MODE_GRID_CLASSES[displayMode])}
           initial="initial"
           animate="animate"
           exit="exit"
