@@ -103,7 +103,7 @@ export function useDataToolbar() {
 }
 
 export function DataToolbarProvider({ children }: { children: ReactNode }) {
-  const [displayMode, setDisplayMode] = useState<DisplayMode>("list");
+  const [displayMode, setDisplayMode] = useState<DisplayMode>("card");
   const [editMode, setEditModeState] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<DataToolbarFilters>(DEFAULT_FILTERS);
