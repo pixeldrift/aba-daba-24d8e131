@@ -57,7 +57,6 @@ const HUG_OVERLAP_PX = 14;
 // track the tile all the way to its settled position, rather than measuring
 // once at open (landing on the pre-reflow rect) and never updating again.
 const REFLOW_TRACK_MS = 500;
-
 /** A single shared, non-modal details panel — mounted only by whichever card
  *  is currently active (see CardShell) — rendered via portal so its `fixed`
  *  positioning isn't trapped by a transformed ancestor (Reorder.Item/motion
