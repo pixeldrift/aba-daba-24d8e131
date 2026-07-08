@@ -34,21 +34,16 @@ export interface DataDetailsDrawerProps {
    *  computes a real width — this only matters as its fallback until then. */
   widthClassName?: string;
   /** Instead of a fixed widthClassName, size the panel to exactly reach
-   *  `cardRef`'s own right edge (plus a small overlap so the arrow lands on
-   *  it, not just beside it) — for the quick-action grids, where each
+   *  `cardRef`'s own right edge — for the quick-action grids, where each
    *  tile's own width is a card-count-dependent, non-round fraction of the
    *  pane (a plain half-viewport-ish widthClassName would either fall short
    *  of the tile's edge or overshoot past it, rather than the two meeting
    *  exactly). Measured the same way `arrowTop` already is, from the same
-   *  card rect. */
+   *  card rect. Unlike widthClassName's own fallback, this doesn't add any
+   *  extra overlap past that edge — see its own comment where hugWidth is
+   *  computed. */
   hugCardRight?: boolean;
 }
-
-// How far the panel's own left edge reaches past the card's right edge when
-// `hugCardRight` is on — enough that the arrow (itself offset -13px further
-// left still, see its own comment below) actually overlaps the card instead
-// of just meeting its edge.
-const HUG_OVERLAP_PX = 14;
 
 /** A single shared, non-modal details panel — mounted only by whichever card
  *  is currently active (see CardShell) — rendered via portal so its `fixed`
@@ -81,7 +76,16 @@ export function DataDetailsDrawer({
       if (!el) return;
       const rect = el.getBoundingClientRect();
       setArrowTop(rect.top + rect.height / 2 - top);
-      if (hugCardRight) setHugWidth(window.innerWidth - rect.right + HUG_OVERLAP_PX);
+      // No added overlap here (unlike Card/List's widthClassName fallback,
+      // which deliberately reaches a bit past a card's own edge to cover its
+      // now-redundant info button) — a tile is small enough that a body
+      // overlap running its full height would sit across real controls the
+      // whole way down, not just near one button. The panel's left edge
+      // lands exactly on the tile's right edge instead; only the arrow
+      // (below, via its own fixed inset) and the pull tab still dip into the
+      // tile a little, the same intentional, localized overlap Card/List's
+      // fallback width has always accepted.
+      if (hugCardRight) setHugWidth(window.innerWidth - rect.right);
     };
     // A grid-mode tile has already finished reflowing into its single left
     // column by the time `open` goes true (IndexInner delays the drawer's
