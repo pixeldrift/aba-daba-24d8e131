@@ -275,6 +275,27 @@ function scrollActiveCardIntoView(el: HTMLElement, headerHeight: number) {
   window.scrollBy({ top: delta, behavior: "smooth" });
 }
 
+// The default (setting off) counterpart to scrollActiveCardIntoView above —
+// same headerHeight-aware math (native `scrollIntoView({block:"nearest"})`
+// has the identical blind spot to `"center"`: it doesn't know the sticky
+// header is eating into the true visible area), but only the minimum nudge
+// needed to bring a partially-hidden card fully on screen, not a forced
+// recenter. A no-op if the card's already fully visible.
+function scrollCardFullyIntoView(el: HTMLElement, headerHeight: number) {
+  const rect = el.getBoundingClientRect();
+  const visibleTop = headerHeight;
+  const visibleBottom = window.innerHeight;
+  if (rect.top >= visibleTop && rect.bottom <= visibleBottom) return;
+  // Taller than the room available below the header — no scroll amount can
+  // satisfy both edges, so just lead with the top (matches how a browser's
+  // own "nearest" falls back when the target doesn't fit either).
+  if (rect.height > visibleBottom - visibleTop || rect.top < visibleTop) {
+    window.scrollBy({ top: rect.top - visibleTop, behavior: "smooth" });
+  } else if (rect.bottom > visibleBottom) {
+    window.scrollBy({ top: rect.bottom - visibleBottom, behavior: "smooth" });
+  }
+}
+
 const DISPLAY_MODE_GRID_CLASSES: Record<DisplayMode, string> = {
   // Tighter than card's gap-3 — a condensed list reads better with its rows
   // sitting close together rather than spaced like full cards.
@@ -358,11 +379,14 @@ function IndexInner() {
       setDrawerSlideOpen(true);
       // The reflow just collapsed every tile into a single left column,
       // which can shift the active tile to a completely different row —
-      // recenter it now that it's settled, the same way a display-mode
-      // switch already does (see the effect below), rather than leaving it
-      // wherever the reflow happened to land it.
+      // bring it back into view now that it's settled (respecting the same
+      // centered-vs-gentle choice as the effect below), rather than leaving
+      // it wherever the reflow happened to land it.
       const el = cardRefs.current.get(activeId);
-      if (el) scrollActiveCardIntoView(el, stickyTop + toolbarHeight);
+      if (el) {
+        if (keepActiveCardCentered) scrollActiveCardIntoView(el, stickyTop + toolbarHeight);
+        else scrollCardFullyIntoView(el, stickyTop + toolbarHeight);
+      }
     }, CARD_MORPH_TRANSITION.duration * 1000 + 50);
     return () => window.clearTimeout(drawerSlideTimeoutRef.current ?? undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -372,11 +396,15 @@ function IndexInner() {
   // Settings tab's "Keep active card centered" toggle) and, unconditionally,
   // whenever the display mode changes — switching from a single column to a
   // multi-column grid reflows every card's position, so without this the
-  // active one can silently scroll off screen.
+  // active one can silently scroll off screen. With the setting off, still
+  // gently nudge a partially-hidden active card fully into view (but never
+  // force a full recenter) — becoming active shouldn't leave half of it
+  // tucked behind the header or hanging off the bottom of the screen.
   useEffect(() => {
-    if (!keepActiveCardCentered) return;
     const el = cardRefs.current.get(activeId);
-    if (el) scrollActiveCardIntoView(el, stickyTop + toolbarHeight);
+    if (!el) return;
+    if (keepActiveCardCentered) scrollActiveCardIntoView(el, stickyTop + toolbarHeight);
+    else scrollCardFullyIntoView(el, stickyTop + toolbarHeight);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, keepActiveCardCentered]);
 
