@@ -33,6 +33,7 @@ import {
   type DataToolbarFilters,
   type DisplayMode,
 } from "@/components/DataToolbarContext";
+import { CardDataStoreProvider } from "@/components/CardDataStore";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -199,7 +200,12 @@ function Index() {
     <SettingsProvider>
       <SessionProvider>
         <DataToolbarProvider>
-          <IndexInner />
+          {/* Above the whole card list, so its store survives the per-card
+              remounts that MorphContent's display-mode crossfade causes
+              below it (see CardDataStore's own comment). */}
+          <CardDataStoreProvider>
+            <IndexInner />
+          </CardDataStoreProvider>
         </DataToolbarProvider>
       </SessionProvider>
     </SettingsProvider>
