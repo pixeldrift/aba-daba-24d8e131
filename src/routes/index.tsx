@@ -46,7 +46,7 @@ export const Route = createFileRoute("/")({
 // stable identity for drag-reorder, favoriting, hiding, and active-card
 // tracking, independent of array position (which filtering/reordering
 // otherwise makes an unreliable key).
-type CardConfig = { id: string } & (
+type CardConfig = { id: string; behaviorRole?: "interfering" } & (
   | {
       kind: "trial";
       title: string;
@@ -116,6 +116,7 @@ const cards: CardConfig[] = [
     id: "flopping-dropping",
     kind: "rate",
     title: "Flopping/dropping to floor",
+    behaviorRole: "interfering",
     phase: "Baseline",
     description:
       "During a timed observation, tally each flop/drop. Rate is reported as occurrences per minute.",
@@ -134,6 +135,7 @@ const cards: CardConfig[] = [
     id: "tantruming",
     kind: "duration",
     title: "Tantruming",
+    behaviorRole: "interfering",
     phase: "Intervention",
     description:
       "Track each tantrum instance separately. Start a new instance with the plus button; pause/resume the current instance with the play/pause button.",
@@ -241,6 +243,10 @@ function getVisibleCards(
     if (filters.trialsReached !== filters.incompleteTrials) {
       if (filters.trialsReached && !completion[card.id]) return false;
       if (filters.incompleteTrials && completion[card.id]) return false;
+    }
+    if (filters.behaviorFilter !== "both") {
+      const role = card.behaviorRole ?? "target";
+      if (role !== filters.behaviorFilter) return false;
     }
     if (q && !card.title.toLowerCase().includes(q)) return false;
     return true;

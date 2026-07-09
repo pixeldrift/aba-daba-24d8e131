@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Heart, EyeOff, Pencil, Search, Star, X } from "lucide-react";
+import { Frown, Heart, EyeOff, Pencil, Search, Star, Target, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PercentCorrectIcon } from "@/components/icons/PercentCorrectIcon";
 import { FrequencyIcon } from "@/components/icons/FrequencyIcon";
@@ -63,6 +63,7 @@ export function DataToolbar({
     setIncompleteTrials,
     setFavoritesOnly,
     setShowHidden,
+    cycleBehaviorFilter,
     clearFilters,
   } = useDataToolbar();
   const [filterOpen, setFilterOpen] = useState(false);
@@ -109,7 +110,8 @@ export function DataToolbar({
     (filters.withData !== filters.noData ? 1 : 0) +
     (filters.trialsReached !== filters.incompleteTrials ? 1 : 0) +
     (filters.favoritesOnly ? 1 : 0) +
-    (filters.showHidden ? 1 : 0);
+    (filters.showHidden ? 1 : 0) +
+    (filters.behaviorFilter !== "both" ? 1 : 0);
 
   return (
     <div
@@ -210,6 +212,39 @@ export function DataToolbar({
             />
           </PopoverContent>
         </Popover>
+
+        {/* Interfering behavior / target goal 3-way filter — cycles both
+            (default, no constraint) -> interfering-only -> target-only ->
+            back to both on each click, rather than the independent-pair
+            toggles used elsewhere in the popover, since only one of these
+            three states can be active at a time. */}
+        <button
+          type="button"
+          onClick={cycleBehaviorFilter}
+          aria-pressed={filters.behaviorFilter !== "both"}
+          aria-label={
+            filters.behaviorFilter === "interfering"
+              ? "Showing interfering behaviors only — click to show target goals only"
+              : filters.behaviorFilter === "target"
+                ? "Showing target goals only — click to show all cards"
+                : "Showing all cards — click to show interfering behaviors only"
+          }
+          title={
+            filters.behaviorFilter === "interfering"
+              ? "Interfering behaviors only"
+              : filters.behaviorFilter === "target"
+                ? "Target goals only"
+                : "Filter: interfering behaviors / target goals"
+          }
+          className={cn(
+            "grid place-items-center size-7 shrink-0 rounded-full border transition-colors",
+            filters.behaviorFilter !== "both"
+              ? "border-blue-400 bg-blue-50 text-blue-600"
+              : "border-stone-200 text-stone-500 hover:text-stone-800 hover:bg-stone-100",
+          )}
+        >
+          {filters.behaviorFilter === "target" ? <Target className="size-3.5" /> : <Frown className="size-3.5" />}
+        </button>
 
         {/* Edit mode */}
         <button
