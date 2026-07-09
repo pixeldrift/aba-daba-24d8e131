@@ -893,6 +893,29 @@ function MorphContent({ displayMode, children }: { displayMode: DisplayMode; chi
   const [height, setHeight] = useState<number | null>(null);
   const isFirstMeasure = useRef(true);
 
+  // overflow:hidden only while a mode switch is actually mid-flight — not a
+  // permanent property of this wrapper. Left on all the time, it clips the
+  // wrapper to the exact measured `scrollHeight` of its content, which
+  // (correctly, per spec) never includes a child's own box-shadow — so an
+  // active card's selected-state shadow got hard-clipped right at its own
+  // bottom edge instead of fading out naturally, reading as a flat gray
+  // smudge with a sharp corner where the fade should have continued. Only
+  // clipping during the brief crossfade (where it's genuinely needed, to
+  // hide the old/new content pair briefly overlapping) and lifting it once
+  // settled lets any static shadow bleed past the box normally at rest.
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const prevDisplayModeRef = useRef(displayMode);
+  useEffect(() => {
+    if (prevDisplayModeRef.current === displayMode) return;
+    prevDisplayModeRef.current = displayMode;
+    setIsTransitioning(true);
+    const id = window.setTimeout(
+      () => setIsTransitioning(false),
+      CARD_MORPH_TRANSITION.duration * 1000 + 50,
+    );
+    return () => window.clearTimeout(id);
+  }, [displayMode]);
+
   // ResizeObserver instead of the more obvious "measure scrollHeight in a
   // useLayoutEffect keyed on displayMode, animate to it, then transitionEnd
   // back to auto" — that trick doesn't hold up here. AnimatePresence's own
@@ -929,7 +952,7 @@ function MorphContent({ displayMode, children }: { displayMode: DisplayMode; chi
   return (
     <motion.div
       className="w-full"
-      style={{ overflow: "hidden" }}
+      style={{ overflow: isTransitioning ? "hidden" : "visible" }}
       animate={{ height: height ?? "auto" }}
       // The very first measurement (initial mount) snaps instantly — there's
       // no prior state to visually transition from, and animating "auto" to
