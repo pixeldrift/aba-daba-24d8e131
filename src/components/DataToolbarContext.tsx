@@ -22,6 +22,10 @@ export interface DataToolbarFilters {
    *  hides shy/hidden cards from the list; ON (true) reveals them alongside
    *  everything else. */
   showHidden: boolean;
+  /** Interfering-behavior vs. target-goal filter — a single three-way
+   *  cycling toggle (not a pair of independent booleans like the ones
+   *  above), since only one of the three states can be active at a time. */
+  behaviorFilter: "both" | "interfering" | "target";
 }
 
 const DEFAULT_FILTERS: DataToolbarFilters = {
@@ -33,6 +37,7 @@ const DEFAULT_FILTERS: DataToolbarFilters = {
   incompleteTrials: false,
   favoritesOnly: false,
   showHidden: false,
+  behaviorFilter: "both",
 };
 
 interface PersistedShape {
@@ -76,6 +81,8 @@ interface DataToolbarContextValue {
   setIncompleteTrials: (v: boolean) => void;
   setFavoritesOnly: (v: boolean) => void;
   setShowHidden: (v: boolean) => void;
+  /** Cycles behaviorFilter: both -> interfering -> target -> both. */
+  cycleBehaviorFilter: () => void;
   clearFilters: () => void;
   favorites: Set<string>;
   toggleFavorite: (id: string) => void;
@@ -166,6 +173,13 @@ export function DataToolbarProvider({ children }: { children: ReactNode }) {
   const setShowHidden = useCallback((v: boolean) => {
     setFilters((f) => ({ ...f, showHidden: v }));
   }, []);
+  const cycleBehaviorFilter = useCallback(() => {
+    setFilters((f) => ({
+      ...f,
+      behaviorFilter:
+        f.behaviorFilter === "both" ? "interfering" : f.behaviorFilter === "interfering" ? "target" : "both",
+    }));
+  }, []);
   const clearFilters = useCallback(() => setFilters(DEFAULT_FILTERS), []);
 
   const toggleFavorite = useCallback((id: string) => {
@@ -210,6 +224,7 @@ export function DataToolbarProvider({ children }: { children: ReactNode }) {
       setIncompleteTrials,
       setFavoritesOnly,
       setShowHidden,
+      cycleBehaviorFilter,
       clearFilters,
       favorites,
       toggleFavorite,
@@ -224,7 +239,7 @@ export function DataToolbarProvider({ children }: { children: ReactNode }) {
     [
       displayMode, editMode, setEditMode, searchQuery, filters,
       toggleKindFilter, togglePhaseFilter, setWithData, setNoData, setTrialsReached, setIncompleteTrials,
-      setFavoritesOnly, setShowHidden, clearFilters,
+      setFavoritesOnly, setShowHidden, cycleBehaviorFilter, clearFilters,
       favorites, toggleFavorite, hidden, toggleHidden, order, setOrder, hasData, completion, reportCardStatus,
     ],
   );

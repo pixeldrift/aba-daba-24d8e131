@@ -1,8 +1,7 @@
 import Icon from "./svg/partial-physical-prompt.svg?react";
 
-/** Partial physical prompt — an open hand, fingers spread (light touch/
- *  guidance, not a full grip) — the "open" counterpart to
- *  FullPhysicalPromptIcon's closed fist. Source:
- *  ./svg/partial-physical-prompt.svg (edit there — this file just re-exports
- *  it). */
+/** Partial physical prompt — a single helping hand (one hand offering
+ *  light support) — the "one hand" counterpart to FullPhysicalPromptIcon's
+ *  pair. Source: ./svg/partial-physical-prompt.svg (edit there — this file
+ *  just re-exports it). */
 export const PartialPhysicalPromptIcon = Icon;

@@ -119,19 +119,22 @@ export function DataListRow({
           and bottom margins within the box either way. */}
       {showActions && <div className="absolute z-10 top-1/2 -translate-y-1/2 right-1.5">{actions}</div>}
 
-      {/* A background wash behind the row's own content rather than a
-          layout sibling it grows to fit — absolutely positioned and z-0 so
-          the title/actions above (both z-10) paint over it instead of the
-          row reserving extra height for it. Skinnier here than CardShell's
-          own labeled version, since there's no helper text to make room
-          for. Inset from the edges and rounded-full (rather than flush
+      {/* A background wash tucked under the title only — stops well short
+          of the floated actions cluster (rather than running the row's
+          full width) so it never sits behind/underneath the buttons.
+          Inset from the edges and rounded-full (rather than flush
           corner-to-corner) so it reads as sitting inside the row's own
           border instead of touching/merging into it — most visible once a
           selected row's ring makes that border more prominent. Only
           rendered where a running percentage is meaningful for the data
           type (Trial, Task Analysis); other kinds pass no `progress`. */}
       {showProgress && (
-        <div className="absolute inset-x-2 bottom-1 z-0 h-0.5 rounded-full overflow-hidden bg-stone-200/80">
+        <div
+          className={cn(
+            "absolute left-2 bottom-1.5 z-0 h-0.5 rounded-full overflow-hidden bg-stone-200/80",
+            showActions ? "right-32" : "right-9",
+          )}
+        >
           <div className={cn("h-full transition-[width]", barColor)} style={{ width: `${pct}%` }} />
         </div>
       )}
