@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Frown, Heart, EyeOff, Pencil, Search, Star, Target, X } from "lucide-react";
+import { CheckCircle2, CircleDashed, ClipboardCheck, ClipboardX, Frown, Heart, EyeOff, Pencil, Search, Star, Target, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PercentCorrectIcon } from "@/components/icons/PercentCorrectIcon";
 import { FrequencyIcon } from "@/components/icons/FrequencyIcon";
@@ -46,10 +46,8 @@ export function DataToolbar({
     filters,
     toggleKindFilter,
     togglePhaseFilter,
-    setWithData,
-    setNoData,
-    setTrialsReached,
-    setIncompleteTrials,
+    cycleDataFilter,
+    cycleCompletionFilter,
     setFavoritesOnly,
     setShowHidden,
     cycleBehaviorFilter,
@@ -94,10 +92,8 @@ export function DataToolbar({
   const activeFilterCount =
     filters.kinds.size +
     filters.phases.size +
-    // Each pair only counts as an active filter when exactly one side is
-    // selected — both or neither applies no constraint (see the popover).
-    (filters.withData !== filters.noData ? 1 : 0) +
-    (filters.trialsReached !== filters.incompleteTrials ? 1 : 0) +
+    (filters.dataFilter !== "all" ? 1 : 0) +
+    (filters.completionFilter !== "all" ? 1 : 0) +
     (filters.favoritesOnly ? 1 : 0) +
     (filters.showHidden ? 1 : 0) +
     (filters.behaviorFilter !== "both" ? 1 : 0);
@@ -174,7 +170,7 @@ export function DataToolbar({
             side="bottom"
             align="center"
             sideOffset={8}
-            className="group z-[70] w-[308px] p-3"
+            className="group z-[70] w-64 p-3"
           >
             <FilterPopoverContent
               availableKinds={availableKinds}
@@ -182,10 +178,8 @@ export function DataToolbar({
               filters={filters}
               toggleKindFilter={toggleKindFilter}
               togglePhaseFilter={togglePhaseFilter}
-              setWithData={setWithData}
-              setNoData={setNoData}
-              setTrialsReached={setTrialsReached}
-              setIncompleteTrials={setIncompleteTrials}
+              cycleDataFilter={cycleDataFilter}
+              cycleCompletionFilter={cycleCompletionFilter}
               setFavoritesOnly={setFavoritesOnly}
               setShowHidden={setShowHidden}
               clearFilters={clearFilters}
@@ -301,10 +295,8 @@ function FilterPopoverContent({
   filters,
   toggleKindFilter,
   togglePhaseFilter,
-  setWithData,
-  setNoData,
-  setTrialsReached,
-  setIncompleteTrials,
+  cycleDataFilter,
+  cycleCompletionFilter,
   setFavoritesOnly,
   setShowHidden,
   clearFilters,
@@ -314,10 +306,8 @@ function FilterPopoverContent({
   filters: ReturnType<typeof useDataToolbar>["filters"];
   toggleKindFilter: (k: CardKind) => void;
   togglePhaseFilter: (p: string) => void;
-  setWithData: (v: boolean) => void;
-  setNoData: (v: boolean) => void;
-  setTrialsReached: (v: boolean) => void;
-  setIncompleteTrials: (v: boolean) => void;
+  cycleDataFilter: () => void;
+  cycleCompletionFilter: () => void;
   setFavoritesOnly: (v: boolean) => void;
   setShowHidden: (v: boolean) => void;
   clearFilters: () => void;
@@ -346,32 +336,27 @@ function FilterPopoverContent({
         />
       </div>
 
-      {/* Each row below is two independent toggles, not a mutually exclusive
-          pair — selecting both or neither applies no constraint (shows
-          all), rather than one turning the other off. */}
+      {/* Single three-way cycling chips (all -> one state -> the other ->
+          all) — same idiom as the behaviorFilter button in the main toolbar
+          row, replacing what used to be two independent toggle pairs. */}
       <div className="flex gap-1.5">
         <ToggleChip
-          label="With Data"
-          selected={filters.withData}
-          onClick={() => setWithData(!filters.withData)}
+          icon={filters.dataFilter === "no-data" ? <ClipboardX className="size-3" /> : <ClipboardCheck className="size-3" />}
+          label={filters.dataFilter === "no-data" ? "No Data" : filters.dataFilter === "with-data" ? "With Data" : "Data"}
+          selected={filters.dataFilter !== "all"}
+          onClick={cycleDataFilter}
         />
         <ToggleChip
-          label="No Data"
-          selected={filters.noData}
-          onClick={() => setNoData(!filters.noData)}
-        />
-      </div>
-
-      <div className="flex gap-1.5">
-        <ToggleChip
-          label="Trials Reached"
-          selected={filters.trialsReached}
-          onClick={() => setTrialsReached(!filters.trialsReached)}
-        />
-        <ToggleChip
-          label="Incomplete Trials"
-          selected={filters.incompleteTrials}
-          onClick={() => setIncompleteTrials(!filters.incompleteTrials)}
+          icon={filters.completionFilter === "incomplete" ? <CircleDashed className="size-3" /> : <CheckCircle2 className="size-3" />}
+          label={
+            filters.completionFilter === "incomplete"
+              ? "Incomplete"
+              : filters.completionFilter === "reached"
+                ? "Reached"
+                : "Trials"
+          }
+          selected={filters.completionFilter !== "all"}
+          onClick={cycleCompletionFilter}
         />
       </div>
 

@@ -242,6 +242,12 @@ function Index() {
 
 const CARD_KINDS_IN_ORDER: CardKind[] = ["trial", "frequency", "rate", "duration", "task-analysis", "rating"];
 
+// Clinical progression order, not the cards' own declaration order — the
+// filter popover's Phase chips should read left-to-right the way a plan
+// actually moves through them. Any phase not in this list (typos, future
+// additions) sorts after, alphabetically, rather than silently vanishing.
+const PHASE_ORDER = ["Probing", "Baseline", "Intervention", "Maintenance"];
+
 function getVisibleCards(
   order: string[],
   filters: DataToolbarFilters,
@@ -268,16 +274,10 @@ function getVisibleCards(
     if (filters.favoritesOnly && !favorites.has(card.id)) return false;
     if (filters.kinds.size > 0 && !filters.kinds.has(card.kind)) return false;
     if (filters.phases.size > 0 && !filters.phases.has(card.phase)) return false;
-    // Each pair below is two independent toggles, not a mutually exclusive
-    // choice — selecting both or neither applies no constraint (show all).
-    if (filters.withData !== filters.noData) {
-      if (filters.withData && !hasData[card.id]) return false;
-      if (filters.noData && hasData[card.id]) return false;
-    }
-    if (filters.trialsReached !== filters.incompleteTrials) {
-      if (filters.trialsReached && !completion[card.id]) return false;
-      if (filters.incompleteTrials && completion[card.id]) return false;
-    }
+    if (filters.dataFilter === "with-data" && !hasData[card.id]) return false;
+    if (filters.dataFilter === "no-data" && hasData[card.id]) return false;
+    if (filters.completionFilter === "reached" && !completion[card.id]) return false;
+    if (filters.completionFilter === "incomplete" && completion[card.id]) return false;
     if (filters.behaviorFilter !== "both") {
       const role = card.behaviorRole ?? "target";
       if (role !== filters.behaviorFilter) return false;
@@ -382,7 +382,12 @@ function IndexInner() {
     () => CARD_KINDS_IN_ORDER.filter((k) => cards.some((c) => c.kind === k)),
     [],
   );
-  const availablePhases = useMemo(() => Array.from(new Set(cards.map((c) => c.phase))), []);
+  const availablePhases = useMemo(() => {
+    const present = new Set(cards.map((c) => c.phase));
+    const known = PHASE_ORDER.filter((p) => present.has(p));
+    const rest = Array.from(present).filter((p) => !PHASE_ORDER.includes(p)).sort();
+    return [...known, ...rest];
+  }, []);
 
   const visibleCards = useMemo(
     () => getVisibleCards(order, filters, searchQuery, favorites, hidden, hasData, completion, editMode),
