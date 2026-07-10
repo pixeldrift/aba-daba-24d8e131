@@ -12,7 +12,10 @@ export interface NumberKeypadProps {
   onReplace: (next: number) => void;
   /** Called when user commits via "Add". */
   onAdd: (delta: number) => void;
-  /** Maximum digits allowed in the pending entry. */
+  /** Maximum digits allowed in the pending entry. Default of 4 caps a
+   *  tally-based entry at 9999 — already well past any realistic single
+   *  count or rate, so it's a guardrail against a fat-fingered run of
+   *  digits rather than a real ceiling anyone should ever hit. */
   maxDigits?: number;
   /** Optional callback when open state changes. */
   onOpenChange?: (open: boolean) => void;
@@ -27,7 +30,7 @@ export function NumberKeypad({
   value,
   onReplace,
   onAdd,
-  maxDigits = 6,
+  maxDigits = 4,
   onOpenChange,
   children,
 }: NumberKeypadProps) {

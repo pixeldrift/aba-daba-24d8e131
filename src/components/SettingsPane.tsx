@@ -1,4 +1,4 @@
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Volume2 } from "lucide-react";
 import {
   ALARM_SOUND_OPTIONS,
   DEFAULT_DAY_END,
@@ -12,6 +12,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { playAlarmPreview } from "@/lib/alarmSounds";
 import { cn } from "@/lib/utils";
 
 function SettingsTimeField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -120,20 +121,43 @@ export function SettingsPane() {
                     <label htmlFor="alarmSound" className="text-sm font-medium">
                       Alarm sound
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => setAlarmSound("normal")}
-                      disabled={alarmSound === "normal"}
-                      aria-label="Reset Alarm sound to default"
-                      className="text-muted-foreground/60 hover:text-foreground transition-colors disabled:opacity-0 disabled:pointer-events-none"
-                    >
-                      <RotateCcw className="size-3" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => playAlarmPreview(alarmSound)}
+                        aria-label={`Play ${alarmSound} alarm sound`}
+                        title="Play sound"
+                        className="text-muted-foreground/60 hover:text-foreground transition-colors"
+                      >
+                        <Volume2 className="size-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAlarmSound("normal")}
+                        disabled={alarmSound === "normal"}
+                        aria-label="Reset Alarm sound to default"
+                        className="text-muted-foreground/60 hover:text-foreground transition-colors disabled:opacity-0 disabled:pointer-events-none"
+                      >
+                        <RotateCcw className="size-3" />
+                      </button>
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground/80 mt-0.5">
                     How urgent an alert's chime sounds while it's live.
                   </p>
-                  <Select value={alarmSound} onValueChange={(v) => setAlarmSound(v as AlarmSoundStyle)}>
+                  <Select
+                    value={alarmSound}
+                    onValueChange={(v) => {
+                      const style = v as AlarmSoundStyle;
+                      setAlarmSound(style);
+                      // Auto-preview on selection — the whole point of
+                      // choosing between "gentle"/"normal"/"heavy" is how
+                      // they actually sound, not their labels, so playing
+                      // it immediately saves a separate confirm-then-play
+                      // step.
+                      playAlarmPreview(style);
+                    }}
+                  >
                     <SelectTrigger id="alarmSound" className="mt-2 w-full">
                       <SelectValue />
                     </SelectTrigger>
