@@ -226,9 +226,10 @@ export function TaskAnalysisCard({
             SwipeStrip bound to the same current/goTo state as the step text
             below, so dragging either one moves both in lockstep and the
             whole row visibly slides as `current` changes (the same native
-            smooth-scroll the text strip already uses). Distance from center
-            shrinks and fades each dot rather than a hard cutoff, reading as
-            "fading out to the edges" instead of a fixed 3-dot window. */}
+            smooth-scroll the text strip already uses). Only the current dot
+            is enlarged; every other dot is the same size regardless of how
+            far it is from center — same fixed convention every other card's
+            own dot row uses (see Duration's). */}
         <SwipeStrip
           count={steps.length}
           current={current}
@@ -239,17 +240,19 @@ export function TaskAnalysisCard({
           itemWrapperClassName="flex items-center justify-center"
         >
           {(i) => {
-            const dist = Math.abs(i - current);
-            const size = dist === 0 ? (large ? "size-2.5" : "size-2") : dist === 1 ? "size-2" : dist === 2 ? "size-1.5" : "size-1";
-            const opacity = dist === 0 ? 1 : dist === 1 ? 0.7 : dist === 2 ? 0.4 : 0.2;
+            const isCurrent = i === current;
             return (
               <span
                 onClick={(e) => {
                   e.stopPropagation();
                   goTo(i);
                 }}
-                className={cn("rounded-full transition-all duration-300", size, statusDotColor(statuses[i]))}
-                style={{ opacity }}
+                className={cn(
+                  "rounded-full transition-all duration-300",
+                  isCurrent ? (large ? "size-2.5" : "size-2") : large ? "size-1.5" : "size-1",
+                  statusDotColor(statuses[i]),
+                )}
+                style={{ opacity: isCurrent ? 1 : 0.5 }}
                 aria-hidden
               />
             );

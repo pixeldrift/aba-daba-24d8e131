@@ -185,7 +185,11 @@ export function TimeOfDayKeypad({ value: _value, onChange, onEditingChange, chil
               else if (e.key === "Enter") { e.preventDefault(); commit(); }
               else if (e.key === "Escape") { e.preventDefault(); setOpen(false); }
             }}
-            className="absolute size-px opacity-0 pointer-events-none -z-10"
+            // text-base (16px): see NumberKeypad's identical hidden input —
+            // iOS zooms in on focus of any sub-16px input and back out on
+            // blur, which is what read as "viewport scales down" on session
+            // end (this popover's own hidden input closing/blurring then).
+            className="absolute size-px text-base opacity-0 pointer-events-none -z-10"
             aria-hidden="true"
             tabIndex={-1}
           />

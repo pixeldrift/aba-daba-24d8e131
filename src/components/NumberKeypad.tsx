@@ -141,7 +141,13 @@ export function NumberKeypad({
                 handleOpenChange(false);
               }
             }}
-            className="absolute size-px opacity-0 pointer-events-none -z-10"
+            // text-base (16px): same fix as the toolbar search box — iOS
+            // Safari zooms the whole page in on focus of any input computing
+            // under 16px, then zooms back OUT the instant it blurs (e.g. when
+            // this popover closes on submit), which read as "the viewport
+            // scales down" on session end since this hidden input is a real
+            // focus target (see the .focus() call above), not just decorative.
+            className="absolute size-px text-base opacity-0 pointer-events-none -z-10"
             aria-hidden="true"
             tabIndex={-1}
           />
