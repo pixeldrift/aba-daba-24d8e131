@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Eye, CheckCircle2 } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Eye, CheckCircle2, X } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { PersonPill } from "@/components/StaffDirectory";
 import { PhoneIcon } from "./icons/PhoneIcon";
+import { RequestEditIcon } from "./icons/RequestEditIcon";
 import { useSession } from "@/components/SessionContext";
+import { useNotifications } from "@/components/NotificationContext";
 import { useStickyTop } from "@/hooks/use-sticky-top";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +14,14 @@ import { cn } from "@/lib/utils";
 // again — long enough to actually register a face, short enough that the
 // screen doesn't sit showing it indefinitely.
 const REVEAL_MS = 5000;
+
+// Request Edit's textarea auto-grows to fit its content between these two
+// bounds — MIN keeps a short field (e.g. "No") from rendering as a single
+// cramped line, MAX keeps a long one (e.g. Favorite Toys/Activities) from
+// growing the dialog past a reasonable size; beyond that it scrolls
+// internally instead (see the textarea's own resize effect).
+const MIN_TEXTAREA_PX = 96;
+const MAX_TEXTAREA_PX = 240;
 
 interface GuardianRecord {
   id: string;
@@ -79,7 +90,6 @@ const ABOUT_ME = {
     { discipline: "Speech", provider: "Vanessa Doofenshmirtz", schedule: "Tuesdays 12:00p" },
     { discipline: "OT", provider: "Jeremy Johnson", schedule: "Wed 3:30–4:00p, Fri 1:30–2:00p" },
   ],
-  lastUpdated: "June 26, 2026",
 };
 
 const JUMP_SECTIONS = [
@@ -138,15 +148,18 @@ export function ClientInfoPane() {
 
       <Section id="section-about-me" title="About Me (Coverage Notes)">
         <div className="divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white overflow-hidden text-sm">
-          <NoteRow label="Seizure Action Plan?">{ABOUT_ME.seizureActionPlan}</NoteRow>
-          <NoteRow label="Allergies">{ABOUT_ME.allergies}</NoteRow>
-          <NoteRow label="Favorite Toys/Activities">{ABOUT_ME.favoriteActivities}</NoteRow>
-          <NoteRow label="Interfering Behaviors">{ABOUT_ME.interferingBehaviors}</NoteRow>
-          <NoteRow label="Environment">{ABOUT_ME.environment}</NoteRow>
-          <NoteRow label="Meal Time/Snack">{ABOUT_ME.mealTime}</NoteRow>
-          <NoteRow label="Session Success Tips/Pairing">{ABOUT_ME.successTips}</NoteRow>
-          <NoteRow label="Toileting">{ABOUT_ME.toileting}</NoteRow>
-          <NoteRow label="Mode of Communication">
+          <NoteRow label="Seizure Action Plan?" value={ABOUT_ME.seizureActionPlan} />
+          <NoteRow label="Allergies" value={ABOUT_ME.allergies} />
+          <NoteRow label="Favorite Toys/Activities" value={ABOUT_ME.favoriteActivities} />
+          <NoteRow label="Interfering Behaviors" value={ABOUT_ME.interferingBehaviors} />
+          <NoteRow label="Environment" value={ABOUT_ME.environment} />
+          <NoteRow label="Meal Time/Snack" value={ABOUT_ME.mealTime} />
+          <NoteRow label="Session Success Tips/Pairing" value={ABOUT_ME.successTips} />
+          <NoteRow label="Toileting" value={ABOUT_ME.toileting} />
+          <NoteRow
+            label="Mode of Communication"
+            value={`Expressive: ${ABOUT_ME.communicationExpressive}\n\nReceptive: ${ABOUT_ME.communicationReceptive}`}
+          >
             <p>
               <span className="font-semibold">Expressive: </span>
               {ABOUT_ME.communicationExpressive}
@@ -156,8 +169,11 @@ export function ClientInfoPane() {
               {ABOUT_ME.communicationReceptive}
             </p>
           </NoteRow>
-          <NoteRow label="Transitions">{ABOUT_ME.transitions}</NoteRow>
-          <NoteRow label="Related Service Times">
+          <NoteRow label="Transitions" value={ABOUT_ME.transitions} />
+          <NoteRow
+            label="Related Service Times"
+            value={ABOUT_ME.relatedServices.map((s) => `${s.discipline}: ${s.provider} · ${s.schedule}`).join("\n")}
+          >
             <div className="space-y-1">
               {ABOUT_ME.relatedServices.map((s) => (
                 <div key={s.discipline} className="flex flex-wrap items-baseline gap-x-1.5">
@@ -169,8 +185,7 @@ export function ClientInfoPane() {
               ))}
             </div>
           </NoteRow>
-          <NoteRow label="Session Structure/Schedule">See the Schedule tab.</NoteRow>
-          <NoteRow label="Last Updated">{ABOUT_ME.lastUpdated}</NoteRow>
+          <NoteRow label="Session Structure/Schedule" value="See the Schedule tab." />
         </div>
       </Section>
 
@@ -268,13 +283,128 @@ function Section({ id, title, children }: { id: string; title: string; children:
 // Label-over-value row for About Me — unlike InfoRow's inline label
 // (fine for a short pill list), these values run to full paragraphs, so
 // label and value need their own stacked lines rather than fighting for
-// space side by side.
-function NoteRow({ label, children }: { label: string; children: React.ReactNode }) {
+// space side by side. `value` is the plain-text version a covering tech's
+// edit request preloads into its textarea; `children`, when given, is a
+// richer rendering of the same fact (e.g. Mode of Communication's two
+// paragraphs) — otherwise `value` itself is rendered directly.
+function NoteRow({ label, value, children }: { label: string; value: string; children?: React.ReactNode }) {
+  const [requestOpen, setRequestOpen] = useState(false);
   return (
-    <div className="p-3">
+    <div className="relative p-3 pr-9">
       <p className="text-xs font-semibold uppercase tracking-wide text-stone-400">{label}</p>
-      <div className="mt-1 leading-snug text-foreground/90">{children}</div>
+      <div className="mt-1 leading-snug text-foreground/90">{children ?? value}</div>
+      {/* Bare icon, no button chrome — a passive "you can suggest a change
+          here" hint, not a primary action, so it stays out of the way of
+          the actual content above it. */}
+      <button
+        type="button"
+        onClick={() => setRequestOpen(true)}
+        aria-label={`Request an edit to ${label}`}
+        className="absolute bottom-1.5 right-1.5 grid place-items-center size-6 text-blue-400/70 hover:text-blue-600 transition-colors"
+      >
+        <RequestEditIcon className="size-4" />
+      </button>
+      <RequestEditDialog open={requestOpen} onOpenChange={setRequestOpen} label={label} currentValue={value} />
     </div>
+  );
+}
+
+// Submits a request rather than editing directly — this client record has
+// no real access-control yet (see README: Editing Allowed / Not Allowed /
+// Approval Required is future scope), so for now every request just goes
+// to the same place a supervisor would actually see it: a live
+// notification, the same way an approval request would surface once that
+// workflow exists. There's no approve/deny action on it yet either.
+function RequestEditDialog({
+  open,
+  onOpenChange,
+  label,
+  currentValue,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  label: string;
+  currentValue: string;
+}) {
+  const { push } = useNotifications();
+  const [text, setText] = useState(currentValue);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Re-seed from the live value each time the dialog opens, rather than
+  // carrying over whatever was left in the box from a prior cancelled
+  // request (or a since-changed field) the last time it was open.
+  useEffect(() => {
+    if (open) setText(currentValue);
+  }, [open, currentValue]);
+
+  // Grows with content (a long field like Favorite Toys/Activities starts
+  // bigger than a short one like Allergies) up to MAX_TEXTAREA_PX, then
+  // scrolls internally rather than growing the dialog past the screen —
+  // standard auto-resize textarea behavior. Radix mounts DialogContent's
+  // children asynchronously relative to `open` flipping true (same as the
+  // filter popover's own content ref elsewhere in this app), so a single
+  // effect keyed on `open` can still find a null ref on its one run; poll
+  // across a few frames instead, re-reading the ref fresh each time.
+  useEffect(() => {
+    if (!open) return;
+    const resize = () => {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.style.height = "auto";
+      el.style.height = `${Math.min(Math.max(el.scrollHeight, MIN_TEXTAREA_PX), MAX_TEXTAREA_PX)}px`;
+    };
+    const rafIds: number[] = [];
+    let frame = 0;
+    const loop = () => {
+      resize();
+      frame += 1;
+      if (frame < 10) rafIds.push(requestAnimationFrame(loop));
+    };
+    rafIds.push(requestAnimationFrame(loop));
+    return () => rafIds.forEach(cancelAnimationFrame);
+  }, [open, text]);
+
+  const handleSave = () => {
+    push({
+      kind: "message",
+      icon: "message",
+      title: `Edit requested: ${label}`,
+      body: text.trim(),
+    });
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-[calc(100%-2rem)] max-w-sm rounded-xl">
+        <DialogHeader className="text-left">
+          <DialogTitle>Request Edit</DialogTitle>
+          <DialogDescription>{label}</DialogDescription>
+        </DialogHeader>
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          className="w-full resize-none overflow-y-auto rounded-xl border-2 border-blue-300 bg-white px-3 py-2 text-sm leading-snug shadow-[inset_0_2px_5px_rgba(0,0,0,0.22)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        />
+        <DialogFooter className="flex-row justify-end gap-2">
+          <Button
+            variant="outline"
+            className="rounded-full border-2 border-blue-300 text-blue-700 hover:bg-blue-50 gap-1.5"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel <X className="size-4" />
+          </Button>
+          <Button
+            className="rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:pointer-events-none"
+            disabled={!text.trim()}
+            onClick={handleSave}
+          >
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

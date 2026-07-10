@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { AnimatePresence, motion, useMotionValue, useTransform, animate, type MotionStyle } from "motion/react";
 import { Bell, BellRing, BellOff, Target, MessageSquare, Megaphone, X, VolumeX, ArrowRight } from "lucide-react";
-import { useNotifications, type Notification, type NotificationIcon, type NotificationKind } from "./NotificationContext";
+import { useNotifications, isAlert, vibrate, type Notification, type NotificationIcon, type NotificationKind } from "./NotificationContext";
 import type { AlarmSoundStyle } from "./SettingsContext";
 import { playAlarmSound } from "@/lib/alarmSounds";
 import { cn } from "@/lib/utils";
@@ -75,20 +75,73 @@ const KIND_STYLES: Record<NotificationKind, { ring: string; iconFg: string; acce
     accent: "bg-violet-500",
     button: "bg-violet-500 hover:bg-violet-600 active:bg-violet-700",
   },
+  "appointment-new": {
+    ring: "border-teal-300 bg-teal-50",
+    iconFg: "text-teal-700",
+    accent: "bg-teal-500",
+    button: "bg-teal-500 hover:bg-teal-600 active:bg-teal-700",
+  },
+  "appointment-cancelled": {
+    ring: "border-rose-300 bg-rose-50",
+    iconFg: "text-rose-700",
+    accent: "bg-rose-500",
+    button: "bg-rose-500 hover:bg-rose-600 active:bg-rose-700",
+  },
+  "edit-approved": {
+    ring: "border-indigo-300 bg-indigo-50",
+    iconFg: "text-indigo-700",
+    accent: "bg-indigo-500",
+    button: "bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700",
+  },
 };
 
-function isAlert(k: NotificationKind) {
-  return k === "alert-now" || k === "alert-priming";
-}
+// Every person a notification title might mention — matched literally
+// (not derived from StaffDirectory/ClientInfoPane's own records) since this
+// is just cosmetic highlighting, not a data dependency. Kept as one flat
+// list here rather than importing each source file's own roster, to avoid
+// coupling this purely-visual concern to wherever those happen to live.
+const KNOWN_NAMES = [
+  "Phineas Flynn",
+  "Linda Flynn-Fletcher",
+  "Lawrence Fletcher",
+  "Heinz Doofenshmirtz",
+  "Perry Plat",
+  "Isabella Garcia-Shapiro",
+  "Baljeet Tjinder",
+  "Vanessa Doofenshmirtz",
+  "Jeremy Johnson",
+  "Dr. Lopez",
+  "Sam Patel",
+];
+const NAME_PATTERN = new RegExp(
+  `(${KNOWN_NAMES.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`,
+  "g",
+);
 
-function vibrate(pattern: number | number[]) {
-  try {
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-      navigator.vibrate(pattern);
-    }
-  } catch {
-    /* noop */
-  }
+// A title's own "Category: rest of it" shape (every kind uses this, from
+// the seeded examples to Request Edit's own "Edit requested: <field>")
+// only bolds the category, not the whole line — and any known person's
+// name within the remainder reads as a plain italic blue mention instead
+// of a full interactive PersonPill, since a notification title isn't a
+// place to open someone's contact menu.
+function NotificationTitle({ title, className }: { title: string; className?: string }) {
+  const colonIdx = title.indexOf(":");
+  const label = colonIdx === -1 ? title : title.slice(0, colonIdx + 1);
+  const rest = colonIdx === -1 ? "" : title.slice(colonIdx + 1);
+  return (
+    <span className={className}>
+      <span className="font-semibold">{label}</span>
+      {rest.split(NAME_PATTERN).map((part, i) =>
+        KNOWN_NAMES.includes(part) ? (
+          <span key={i} className="italic text-blue-600">
+            {part}
+          </span>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </span>
+  );
 }
 
 export function NotificationBar() {
@@ -313,7 +366,7 @@ function NotificationRow({
             <Icon className="size-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-stone-900 truncate">{n.title}</div>
+            <NotificationTitle title={n.title} className="block text-sm text-stone-900 truncate" />
             {n.body && (
               <div className="text-xs text-stone-600 truncate">{n.body}</div>
             )}
@@ -353,6 +406,101 @@ function NotificationRow({
       </div>
     </motion.div>
   );
+}
+
+// Full persistent history — unlike the transient banner above (which only
+// ever shows `live`, and whose own dismiss/snooze/silence actions merely
+// stop a row from chiming/showing up there), this renders every
+// notification regardless of state and only drops one when the user hits
+// Clear here. That's the "persists until explicitly cleared" half of the
+// notification system; auto-expiring old ones after some duration is
+// still just a roadmap idea (see README) — not built yet.
+export function NotificationsPane() {
+  const { notifications, clear, clearAll, activate } = useNotifications();
+  const ordered = [...notifications].sort((a, b) => b.createdAt - a.createdAt);
+
+  if (ordered.length === 0) {
+    return (
+      <div className="max-w-md mx-auto mt-12 rounded-xl border border-dashed border-stone-300 bg-white p-8 text-center">
+        <h2 className="font-display text-xl">Alerts &amp; announcements</h2>
+        <p className="mt-2 text-sm text-muted-foreground">Messages, reminders, and supervisor notes will appear here.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto mt-6 px-4 pb-8">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-stone-400">Notifications</h2>
+        <button type="button" onClick={clearAll} className="text-xs font-medium text-blue-600 hover:text-blue-700">
+          Clear all
+        </button>
+      </div>
+      <div className="divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white overflow-hidden">
+        {ordered.map((n) => (
+          <NotificationListRow key={n.id} n={n} onClear={() => clear(n.id)} onActivate={() => activate(n)} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NotificationListRow({
+  n,
+  onClear,
+  onActivate,
+}: {
+  n: Notification;
+  onClear: () => void;
+  onActivate: () => void;
+}) {
+  const silenced = n.state === "silenced";
+  const Icon = silenced ? BellOff : ICON_MAP[n.icon];
+  const styles = KIND_STYLES[n.kind];
+  // Names the actual destination (matches "(View Schedule)"/"(View Info)"
+  // phrasing) rather than a bare "View" — sourceRef.type is what
+  // handleNotificationActivate itself switches on to pick a tab.
+  const viewLabel =
+    n.sourceRef?.type === "activity" ? "View Schedule" : n.sourceRef?.type === "info" ? "View Info" : "View";
+  return (
+    <div className="flex items-start gap-3 p-3">
+      <div className={cn("flex items-center justify-center size-8 shrink-0 rounded-full", styles.ring, styles.iconFg)}>
+        <Icon className="size-4" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <NotificationTitle title={n.title} className="block text-sm text-stone-900" />
+        {n.body && <p className="mt-0.5 text-xs text-stone-600">{n.body}</p>}
+        <div className="mt-1 flex items-center gap-2">
+          {n.sourceRef && (
+            <button type="button" onClick={onActivate} className="text-xs font-medium text-blue-600 hover:text-blue-700">
+              {viewLabel}
+            </button>
+          )}
+          <span className="text-[10px] text-stone-400">{formatRelativeTime(n.createdAt)}</span>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onClear}
+        aria-label="Clear notification"
+        className="shrink-0 grid place-items-center size-7 rounded-full text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors"
+      >
+        <X className="size-4" />
+      </button>
+    </div>
+  );
+}
+
+function formatRelativeTime(ts: number) {
+  const diffMs = Date.now() - ts;
+  const min = Math.floor(diffMs / 60_000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const days = Math.floor(hr / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 function RowButton({
