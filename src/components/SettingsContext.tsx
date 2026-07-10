@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import type { DisplayMode } from "./DataToolbarContext";
 
 export interface SettingDef {
   key: string;
@@ -52,6 +53,8 @@ const DEFAULT_ALARM_SOUND: AlarmSoundStyle = "normal";
 
 const DEFAULT_KEEP_ACTIVE_CARD_CENTERED = false;
 
+const DEFAULT_DATA_VIEW: DisplayMode = "card";
+
 // Clinic hours the Schedule tab's grid is bounded to — 24h "HH:MM".
 export const DEFAULT_DAY_START = "08:00";
 export const DEFAULT_DAY_END = "18:00";
@@ -77,6 +80,11 @@ interface SettingsContextValue {
   setDayStart: (v: string) => void;
   dayEnd: string;
   setDayEnd: (v: string) => void;
+  /** View mode the Data tab starts in each time the app loads. Changing it
+   *  doesn't affect the view already showing in an open session — see
+   *  DataToolbarProvider's own comment on why it's adopted only once. */
+  defaultDataView: DisplayMode;
+  setDefaultDataView: (v: DisplayMode) => void;
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -93,6 +101,7 @@ interface StoredShape {
   keepActiveCardCentered: boolean;
   dayStart: string;
   dayEnd: string;
+  defaultDataView: DisplayMode;
 }
 
 function loadStored(): StoredShape {
@@ -102,6 +111,7 @@ function loadStored(): StoredShape {
     keepActiveCardCentered: DEFAULT_KEEP_ACTIVE_CARD_CENTERED,
     dayStart: DEFAULT_DAY_START,
     dayEnd: DEFAULT_DAY_END,
+    defaultDataView: DEFAULT_DATA_VIEW,
   };
   if (typeof window === "undefined") return fallback;
   try {
@@ -114,6 +124,7 @@ function loadStored(): StoredShape {
       keepActiveCardCentered: parsed.keepActiveCardCentered ?? DEFAULT_KEEP_ACTIVE_CARD_CENTERED,
       dayStart: parsed.dayStart ?? DEFAULT_DAY_START,
       dayEnd: parsed.dayEnd ?? DEFAULT_DAY_END,
+      defaultDataView: parsed.defaultDataView ?? DEFAULT_DATA_VIEW,
     };
   } catch {
     return fallback;
@@ -128,6 +139,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [keepActiveCardCentered, setKeepActiveCardCentered] = useState(DEFAULT_KEEP_ACTIVE_CARD_CENTERED);
   const [dayStart, setDayStart] = useState(DEFAULT_DAY_START);
   const [dayEnd, setDayEnd] = useState(DEFAULT_DAY_END);
+  const [defaultDataView, setDefaultDataView] = useState<DisplayMode>(DEFAULT_DATA_VIEW);
 
   useEffect(() => {
     const stored = loadStored();
@@ -136,13 +148,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setKeepActiveCardCentered(stored.keepActiveCardCentered);
     setDayStart(stored.dayStart);
     setDayEnd(stored.dayEnd);
+    setDefaultDataView(stored.defaultDataView);
   }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const stored: StoredShape = { values, alarmSound, keepActiveCardCentered, dayStart, dayEnd };
+    const stored: StoredShape = { values, alarmSound, keepActiveCardCentered, dayStart, dayEnd, defaultDataView };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
-  }, [values, alarmSound, keepActiveCardCentered, dayStart, dayEnd]);
+  }, [values, alarmSound, keepActiveCardCentered, dayStart, dayEnd, defaultDataView]);
 
   const setValue = useCallback((key: string, value: number) => {
     setValues((v) => ({ ...v, [key]: value }));
@@ -154,6 +167,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setKeepActiveCardCentered(DEFAULT_KEEP_ACTIVE_CARD_CENTERED);
     setDayStart(DEFAULT_DAY_START);
     setDayEnd(DEFAULT_DAY_END);
+    setDefaultDataView(DEFAULT_DATA_VIEW);
   }, []);
   const resetOne = useCallback((key: string) => {
     setValues((v) => ({ ...v, [key]: DEFAULTS[key] }));
@@ -164,8 +178,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       values, setValue, resetAll, resetOne, alarmSound, setAlarmSound,
       keepActiveCardCentered, setKeepActiveCardCentered,
       dayStart, setDayStart, dayEnd, setDayEnd,
+      defaultDataView, setDefaultDataView,
     }),
-    [values, setValue, resetAll, resetOne, alarmSound, keepActiveCardCentered, dayStart, dayEnd],
+    [values, setValue, resetAll, resetOne, alarmSound, keepActiveCardCentered, dayStart, dayEnd, defaultDataView],
   );
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;

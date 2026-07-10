@@ -1,8 +1,23 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { ListViewIcon } from "@/components/icons/ListViewIcon";
+import { CardViewIcon } from "@/components/icons/CardViewIcon";
+import { GridViewIcon } from "@/components/icons/GridViewIcon";
+import { SmallGridViewIcon } from "@/components/icons/SmallGridViewIcon";
+import { useSettings } from "./SettingsContext";
 
 export type CardKind = "trial" | "frequency" | "rate" | "duration" | "task-analysis" | "rating";
 
 export type DisplayMode = "list" | "card" | "grid-large" | "grid-small";
+
+/** Single source of truth for each view mode's label + icon, shared by the
+ *  Data toolbar's segmented toggle and the Settings "Default data view"
+ *  picker so the two never drift apart. */
+export const DISPLAY_MODES: { mode: DisplayMode; label: string; icon: (props: { className?: string }) => React.ReactNode }[] = [
+  { mode: "list", label: "List", icon: (p) => <ListViewIcon {...p} /> },
+  { mode: "card", label: "Card", icon: (p) => <CardViewIcon {...p} /> },
+  { mode: "grid-large", label: "Large Grid", icon: (p) => <GridViewIcon {...p} /> },
+  { mode: "grid-small", label: "Small Grid", icon: (p) => <SmallGridViewIcon {...p} /> },
+];
 
 export interface DataToolbarFilters {
   /** Empty set = no kind filter applied (show all kinds). */
@@ -110,7 +125,21 @@ export function useDataToolbar() {
 }
 
 export function DataToolbarProvider({ children }: { children: ReactNode }) {
-  const [displayMode, setDisplayMode] = useState<DisplayMode>("card");
+  const { defaultDataView } = useSettings();
+  const [displayMode, setDisplayModeState] = useState<DisplayMode>(defaultDataView);
+  // Settings loads its persisted value asynchronously (see SettingsProvider),
+  // so the very first render here still sees the pre-hydration default. Once
+  // it lands, adopt it — but only until the user actually touches the
+  // toggle themselves, so picking a new "default" mid-session doesn't yank
+  // the view out from under them.
+  const userChangedDisplayMode = useRef(false);
+  useEffect(() => {
+    if (!userChangedDisplayMode.current) setDisplayModeState(defaultDataView);
+  }, [defaultDataView]);
+  const setDisplayMode = useCallback((mode: DisplayMode) => {
+    userChangedDisplayMode.current = true;
+    setDisplayModeState(mode);
+  }, []);
   const [editMode, setEditModeState] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<DataToolbarFilters>(DEFAULT_FILTERS);

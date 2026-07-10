@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useMotionValue, useTransform, animate, type Mo
 import { Bell, BellRing, BellOff, Target, MessageSquare, Megaphone, X, VolumeX, ArrowRight } from "lucide-react";
 import { useNotifications, type Notification, type NotificationIcon, type NotificationKind } from "./NotificationContext";
 import type { AlarmSoundStyle } from "./SettingsContext";
+import { playAlarmSound } from "@/lib/alarmSounds";
 import { cn } from "@/lib/utils";
 
 // Swipe tuning — TODO: surface in user settings.
@@ -78,57 +79,6 @@ const KIND_STYLES: Record<NotificationKind, { ring: string; iconFg: string; acce
 
 function isAlert(k: NotificationKind) {
   return k === "alert-now" || k === "alert-priming";
-}
-
-// Play a short alarm chime via WebAudio (no asset dependency) — three
-// styles ranging from a soft heads-up to a properly obnoxious wake-you-up
-// alarm, so the "heavy" option actually reads as more urgent than "normal"
-// rather than just louder.
-function playChime(style: AlarmSoundStyle = "normal") {
-  try {
-    const AC = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext | undefined;
-    if (!AC) return;
-    const ctx = new AC();
-    const now = ctx.currentTime;
-
-    const tone = (freq: number, t0: number, duration: number, peakGain: number, waveType: OscillatorType) => {
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = waveType;
-      o.frequency.value = freq;
-      g.gain.setValueAtTime(0, t0);
-      g.gain.linearRampToValueAtTime(peakGain, t0 + duration * 0.12);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
-      o.connect(g).connect(ctx.destination);
-      o.start(t0);
-      o.stop(t0 + duration + 0.05);
-    };
-
-    let closeAt = 900;
-    if (style === "gentle") {
-      // Two soft, slow sine notes, a gentle two-tone doorbell.
-      tone(587, now, 0.5, 0.11, "sine"); // D5
-      tone(784, now + 0.32, 0.6, 0.11, "sine"); // G5
-      closeAt = 1100;
-    } else if (style === "heavy") {
-      // A rapid, insistent square-wave siren — three sharp high/low pulses.
-      const pulseTimes = [0, 0.16, 0.32];
-      pulseTimes.forEach((offset) => {
-        tone(988, now + offset, 0.12, 0.3, "square");
-        tone(740, now + offset + 0.12, 0.12, 0.3, "square");
-      });
-      closeAt = 700;
-    } else {
-      // Normal — the original pleasant two-tone chime.
-      tone(880, now, 0.35, 0.18, "sine"); // A5
-      tone(1318, now + 0.18, 0.4, 0.18, "sine"); // E6
-      closeAt = 900;
-    }
-
-    window.setTimeout(() => ctx.close().catch(() => {}), closeAt);
-  } catch {
-    /* noop */
-  }
 }
 
 function vibrate(pattern: number | number[]) {
@@ -225,10 +175,10 @@ function NotificationRow({
   // Chime + vibrate every 2s while an alert with chime is visible.
   useEffect(() => {
     if (!alert || !hasChime) return;
-    playChime(alarmSound);
+    playAlarmSound(alarmSound);
     vibrate(n.kind === "alert-now" ? [60, 40, 60] : 50);
     const id = window.setInterval(() => {
-      playChime(alarmSound);
+      playAlarmSound(alarmSound);
       vibrate(n.kind === "alert-now" ? [60, 40, 60] : 50);
     }, 2000);
     return () => window.clearInterval(id);

@@ -7,12 +7,14 @@ import {
   useSettings,
   type AlarmSoundStyle,
 } from "./SettingsContext";
+import { DISPLAY_MODES } from "./DataToolbarContext";
 import { TimeOfDayKeypad, formatTimeOfDay } from "./TimeOfDayKeypad";
+import { IconsShowcase } from "./IconsShowcase";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { playAlarmPreview } from "@/lib/alarmSounds";
+import { playAlarmSound } from "@/lib/alarmSounds";
 import { cn } from "@/lib/utils";
 
 function SettingsTimeField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -39,6 +41,7 @@ export function SettingsPane() {
     values, setValue, resetAll, resetOne, alarmSound, setAlarmSound,
     keepActiveCardCentered, setKeepActiveCardCentered,
     dayStart, setDayStart, dayEnd, setDayEnd,
+    defaultDataView, setDefaultDataView,
   } = useSettings();
   const groups = Array.from(new Set(SETTINGS.map((s) => s.group)));
 
@@ -124,7 +127,7 @@ export function SettingsPane() {
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => playAlarmPreview(alarmSound)}
+                        onClick={() => playAlarmSound(alarmSound)}
                         aria-label={`Play ${alarmSound} alarm sound`}
                         title="Play sound"
                         className="text-muted-foreground/60 hover:text-foreground transition-colors"
@@ -155,7 +158,7 @@ export function SettingsPane() {
                       // they actually sound, not their labels, so playing
                       // it immediately saves a separate confirm-then-play
                       // step.
-                      playAlarmPreview(style);
+                      playAlarmSound(style);
                     }}
                   >
                     <SelectTrigger id="alarmSound" className="mt-2 w-full">
@@ -231,7 +234,49 @@ export function SettingsPane() {
               className="shrink-0"
             />
           </div>
+
+          <div className="mt-5">
+            <div className="flex items-baseline justify-between gap-3">
+              <div className="min-w-0">
+                <label className="text-sm font-medium">Default data view</label>
+                <p className="text-xs text-muted-foreground/80 mt-0.5">
+                  The view the Data tab opens in — same options as the toolbar's view toggle.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDefaultDataView("card")}
+                disabled={defaultDataView === "card"}
+                aria-label="Reset Default data view to default"
+                className="shrink-0 text-muted-foreground/60 hover:text-foreground transition-colors disabled:opacity-0 disabled:pointer-events-none"
+              >
+                <RotateCcw className="size-3" />
+              </button>
+            </div>
+            <div className="mt-2 flex items-center gap-1 rounded-full border border-stone-200 bg-stone-100/60 p-1 w-fit">
+              {DISPLAY_MODES.map(({ mode, label, icon }) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setDefaultDataView(mode)}
+                  aria-pressed={defaultDataView === mode}
+                  aria-label={`${label} view`}
+                  title={`${label} view`}
+                  className={cn(
+                    "grid place-items-center size-8 rounded-full transition-colors",
+                    defaultDataView === mode
+                      ? "btn-bevel bg-blue-500 text-white"
+                      : "text-stone-500 hover:text-stone-800",
+                  )}
+                >
+                  {icon({ className: "size-4" })}
+                </button>
+              ))}
+            </div>
+          </div>
         </section>
+
+        <IconsShowcase />
       </div>
     </div>
   );
