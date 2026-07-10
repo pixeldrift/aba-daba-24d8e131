@@ -22,6 +22,7 @@ import {
 import { CollapseIcon } from "./icons/CollapseIcon";
 import { ProportionalRowsIcon } from "./icons/ProportionalRowsIcon";
 import { SmileyIcon } from "./icons/SmileyIcon";
+import { HandshakeIcon } from "./icons/HandshakeIcon";
 import {
   Select,
   SelectContent,
@@ -900,11 +901,11 @@ export function ScheduleView({
             // Same inset-field look as TimeField (pill border + inner
             // shadow), so it reads as an actual text entry rather than the
             // plain-text-with-hidden-border stand-in this used to be. Black
-            // text (not the trigger's blue) plus a stronger inset shadow
-            // than the smaller fields use — at this size and weight, the
-            // subtle 0.08 shadow read as decoration rather than a carved-in,
+            // text (not the trigger's blue) plus an even stronger inset
+            // shadow than the smaller fields use — at this size and weight,
+            // a lighter shadow reads as decoration rather than a carved-in,
             // clearly-editable well.
-            className="flex-1 min-w-0 h-11 text-base rounded-full px-4 font-bold border-2 border-blue-500 bg-white text-black shadow-[inset_0_2px_4px_rgba(0,0,0,0.18)] transition-colors"
+            className="flex-1 min-w-0 h-11 text-base rounded-full px-4 font-bold border-2 border-blue-500 bg-white text-black shadow-[inset_0_3px_6px_rgba(0,0,0,0.26)] transition-colors"
             style={{ transitionDuration: `${EDIT_MODE_DURATION_MS}ms` }}
           />
         ) : (
@@ -1282,7 +1283,7 @@ export function ScheduleView({
 
       {/* Schedule grid */}
       <div className="mt-3 mx-1 rounded-md border border-stone-200 relative">
-        <div className="grid grid-cols-[40px_1fr_84px_34px] gap-1 px-1.5 py-1 text-[10px] uppercase tracking-wide text-muted-foreground border-b border-stone-300 bg-stone-200 rounded-t-md">
+        <div className="grid grid-cols-[40px_1fr_84px_34px] gap-1 px-1.5 py-1 mb-1 text-[10px] uppercase tracking-wide text-muted-foreground bg-stone-200 rounded-full">
           <div className="text-right pr-1.5">Time</div>
           <div className="flex items-center gap-1.5">
             <span className="invisible text-sm leading-none shrink-0" aria-hidden>•</span>
@@ -2290,7 +2291,7 @@ function AppointmentDialog({
           </div>
           <TapToggle
             label="Co-Treat"
-            icon={<HandHelping className="size-3.5" />}
+            icon={<HandshakeIcon className="size-3.5" />}
             checked={coTreat}
             onChange={setCoTreat}
           />
@@ -2489,7 +2490,7 @@ function TimeField({
           type="button"
           onClick={open}
           className={cn(
-            "flex h-9 w-[84px] items-center justify-center border-2 bg-white px-1.5 text-sm tabular-nums shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)] transition-colors",
+            "flex h-9 w-[84px] items-center justify-center border-2 bg-white px-1.5 text-sm tabular-nums shadow-[inset_0_2px_5px_rgba(0,0,0,0.22)] transition-colors",
             !resetSide && "rounded-full",
             resetSide === "left" && "rounded-r-full",
             resetSide === "right" && "rounded-l-full",

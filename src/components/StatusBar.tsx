@@ -53,10 +53,10 @@ interface StatusBarProps {
 }
 
 const TABS: { id: StatusTab; label: string; icon: ComponentType<{ className?: string }> }[] = [
-  { id: "info", label: "Info", icon: InfoIcon },
+  { id: "info", label: "Client Info", icon: InfoIcon },
   { id: "data", label: "Data", icon: ClipboardList },
   { id: "schedule", label: "Schedule", icon: CalendarDays },
-  { id: "notifications", label: "Alerts", icon: Bell },
+  { id: "notifications", label: "Notifications", icon: Bell },
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
@@ -281,7 +281,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
 
   return (
     <>
-      <div data-status-bar className="relative overflow-hidden sticky top-0 z-40 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b border-stone-200">
+      <div data-status-bar className="relative overflow-hidden sticky top-0 z-40 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
         <div className={cn("max-w-5xl mx-auto px-4", isRunning ? "pt-1" : "pt-2")}>
           {/* Title row — static, never scales or layout-animates */}
           <div className="flex items-start justify-between gap-3">
@@ -295,11 +295,10 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
                 <ArrowLeft className="size-5" />
               </button>
               <h1 className="min-w-0 font-display text-base sm:text-lg leading-tight truncate">{title}</h1>
-              {/* Short git hash, not the title's own text, so it stays
-                  visible (shrink-0) even once the title itself has to
-                  truncate on a narrow screen — a quick "am I on the
-                  latest build" check shouldn't be the first thing that
-                  gets clipped. */}
+              {/* Independent of the title's own text, so it stays visible
+                  (shrink-0) even once the title itself has to truncate on a
+                  narrow screen — a quick "am I on the latest build" check
+                  shouldn't be the first thing that gets clipped. */}
               <span className="shrink-0 italic font-normal text-stone-400 text-xs sm:text-sm" title="Build version">
                 ({__APP_VERSION__})
               </span>
@@ -398,7 +397,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
                           : "bg-stone-200/70 text-stone-600 border-transparent hover:text-foreground hover:bg-stone-200",
                       )}
                     >
-                      <Icon className="size-4" />
+                      <Icon className={cn("size-4", !isActive && "opacity-60")} />
                       <span className="hidden sm:inline">{t.label}</span>
                       {isActive && (
                         <span className="absolute -bottom-px left-0 right-0 h-px bg-background" aria-hidden />
@@ -857,7 +856,7 @@ function ExpandedSessionBox({
   onRequestDiscard: () => void;
 }) {
   const isPaused = status === "paused";
-  const label = isPaused ? "Session Paused" : "Previous Session";
+  const label = isPaused ? "Session Paused:" : "Previous Session:";
   const ease = SESSION_MORPH_EASE;
   // Gray only while genuinely idle and showing a leftover previous-session
   // value — once paused (this session's own time) or once a start/resume has
@@ -897,7 +896,7 @@ function ExpandedSessionBox({
           animate={{ opacity: dimmed ? 0 : 1 }}
           initial={false}
           transition={{ duration: 0.2 }}
-          className="text-[10px] uppercase tracking-wider text-muted-foreground"
+          className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
         >
           {label}
         </motion.span>

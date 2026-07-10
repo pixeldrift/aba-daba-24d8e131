@@ -1286,7 +1286,7 @@ function InfoPane() {
         </div>
       </div>
       <div className="mt-8 rounded-xl border border-dashed border-stone-300 bg-white p-8 text-center">
-        <h3 className="font-display text-xl">Session info</h3>
+        <h3 className="font-display text-xl">Client Info</h3>
         <p className="mt-2 text-sm text-muted-foreground">Goals, programs, and learner notes will live here.</p>
       </div>
     </div>
