@@ -494,7 +494,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
               exit={{ opacity: 0, transition: { duration: PILL_CROSSFADE_MS / 1000 } }}
               transition={{ duration: PILL_TRAVEL_MS / 1000, ease: PILL_TRAVEL_EASE }}
               onAnimationComplete={() => setPillTraveling(false)}
-              className="fixed z-50 flex items-stretch rounded-full border-2 bg-white shadow-md pointer-events-none overflow-hidden"
+              className="fixed z-50 flex items-stretch rounded-full border-2 bg-white pointer-events-none overflow-hidden"
             >
               <motion.span
                 initial={{ fontSize: digitPx.from, color: digitColor.from }}
