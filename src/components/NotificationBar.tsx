@@ -95,6 +95,54 @@ const KIND_STYLES: Record<NotificationKind, { ring: string; iconFg: string; acce
   },
 };
 
+// Every person a notification title might mention — matched literally
+// (not derived from StaffDirectory/ClientInfoPane's own records) since this
+// is just cosmetic highlighting, not a data dependency. Kept as one flat
+// list here rather than importing each source file's own roster, to avoid
+// coupling this purely-visual concern to wherever those happen to live.
+const KNOWN_NAMES = [
+  "Phineas Flynn",
+  "Linda Flynn-Fletcher",
+  "Lawrence Fletcher",
+  "Heinz Doofenshmirtz",
+  "Perry Plat",
+  "Isabella Garcia-Shapiro",
+  "Baljeet Tjinder",
+  "Vanessa Doofenshmirtz",
+  "Jeremy Johnson",
+  "Dr. Lopez",
+  "Sam Patel",
+];
+const NAME_PATTERN = new RegExp(
+  `(${KNOWN_NAMES.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`,
+  "g",
+);
+
+// A title's own "Category: rest of it" shape (every kind uses this, from
+// the seeded examples to Request Edit's own "Edit requested: <field>")
+// only bolds the category, not the whole line — and any known person's
+// name within the remainder reads as a plain italic blue mention instead
+// of a full interactive PersonPill, since a notification title isn't a
+// place to open someone's contact menu.
+function NotificationTitle({ title, className }: { title: string; className?: string }) {
+  const colonIdx = title.indexOf(":");
+  const label = colonIdx === -1 ? title : title.slice(0, colonIdx + 1);
+  const rest = colonIdx === -1 ? "" : title.slice(colonIdx + 1);
+  return (
+    <span className={className}>
+      <span className="font-semibold">{label}</span>
+      {rest.split(NAME_PATTERN).map((part, i) =>
+        KNOWN_NAMES.includes(part) ? (
+          <span key={i} className="italic text-blue-600">
+            {part}
+          </span>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </span>
+  );
+}
 
 export function NotificationBar() {
   const { live, dismiss, snooze, silence, activate } = useNotifications();
@@ -318,7 +366,7 @@ function NotificationRow({
             <Icon className="size-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-stone-900 truncate">{n.title}</div>
+            <NotificationTitle title={n.title} className="block text-sm text-stone-900 truncate" />
             {n.body && (
               <div className="text-xs text-stone-600 truncate">{n.body}</div>
             )}
@@ -420,7 +468,7 @@ function NotificationListRow({
         <Icon className="size-4" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-stone-900">{n.title}</p>
+        <NotificationTitle title={n.title} className="block text-sm text-stone-900" />
         {n.body && <p className="mt-0.5 text-xs text-stone-600">{n.body}</p>}
         <div className="mt-1 flex items-center gap-2">
           {n.sourceRef && (
