@@ -52,7 +52,38 @@ const VEHICLES: VehicleRecord[] = [
 
 const TEAM_MEMBERS = ["Perry Plat", "Isabella Garcia-Shapiro", "Baljeet Tjinder"];
 
+// Quick-orientation notes for anyone covering a session cold — same purpose
+// as CentralReach's own "About Me (coverage notes)" panel. Anything already
+// covered by its own dedicated section elsewhere on this page (DOB/age,
+// caregivers/vehicles, lead BCBA) is left out rather than repeated here.
+const ABOUT_ME = {
+  seizureActionPlan: "No",
+  allergies: "No known allergies.",
+  favoriteActivities:
+    "Building/inventing play, sketching blueprints, backyard rollercoaster models, bubbles, kazoo, being spun in the desk chair, tickles.",
+  interferingBehaviors: "Tantrums, elopement, property destruction, climbing.",
+  environment:
+    "Keep the workbench and tool bin within reach. Sit facing the yard gate to prevent elopement mid-build.",
+  mealTime:
+    "On-site 9:00a–3:00p daily. Split snack/lunch into two portions — first half late morning, second half early afternoon.",
+  successTips:
+    '"What should we build today?" is a reliable opener. Snack is in the labeled bin in the kitchen; extra juice boxes in the fridge door (limit to one after any juice from the car).',
+  toileting: "Fully independent; occasional reminders to wash hands after the workshop sink.",
+  communicationExpressive:
+    "Full vocal sentences; talks through the plan before starting a build. Gestures/points when overstimulated.",
+  communicationReceptive:
+    "Follows multi-step verbal instructions independently. Benefits from a visual schedule ahead of any transition away from a build.",
+  transitions:
+    'Show the "next activity" picture card 2 minutes before transitioning away from a build. If he protests, let him finish the current step first.',
+  relatedServices: [
+    { discipline: "Speech", provider: "Vanessa Doofenshmirtz", schedule: "Tuesdays 12:00p" },
+    { discipline: "OT", provider: "Jeremy Johnson", schedule: "Wed 3:30–4:00p, Fri 1:30–2:00p" },
+  ],
+  lastUpdated: "June 26, 2026",
+};
+
 const JUMP_SECTIONS = [
+  { id: "section-about-me", label: "About Me" },
   { id: "section-guardians", label: "Guardians" },
   { id: "section-vehicles", label: "Vehicles" },
   { id: "section-team", label: "Care Team" },
@@ -104,6 +135,44 @@ export function ClientInfoPane() {
           </button>
         ))}
       </div>
+
+      <Section id="section-about-me" title="About Me (Coverage Notes)">
+        <div className="divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white overflow-hidden text-sm">
+          <NoteRow label="Seizure Action Plan?">{ABOUT_ME.seizureActionPlan}</NoteRow>
+          <NoteRow label="Allergies">{ABOUT_ME.allergies}</NoteRow>
+          <NoteRow label="Favorite Toys/Activities">{ABOUT_ME.favoriteActivities}</NoteRow>
+          <NoteRow label="Interfering Behaviors">{ABOUT_ME.interferingBehaviors}</NoteRow>
+          <NoteRow label="Environment">{ABOUT_ME.environment}</NoteRow>
+          <NoteRow label="Meal Time/Snack">{ABOUT_ME.mealTime}</NoteRow>
+          <NoteRow label="Session Success Tips/Pairing">{ABOUT_ME.successTips}</NoteRow>
+          <NoteRow label="Toileting">{ABOUT_ME.toileting}</NoteRow>
+          <NoteRow label="Mode of Communication">
+            <p>
+              <span className="font-semibold">Expressive: </span>
+              {ABOUT_ME.communicationExpressive}
+            </p>
+            <p className="mt-1.5">
+              <span className="font-semibold">Receptive: </span>
+              {ABOUT_ME.communicationReceptive}
+            </p>
+          </NoteRow>
+          <NoteRow label="Transitions">{ABOUT_ME.transitions}</NoteRow>
+          <NoteRow label="Related Service Times">
+            <div className="space-y-1">
+              {ABOUT_ME.relatedServices.map((s) => (
+                <div key={s.discipline} className="flex flex-wrap items-baseline gap-x-1.5">
+                  <span className="font-semibold">{s.discipline}:</span>
+                  <span>
+                    {s.provider} &middot; {s.schedule}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </NoteRow>
+          <NoteRow label="Session Structure/Schedule">See the Schedule tab.</NoteRow>
+          <NoteRow label="Last Updated">{ABOUT_ME.lastUpdated}</NoteRow>
+        </div>
+      </Section>
 
       <Section id="section-guardians" title="Guardians">
         <div className="divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white overflow-hidden">
@@ -193,6 +262,19 @@ function Section({ id, title, children }: { id: string; title: string; children:
       <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">{title}</h2>
       {children}
     </section>
+  );
+}
+
+// Label-over-value row for About Me — unlike InfoRow's inline label
+// (fine for a short pill list), these values run to full paragraphs, so
+// label and value need their own stacked lines rather than fighting for
+// space side by side.
+function NoteRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-stone-400">{label}</p>
+      <div className="mt-1 leading-snug text-foreground/90">{children}</div>
+    </div>
   );
 }
 
