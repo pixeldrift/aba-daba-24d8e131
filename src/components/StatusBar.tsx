@@ -405,7 +405,7 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
                     </button>
                   );
                 })}
-                <ActiveDurationIndicator timers={durationTimers} />
+                <ActiveDurationIndicator timers={durationTimers} activeTab={activeTab} onTabChange={onTabChange} />
               </div>
 
               <AnimatePresence initial={false}>
@@ -575,9 +575,37 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
 }
 
 
-function ActiveDurationIndicator({ timers }: { timers: { id: string; label: string; scrollTo: () => void; activate?: () => void }[] }) {
+function ActiveDurationIndicator({
+  timers,
+  activeTab,
+  onTabChange,
+}: {
+  timers: { id: string; label: string; scrollTo: () => void; activate?: () => void }[];
+  activeTab: StatusTab;
+  onTabChange: (t: StatusTab) => void;
+}) {
+  // Switching the Data tab's display mode (list/card/grid) remounts every
+  // card, which briefly unregisters and re-registers each running timer —
+  // without this grace window `timers` would bounce to empty and back for
+  // that one frame, flashing this indicator away and back instead of
+  // staying put the way the rest of the header does through that same
+  // transition.
+  const [displayedTimers, setDisplayedTimers] = useState(timers);
+  const timersRef = useRef(timers);
+  timersRef.current = timers;
+  useEffect(() => {
+    if (timers.length > 0) {
+      setDisplayedTimers(timers);
+      return;
+    }
+    const id = window.setTimeout(() => {
+      if (timersRef.current.length === 0) setDisplayedTimers([]);
+    }, 300);
+    return () => window.clearTimeout(id);
+  }, [timers]);
+
   const [index, setIndex] = useState(0);
-  const count = timers.length;
+  const count = displayedTimers.length;
   const visible = count > 0;
 
   useEffect(() => {
@@ -586,9 +614,10 @@ function ActiveDurationIndicator({ timers }: { timers: { id: string; label: stri
 
   const handleClick = () => {
     if (count === 0) return;
+    if (activeTab !== "data") onTabChange("data");
     const next = index % count;
-    timers[next]?.scrollTo();
-    timers[next]?.activate?.();
+    displayedTimers[next]?.scrollTo();
+    displayedTimers[next]?.activate?.();
     setIndex((i) => (count > 0 ? (i + 1) % count : 0));
   };
 
@@ -599,7 +628,7 @@ function ActiveDurationIndicator({ timers }: { timers: { id: string; label: stri
           key="duration-indicator"
           onClick={handleClick}
           aria-label={count > 1 ? `Jump to next running timer (${count} active)` : `Jump to running timer`}
-          title={count > 1 ? `${count} timers running — tap to cycle` : timers[0]?.label}
+          title={count > 1 ? `${count} timers running — tap to cycle` : displayedTimers[0]?.label}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
