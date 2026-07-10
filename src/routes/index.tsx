@@ -14,7 +14,7 @@ import { SettingsProvider, useSettings } from "@/components/SettingsContext";
 import { SettingsPane } from "@/components/SettingsPane";
 import { StatusBar, type StatusTab } from "@/components/StatusBar";
 import { NotificationProvider } from "@/components/NotificationContext";
-import { NOTIFICATION_AREA_TRANSITION } from "@/components/NotificationBar";
+import { NOTIFICATION_AREA_TRANSITION, NotificationsPane } from "@/components/NotificationBar";
 import { useStickyTop } from "@/hooks/use-sticky-top";
 import { useElementHeight } from "@/hooks/use-element-height";
 import { DataToolbar } from "@/components/DataToolbar";
@@ -800,7 +800,7 @@ function IndexInner() {
             onScrolledToTarget={() => setScheduleScrollId(null)}
           />
         )}
-        {tab === "notifications" && <PlaceholderPane title="Alerts & announcements" description="Messages, reminders, and supervisor notes will appear here." />}
+        {tab === "notifications" && <NotificationsPane />}
         {tab === "settings" && <SettingsPane />}
       </motion.section>
       </LayoutGroup>
@@ -1313,11 +1313,3 @@ function EditableCardItem({
   );
 }
 
-function PlaceholderPane({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="max-w-md mx-auto mt-12 rounded-xl border border-dashed border-stone-300 bg-white p-8 text-center">
-      <h2 className="font-display text-xl">{title}</h2>
-      <p className="mt-2 text-sm text-muted-foreground">{description}</p>
-    </div>
-  );
-}

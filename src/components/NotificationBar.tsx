@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { AnimatePresence, motion, useMotionValue, useTransform, animate, type MotionStyle } from "motion/react";
 import { Bell, BellRing, BellOff, Target, MessageSquare, Megaphone, X, VolumeX, ArrowRight } from "lucide-react";
-import { useNotifications, type Notification, type NotificationIcon, type NotificationKind } from "./NotificationContext";
+import { useNotifications, isAlert, vibrate, type Notification, type NotificationIcon, type NotificationKind } from "./NotificationContext";
 import type { AlarmSoundStyle } from "./SettingsContext";
 import { playAlarmSound } from "@/lib/alarmSounds";
 import { cn } from "@/lib/utils";
@@ -77,19 +77,6 @@ const KIND_STYLES: Record<NotificationKind, { ring: string; iconFg: string; acce
   },
 };
 
-function isAlert(k: NotificationKind) {
-  return k === "alert-now" || k === "alert-priming";
-}
-
-function vibrate(pattern: number | number[]) {
-  try {
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-      navigator.vibrate(pattern);
-    }
-  } catch {
-    /* noop */
-  }
-}
 
 export function NotificationBar() {
   const { live, dismiss, snooze, silence, activate } = useNotifications();
@@ -353,6 +340,96 @@ function NotificationRow({
       </div>
     </motion.div>
   );
+}
+
+// Full persistent history — unlike the transient banner above (which only
+// ever shows `live`, and whose own dismiss/snooze/silence actions merely
+// stop a row from chiming/showing up there), this renders every
+// notification regardless of state and only drops one when the user hits
+// Clear here. That's the "persists until explicitly cleared" half of the
+// notification system; auto-expiring old ones after some duration is
+// still just a roadmap idea (see README) — not built yet.
+export function NotificationsPane() {
+  const { notifications, clear, clearAll, activate } = useNotifications();
+  const ordered = [...notifications].sort((a, b) => b.createdAt - a.createdAt);
+
+  if (ordered.length === 0) {
+    return (
+      <div className="max-w-md mx-auto mt-12 rounded-xl border border-dashed border-stone-300 bg-white p-8 text-center">
+        <h2 className="font-display text-xl">Alerts &amp; announcements</h2>
+        <p className="mt-2 text-sm text-muted-foreground">Messages, reminders, and supervisor notes will appear here.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto mt-6 px-4 pb-8">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-stone-400">Notifications</h2>
+        <button type="button" onClick={clearAll} className="text-xs font-medium text-blue-600 hover:text-blue-700">
+          Clear all
+        </button>
+      </div>
+      <div className="divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white overflow-hidden">
+        {ordered.map((n) => (
+          <NotificationListRow key={n.id} n={n} onClear={() => clear(n.id)} onActivate={() => activate(n)} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NotificationListRow({
+  n,
+  onClear,
+  onActivate,
+}: {
+  n: Notification;
+  onClear: () => void;
+  onActivate: () => void;
+}) {
+  const silenced = n.state === "silenced";
+  const Icon = silenced ? BellOff : ICON_MAP[n.icon];
+  const styles = KIND_STYLES[n.kind];
+  return (
+    <div className="flex items-start gap-3 p-3">
+      <div className={cn("flex items-center justify-center size-8 shrink-0 rounded-full", styles.ring, styles.iconFg)}>
+        <Icon className="size-4" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-stone-900">{n.title}</p>
+        {n.body && <p className="mt-0.5 text-xs text-stone-600">{n.body}</p>}
+        <div className="mt-1 flex items-center gap-2">
+          {n.sourceRef && (
+            <button type="button" onClick={onActivate} className="text-xs font-medium text-blue-600 hover:text-blue-700">
+              View
+            </button>
+          )}
+          <span className="text-[10px] text-stone-400">{formatRelativeTime(n.createdAt)}</span>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onClear}
+        aria-label="Clear notification"
+        className="shrink-0 grid place-items-center size-7 rounded-full text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors"
+      >
+        <X className="size-4" />
+      </button>
+    </div>
+  );
+}
+
+function formatRelativeTime(ts: number) {
+  const diffMs = Date.now() - ts;
+  const min = Math.floor(diffMs / 60_000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const days = Math.floor(hr / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 function RowButton({

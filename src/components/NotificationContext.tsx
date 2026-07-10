@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSettings, type AlarmSoundStyle } from "./SettingsContext";
+import { playAlarmSound } from "@/lib/alarmSounds";
 
 
 
@@ -57,8 +58,28 @@ interface NotificationContextValue {
   snooze: (id: string, ms?: number) => void;
   silence: (id: string) => void;
   archive: (id: string) => void;
+  // Distinct from dismiss/archive: those just stop a notification from
+  // showing in the transient top banner (see NotificationBar) — it still
+  // persists in the Notifications tab's own list either way. clear/clearAll
+  // are the only things that actually remove it from that list for good.
+  clear: (id: string) => void;
+  clearAll: () => void;
   activate: (n: Notification) => void;
   prefs: UserPrefs;
+}
+
+export function isAlert(kind: NotificationKind) {
+  return kind === "alert-now" || kind === "alert-priming";
+}
+
+export function vibrate(pattern: number | number[]) {
+  try {
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate(pattern);
+    }
+  } catch {
+    /* noop */
+  }
 }
 
 // Reads the user-configurable Settings-tab values (snooze time, notification
@@ -129,6 +150,18 @@ export function NotificationProvider({ children, onActivate }: { children: React
     [prefs.snoozeMs],
   );
 
+  // clear/clearAll actually remove from the list — unlike dismiss/archive,
+  // which only affect the transient top banner (see that comment on the
+  // context value interface above).
+  const clear = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
+  const clearAll = useCallback(() => {
+    setNotifications([]);
+    dedupeRef.current.clear();
+  }, []);
+
   const push = useCallback((input: PushInput): string | null => {
     const dedupeKey = input.dedupeKey ?? input.id;
     if (dedupeKey) {
@@ -161,8 +194,18 @@ export function NotificationProvider({ children, onActivate }: { children: React
       const trimmed = prev.length >= MAX_RETAINED ? prev.slice(prev.length - MAX_RETAINED + 1) : prev;
       return [...trimmed, next];
     });
+    // Alert kinds get their own repeating chime for as long as they're
+    // visible in the banner (see NotificationBar's own effect, keyed to
+    // that row actually being on screen) — this is everything else's only
+    // sound, a single chime the moment it's created, using the same
+    // Settings-configured alarm style so all notifications share one
+    // consistent alarm system rather than some being silent.
+    if (!isAlert(input.kind)) {
+      playAlarmSound(prefs.alarmSound);
+      vibrate(40);
+    }
     return id;
-  }, []);
+  }, [prefs.alarmSound]);
 
   // Tick: handle autofade expiration + snooze re-fire.
   useEffect(() => {
@@ -195,8 +238,8 @@ export function NotificationProvider({ children, onActivate }: { children: React
   );
 
   const value = useMemo<NotificationContextValue>(
-    () => ({ notifications, live, push, dismiss, snooze, silence, archive, activate, prefs }),
-    [notifications, live, push, dismiss, snooze, silence, archive, activate, prefs],
+    () => ({ notifications, live, push, dismiss, snooze, silence, archive, clear, clearAll, activate, prefs }),
+    [notifications, live, push, dismiss, snooze, silence, archive, clear, clearAll, activate, prefs],
   );
 
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;

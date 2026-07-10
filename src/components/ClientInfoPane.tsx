@@ -15,6 +15,14 @@ import { cn } from "@/lib/utils";
 // screen doesn't sit showing it indefinitely.
 const REVEAL_MS = 5000;
 
+// Request Edit's textarea auto-grows to fit its content between these two
+// bounds — MIN keeps a short field (e.g. "No") from rendering as a single
+// cramped line, MAX keeps a long one (e.g. Favorite Toys/Activities) from
+// growing the dialog past a reasonable size; beyond that it scrolls
+// internally instead (see the textarea's own resize effect).
+const MIN_TEXTAREA_PX = 96;
+const MAX_TEXTAREA_PX = 240;
+
 interface GuardianRecord {
   id: string;
   name: string;
@@ -320,6 +328,7 @@ function RequestEditDialog({
 }) {
   const { push } = useNotifications();
   const [text, setText] = useState(currentValue);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Re-seed from the live value each time the dialog opens, rather than
   // carrying over whatever was left in the box from a prior cancelled
@@ -327,6 +336,33 @@ function RequestEditDialog({
   useEffect(() => {
     if (open) setText(currentValue);
   }, [open, currentValue]);
+
+  // Grows with content (a long field like Favorite Toys/Activities starts
+  // bigger than a short one like Allergies) up to MAX_TEXTAREA_PX, then
+  // scrolls internally rather than growing the dialog past the screen —
+  // standard auto-resize textarea behavior. Radix mounts DialogContent's
+  // children asynchronously relative to `open` flipping true (same as the
+  // filter popover's own content ref elsewhere in this app), so a single
+  // effect keyed on `open` can still find a null ref on its one run; poll
+  // across a few frames instead, re-reading the ref fresh each time.
+  useEffect(() => {
+    if (!open) return;
+    const resize = () => {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.style.height = "auto";
+      el.style.height = `${Math.min(Math.max(el.scrollHeight, MIN_TEXTAREA_PX), MAX_TEXTAREA_PX)}px`;
+    };
+    const rafIds: number[] = [];
+    let frame = 0;
+    const loop = () => {
+      resize();
+      frame += 1;
+      if (frame < 10) rafIds.push(requestAnimationFrame(loop));
+    };
+    rafIds.push(requestAnimationFrame(loop));
+    return () => rafIds.forEach(cancelAnimationFrame);
+  }, [open, text]);
 
   const handleSave = () => {
     push({
@@ -346,10 +382,10 @@ function RequestEditDialog({
           <DialogDescription>{label}</DialogDescription>
         </DialogHeader>
         <textarea
+          ref={textareaRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          rows={5}
-          className="w-full rounded-xl border-2 border-blue-300 bg-white px-3 py-2 text-sm leading-snug shadow-[inset_0_2px_5px_rgba(0,0,0,0.22)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="w-full resize-none overflow-y-auto rounded-xl border-2 border-blue-300 bg-white px-3 py-2 text-sm leading-snug shadow-[inset_0_2px_5px_rgba(0,0,0,0.22)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
         <DialogFooter className="flex-row justify-end gap-2">
           <Button
