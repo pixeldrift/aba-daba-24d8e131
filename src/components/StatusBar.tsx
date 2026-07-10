@@ -294,7 +294,15 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
               >
                 <ArrowLeft className="size-5" />
               </button>
-              <h1 className="font-display text-base sm:text-lg leading-tight truncate">{title}</h1>
+              <h1 className="min-w-0 font-display text-base sm:text-lg leading-tight truncate">{title}</h1>
+              {/* Short git hash, not the title's own text, so it stays
+                  visible (shrink-0) even once the title itself has to
+                  truncate on a narrow screen — a quick "am I on the
+                  latest build" check shouldn't be the first thing that
+                  gets clipped. */}
+              <span className="shrink-0 italic font-normal text-stone-400 text-xs sm:text-sm" title="Build version">
+                ({__APP_VERSION__})
+              </span>
             </div>
 
             <div className="pt-1">

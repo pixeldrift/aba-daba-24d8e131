@@ -6,12 +6,8 @@ import { FrequencyIcon } from "@/components/icons/FrequencyIcon";
 import { RateIcon } from "@/components/icons/RateIcon";
 import { DurationIcon } from "@/components/icons/DurationIcon";
 import { TaskAnalysisIcon } from "@/components/icons/TaskAnalysisIcon";
-import { ListViewIcon } from "@/components/icons/ListViewIcon";
-import { CardViewIcon } from "@/components/icons/CardViewIcon";
-import { GridViewIcon } from "@/components/icons/GridViewIcon";
-import { SmallGridViewIcon } from "@/components/icons/SmallGridViewIcon";
 import { FilterIcon } from "@/components/icons/FilterIcon";
-import { useDataToolbar, type CardKind, type DisplayMode } from "./DataToolbarContext";
+import { useDataToolbar, DISPLAY_MODES, type CardKind } from "./DataToolbarContext";
 import { cn } from "@/lib/utils";
 
 const KIND_META: Record<CardKind, { label: string; icon: (props: { className?: string }) => React.ReactNode }> = {
@@ -22,13 +18,6 @@ const KIND_META: Record<CardKind, { label: string; icon: (props: { className?: s
   "task-analysis": { label: "Task Analysis", icon: (p) => <TaskAnalysisIcon {...p} /> },
   rating: { label: "Rating", icon: (p) => <Star {...p} /> },
 };
-
-const DISPLAY_MODES: { mode: DisplayMode; label: string; icon: (props: { className?: string }) => React.ReactNode }[] = [
-  { mode: "list", label: "List", icon: (p) => <ListViewIcon {...p} /> },
-  { mode: "card", label: "Card", icon: (p) => <CardViewIcon {...p} /> },
-  { mode: "grid-large", label: "Large Grid", icon: (p) => <GridViewIcon {...p} /> },
-  { mode: "grid-small", label: "Small Grid", icon: (p) => <SmallGridViewIcon {...p} /> },
-];
 
 export interface DataToolbarProps {
   stickyTop: number;
