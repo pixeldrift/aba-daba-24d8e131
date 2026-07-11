@@ -11,6 +11,10 @@ import doofenshmirtzPhoto from "@/assets/images/people/doofenshmirtz.jpeg";
 import perryPhoto from "@/assets/images/people/perry.jpeg";
 import isabellaPhoto from "@/assets/images/people/isabella.jpeg";
 import baljeetPhoto from "@/assets/images/people/baljeet.jpeg";
+import vanessaPhoto from "@/assets/images/people/vanessa.jpeg";
+import jeremyPhoto from "@/assets/images/people/jeremy.jpeg";
+import bufordPhoto from "@/assets/images/people/buford.jpeg";
+import stacyPhoto from "@/assets/images/people/stacy.jpeg";
 
 interface StaffRecord {
   name: string;
@@ -52,7 +56,7 @@ const STAFF_DIRECTORY: Record<string, StaffRecord> = {
     avatar: perryPhoto,
     phone: "+16155550198",
     email: "p.plat@abadaba.clinic",
-    assignedClients: ["Phineas Flynn"],
+    assignedClients: ["Phineas Flynn", "Buford Van Stomm"],
   },
   "Isabella Garcia-Shapiro": {
     name: "Isabella Garcia-Shapiro",
@@ -64,7 +68,7 @@ const STAFF_DIRECTORY: Record<string, StaffRecord> = {
     avatar: isabellaPhoto,
     phone: "+16155550176",
     email: "i.garciashapiro@abadaba.clinic",
-    assignedClients: ["Phineas Flynn"],
+    assignedClients: ["Phineas Flynn", "Stacy Hirano"],
   },
   "Baljeet Tjinder": {
     name: "Baljeet Tjinder",
@@ -78,6 +82,42 @@ const STAFF_DIRECTORY: Record<string, StaffRecord> = {
     email: "b.tjinder@abadaba.clinic",
     assignedClients: ["Phineas Flynn"],
   },
+  // Related-service providers (see ClientInfoPane's ABOUT_ME.relatedServices)
+  // — external, not clinic staff, but reuse this same directory/PersonPill
+  // machinery since a bio popup is all either one needs.
+  "Vanessa Doofenshmirtz": {
+    name: "Vanessa Doofenshmirtz",
+    title: "Speech-Language Pathologist (SLP)",
+    role: "SLP",
+    npi: "5647382910",
+    location: "Nashville Speech Partners",
+    bio: "Dry, no-nonsense, and allergic to sugar-coating feedback — articulation homework somehow always gets done.",
+    avatar: vanessaPhoto,
+    phone: "+16155550184",
+    email: "vanessa@nashvillespeechpartners.com",
+    assignedClients: ["Phineas Flynn"],
+  },
+  "Jeremy Johnson": {
+    name: "Jeremy Johnson",
+    title: "Occupational Therapist (OTR/L)",
+    role: "OT",
+    npi: "6758493021",
+    location: "Midtown Pediatric OT",
+    bio: "Easygoing and quick to build rapport — turns fine-motor drills into something closer to a jam session.",
+    avatar: jeremyPhoto,
+    phone: "+16155550157",
+    email: "jeremy@midtownpediatricot.com",
+    assignedClients: ["Phineas Flynn"],
+  },
+};
+
+// Photo lookup for clients that appear in a staff member's Assigned Clients
+// list but (unlike Phineas) don't have their own ClientInfoPane record — a
+// small, separate map rather than folding them into CLIENT since they're
+// only ever referenced by name here.
+const CLIENT_AVATARS: Record<string, string> = {
+  "Buford Van Stomm": bufordPhoto,
+  "Stacy Hirano": stacyPhoto,
 };
 
 /** A person's name, styled as a pill — same look everywhere it appears
@@ -222,15 +262,24 @@ function StaffProfileDialog({
           </button>
           {clientsOpen && (
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {staff.assignedClients.map((client) => (
-                <span
-                  key={client}
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-200 text-blue-800 text-sm"
-                >
-                  <User className="size-3" fill="currentColor" strokeWidth={0} />
-                  <span>{client}</span>
-                </span>
-              ))}
+              {staff.assignedClients.map((client) => {
+                const photo = CLIENT_AVATARS[client];
+                return (
+                  <span
+                    key={client}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-200 text-blue-800 text-sm"
+                  >
+                    {photo ? (
+                      <span className="size-4 shrink-0 overflow-hidden rounded-full">
+                        <Avatar value={photo} />
+                      </span>
+                    ) : (
+                      <User className="size-3" fill="currentColor" strokeWidth={0} />
+                    )}
+                    <span>{client}</span>
+                  </span>
+                );
+              })}
             </div>
           )}
         </div>

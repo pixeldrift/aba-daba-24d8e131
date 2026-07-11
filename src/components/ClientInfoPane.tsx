@@ -184,9 +184,8 @@ export function ClientInfoPane() {
               {ABOUT_ME.relatedServices.map((s) => (
                 <div key={s.discipline} className="flex flex-wrap items-baseline gap-x-1.5">
                   <span className="font-semibold">{s.discipline}:</span>
-                  <span>
-                    {s.provider} &middot; {s.schedule}
-                  </span>
+                  <PersonPill name={s.provider} />
+                  <span>&middot; {s.schedule}</span>
                 </div>
               ))}
             </div>
