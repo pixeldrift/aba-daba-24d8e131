@@ -9,6 +9,8 @@ import { Avatar } from "@/components/Avatar";
 import { cn } from "@/lib/utils";
 import doofenshmirtzPhoto from "@/assets/images/people/doofenshmirtz.jpeg";
 import perryPhoto from "@/assets/images/people/perry.jpeg";
+import isabellaPhoto from "@/assets/images/people/isabella.jpeg";
+import baljeetPhoto from "@/assets/images/people/baljeet.jpeg";
 
 interface StaffRecord {
   name: string;
@@ -59,7 +61,7 @@ const STAFF_DIRECTORY: Record<string, StaffRecord> = {
     npi: "3847561029",
     location: "Nashville Clinic",
     bio: "Runs a tight, well-organized session and never misses a data point — the kind of technician other techs go to for advice.",
-    avatar: "🌺",
+    avatar: isabellaPhoto,
     phone: "+16155550176",
     email: "i.garciashapiro@abadaba.clinic",
     assignedClients: ["Phineas Flynn"],
@@ -71,7 +73,7 @@ const STAFF_DIRECTORY: Record<string, StaffRecord> = {
     npi: "4756102938",
     location: "Nashville Clinic",
     bio: "Meticulous with programming and progress monitoring — happiest when a graph trends exactly the way the plan predicted it would.",
-    avatar: "📚",
+    avatar: baljeetPhoto,
     phone: "+16155550163",
     email: "b.tjinder@abadaba.clinic",
     assignedClients: ["Phineas Flynn"],
