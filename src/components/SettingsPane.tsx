@@ -122,31 +122,20 @@ export function SettingsPane() {
                 <div>
                   <div className="flex items-baseline justify-between gap-3">
                     <label htmlFor="alarmSound" className="text-sm font-medium">
-                      Alarm sound
+                      Default Alarm Sound
                     </label>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => playAlarmSound(alarmSound)}
-                        aria-label={`Play ${alarmSound} alarm sound`}
-                        title="Play sound"
-                        className="text-muted-foreground/60 hover:text-foreground transition-colors"
-                      >
-                        <Volume2 className="size-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setAlarmSound("alert")}
-                        disabled={alarmSound === "alert"}
-                        aria-label="Reset Alarm sound to default"
-                        className="text-muted-foreground/60 hover:text-foreground transition-colors disabled:opacity-0 disabled:pointer-events-none"
-                      >
-                        <RotateCcw className="size-3" />
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => playAlarmSound(alarmSound)}
+                      aria-label={`Play ${alarmSound} alarm sound`}
+                      title="Play sound"
+                      className="text-muted-foreground/60 hover:text-foreground transition-colors"
+                    >
+                      <Volume2 className="size-3.5" />
+                    </button>
                   </div>
                   <p className="text-xs text-muted-foreground/80 mt-0.5">
-                    How urgent an alert's chime sounds while it's live.
+                    Plays on a loop while an alert is live. Can be overridden per notification.
                   </p>
                   <Select
                     value={alarmSound}
