@@ -1148,8 +1148,8 @@ function PromptLevelButton({
         <div
           className={cn(
             "absolute h-3 w-3 -translate-x-1/2 rotate-45 border-red-300 bg-card",
-            "-bottom-[7px] border-r-2 border-b-2",
-            "group-data-[side=bottom]:bottom-auto group-data-[side=bottom]:-top-[7px]",
+            "-bottom-[6px] border-r-2 border-b-2",
+            "group-data-[side=bottom]:bottom-auto group-data-[side=bottom]:-top-[6px]",
             "group-data-[side=bottom]:border-r-0 group-data-[side=bottom]:border-b-0",
             "group-data-[side=bottom]:border-l-2 group-data-[side=bottom]:border-t-2",
           )}
@@ -1265,8 +1265,8 @@ function ListPromptLevelButton({
         <div
           className={cn(
             "absolute h-3 w-3 -translate-x-1/2 rotate-45 border-red-300 bg-card",
-            "-bottom-[7px] border-r-2 border-b-2",
-            "group-data-[side=bottom]:bottom-auto group-data-[side=bottom]:-top-[7px]",
+            "-bottom-[6px] border-r-2 border-b-2",
+            "group-data-[side=bottom]:bottom-auto group-data-[side=bottom]:-top-[6px]",
             "group-data-[side=bottom]:border-r-0 group-data-[side=bottom]:border-b-0",
             "group-data-[side=bottom]:border-l-2 group-data-[side=bottom]:border-t-2",
           )}
@@ -1379,8 +1379,8 @@ function RowPromptLevelButton({
         <div
           className={cn(
             "absolute h-3 w-3 -translate-x-1/2 rotate-45 border-red-300 bg-card",
-            "-bottom-[7px] border-r-2 border-b-2",
-            "group-data-[side=bottom]:bottom-auto group-data-[side=bottom]:-top-[7px]",
+            "-bottom-[6px] border-r-2 border-b-2",
+            "group-data-[side=bottom]:bottom-auto group-data-[side=bottom]:-top-[6px]",
             "group-data-[side=bottom]:border-r-0 group-data-[side=bottom]:border-b-0",
             "group-data-[side=bottom]:border-l-2 group-data-[side=bottom]:border-t-2",
           )}

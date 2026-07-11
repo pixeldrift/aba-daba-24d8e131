@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { PersonPill } from "@/components/StaffDirectory";
 import { Avatar } from "@/components/Avatar";
+import { PhotoZoomButton, PhotoZoomDialog } from "@/components/PhotoZoom";
 import { PhoneIcon } from "./icons/PhoneIcon";
 import { RequestEditIcon } from "./icons/RequestEditIcon";
 import { useSession } from "@/components/SessionContext";
@@ -217,7 +218,7 @@ export function ClientInfoPane({ onViewSchedule }: { onViewSchedule: () => void 
         <div className="divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white overflow-hidden">
           {GUARDIANS.map((g) => (
             <div key={g.id} className="flex items-center gap-3 p-3">
-              <PhotoZoomButton avatar={g.avatar} label={g.name} size="size-10" textSize="text-xl" />
+              <PhotoZoomButton avatar={g.avatar} label={g.name} size="size-10" />
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm truncate">{g.name}</p>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -253,9 +254,9 @@ export function ClientInfoPane({ onViewSchedule }: { onViewSchedule: () => void 
               <div key={v.id} className="flex items-center gap-3 p-3">
                 <PhotoZoomButton
                   avatar={v.photo}
+                  kind="vehicle"
                   label={`${v.color} ${v.make} ${v.model}`}
                   size="size-10"
-                  textSize="text-xl"
                 />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm truncate">
@@ -501,7 +502,10 @@ function ClientAvatar() {
         aria-label={revealed ? `${CLIENT.firstName}'s photo — tap to enlarge` : `Tap to reveal ${CLIENT.firstName}'s photo`}
         className="relative size-20 shrink-0 overflow-hidden rounded-full border-2 border-blue-300 bg-blue-100 grid place-items-center text-4xl"
       >
-        <Avatar value={CLIENT.avatar} className={cn("transition-[filter] duration-300", !revealed && "blur-md")} />
+        <Avatar
+          value={CLIENT.avatar}
+          className={cn("h-full w-full object-cover transition-[filter] duration-300", !revealed && "blur-md")}
+        />
         {!revealed && (
           // Centered (not corner-pinned) and bare — a corner badge got
           // clipped by the circle's own rounded edge (a square positioned
@@ -524,66 +528,3 @@ function ClientAvatar() {
   );
 }
 
-// Plain (non-blurred) tap-to-zoom trigger — used by guardian rows, and
-// internally by ClientAvatar's own second-tap zoom.
-function PhotoZoomButton({
-  avatar,
-  label,
-  size,
-  textSize,
-}: {
-  avatar: string;
-  label: string;
-  size: string;
-  textSize: string;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label={`Enlarge photo of ${label}`}
-        className={cn(
-          "shrink-0 overflow-hidden rounded-full border border-stone-200 bg-blue-50 grid place-items-center",
-          size,
-          textSize,
-        )}
-      >
-        <Avatar value={avatar} />
-      </button>
-      <PhotoZoomDialog open={open} onOpenChange={setOpen} avatar={avatar} label={label} />
-    </>
-  );
-}
-
-// Full-size lightbox shared by every photo in the pane — tapping the photo
-// itself closes it, same as the dialog's own X (DialogContent already
-// renders one in the corner) or tapping outside.
-function PhotoZoomDialog({
-  open,
-  onOpenChange,
-  avatar,
-  label,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  avatar: string;
-  label: string;
-}) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-auto max-w-[min(85vw,320px)] rounded-3xl border-none bg-transparent p-0 shadow-none grid place-items-center [&>button]:bg-white/90 [&>button]:rounded-full [&>button]:p-1.5 [&>button]:right-3 [&>button]:top-3">
-        <DialogTitle className="sr-only">{label}'s photo</DialogTitle>
-        <button
-          type="button"
-          onClick={() => onOpenChange(false)}
-          aria-label="Shrink photo"
-          className="grid aspect-square w-[min(85vw,320px)] place-items-center overflow-hidden rounded-full border-4 border-white bg-blue-100 text-[100px] leading-none shadow-2xl"
-        >
-          <Avatar value={avatar} />
-        </button>
-      </DialogContent>
-    </Dialog>
-  );
-}
