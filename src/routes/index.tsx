@@ -660,7 +660,7 @@ function IndexInner() {
           see LayoutGroup's docs on coordinating layout detection across
           separate components. */}
       <LayoutGroup id="session-bar">
-      <StatusBar activeTab={tab} onTabChange={setTab} />
+      <StatusBar activeTab={tab} onTabChange={setTab} suppressNavLayout={suppressCardLayout} />
 
       {/* Rendered as a sibling of (not nested inside) the motion.section
           below — that section's own `layout="position"` tracking applies a
@@ -722,7 +722,7 @@ function IndexInner() {
               side — without this, that briefly inflates the document's
               scrollable width, which some mobile browsers respond to by
               rescaling the visual viewport for an instant. */}
-          <div className={cn("flex flex-col items-center -mx-2 overflow-x-hidden", isGridDisplayMode ? "mt-4" : "mt-5")}>
+          <div className={cn("flex flex-col items-center -mx-2 overflow-x-hidden", isGridDisplayMode ? "pt-4" : "pt-5")}>
             <div
               className={cn(
                 "transition-[opacity,width] duration-300",

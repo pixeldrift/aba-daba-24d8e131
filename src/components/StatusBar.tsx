@@ -50,6 +50,7 @@ interface StatusBarProps {
   activeTab: StatusTab;
   onTabChange: (t: StatusTab) => void;
   title?: string;
+  suppressNavLayout?: boolean;
 }
 
 const TABS: { id: StatusTab; label: string; icon: ComponentType<{ className?: string }> }[] = [
@@ -72,7 +73,12 @@ const SESSION_MORPH_EASE = NOTIFICATION_AREA_TRANSITION.ease;
 // ease-out than the rest of the header's snappier, mechanical transitions.
 const PILL_TRAVEL_EASE = [0.22, 1, 0.36, 1] as const;
 
-export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Data Sheet" }: StatusBarProps) {
+export function StatusBar({
+  activeTab,
+  onTabChange,
+  title = "Phineas Flynn's Data Sheet",
+  suppressNavLayout = false,
+}: StatusBarProps) {
   const {
     status,
     elapsedMs,
@@ -378,9 +384,29 @@ export function StatusBar({ activeTab, onTabChange, title = "Phineas Flynn's Dat
             <NotificationBar />
 
             {/* Tabs row + mini session (when running) */}
+            {/* suppressNavLayout zeroes the layout transition's duration
+                during a data-tab display-mode morph. This nav sits sticky
+                at top:0, so its own true position never changes for that
+                reason — but Framer Motion's LayoutGroup batches it together
+                with the data panel below (see index.tsx's "session-bar"
+                LayoutGroup), and the panel's active-card scroll anchor calls
+                window.scrollBy every frame while the morph runs. Motion's
+                projection math isn't sticky-aware: it reads a stuck
+                element's rect as having moved whenever scrollY changes
+                mid-measurement, so it was playing a brief, spurious
+                correction (a few px, decaying back to 0 over the whole
+                morph) each time that scroll anchor nudged the page. Toggling
+                the `layout` prop itself off/on around the window was tried
+                and made this worse — Motion re-initializes its projection
+                right as it re-enables, so it can catch the tail of the
+                scroll correction and animate it with the full (non-zero)
+                transition instead. Zeroing just the duration keeps
+                measurement continuous and collapses whatever phantom delta
+                it finds down to a single frame, which reads as no jump at
+                all. */}
             <motion.nav
               layout="position"
-              transition={{ layout: NOTIFICATION_AREA_TRANSITION }}
+              transition={{ layout: suppressNavLayout ? { duration: 0 } : NOTIFICATION_AREA_TRANSITION }}
               className={cn("flex items-end justify-between gap-2 -mb-px", isRunning ? "mt-1" : "mt-1.5")}
               role="tablist"
               aria-label="Session sections"
