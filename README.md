@@ -1,9 +1,10 @@
 # ABA DaBa
 
 A prototype platform for Applied Behavioral Analysis data colletion and
-session management. Focused on user experience and ease of information
-access and recording while working in a busy clinical environment.
-Many quality of life features for behavioral techs juggling client needs.
+session management. This front-end is focused on user experience and ease
+of information access while working in a busy clinical environment.
+Many quality of life features for behavioral techs who need to juggle
+data entry while managing the needs of challenging clients during a session.
 
 
 ## Tech stack
