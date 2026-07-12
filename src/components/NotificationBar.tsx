@@ -110,8 +110,6 @@ const KNOWN_NAMES = [
   "Baljeet Tjinder",
   "Vanessa Doofenshmirtz",
   "Jeremy Johnson",
-  "Dr. Lopez",
-  "Sam Patel",
 ];
 const NAME_PATTERN = new RegExp(
   `(${KNOWN_NAMES.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`,
@@ -436,10 +434,12 @@ export function NotificationsPane() {
           Clear all
         </button>
       </div>
-      <div className="divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white overflow-hidden">
-        {ordered.map((n) => (
-          <NotificationListRow key={n.id} n={n} onClear={() => clear(n.id)} onActivate={() => activate(n)} />
-        ))}
+      <div className="space-y-2">
+        <AnimatePresence initial={false}>
+          {ordered.map((n) => (
+            <NotificationListRow key={n.id} n={n} onClear={() => clear(n.id)} onActivate={() => activate(n)} />
+          ))}
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -462,8 +462,28 @@ function NotificationListRow({
   // handleNotificationActivate itself switches on to pick a tab.
   const viewLabel =
     n.sourceRef?.type === "activity" ? "View Schedule" : n.sourceRef?.type === "info" ? "View Info" : "View";
+
+  // Same "slide fully off, then remove" beat as the live alarm bar's own
+  // Dismiss button (see NotificationRow's commit()) — x is driven entirely
+  // by this motion value rather than the `exit` variant below, so the two
+  // don't fight over the same property. `exit` only ever touches opacity,
+  // which still covers Clear All wiping every row at once with no individual
+  // click to slide from.
+  const dismissX = useMotionValue(0);
+  const handleClear = () => {
+    animate(dismissX, -500, { type: "tween", ease: "easeIn", duration: 0.22 }).then(onClear);
+  };
+
   return (
-    <div className="flex items-start gap-3 p-3">
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 12, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.2, ease: "easeOut" } }}
+      transition={{ layout: NOTIFICATION_AREA_TRANSITION, default: { type: "spring", stiffness: 420, damping: 20 } }}
+      style={{ x: dismissX }}
+      className="flex items-start gap-3 rounded-xl border border-stone-200 bg-white p-3 shadow-sm"
+    >
       <div className={cn("flex items-center justify-center size-8 shrink-0 rounded-full", styles.ring, styles.iconFg)}>
         <Icon className="size-4" />
       </div>
@@ -481,13 +501,13 @@ function NotificationListRow({
       </div>
       <button
         type="button"
-        onClick={onClear}
+        onClick={handleClear}
         aria-label="Clear notification"
         className="shrink-0 grid place-items-center size-7 rounded-full text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors"
       >
         <X className="size-4" />
       </button>
-    </div>
+    </motion.div>
   );
 }
 

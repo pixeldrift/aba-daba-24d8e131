@@ -5,7 +5,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { PhoneIcon } from "./icons/PhoneIcon";
 import { EmailIcon } from "./icons/EmailIcon";
 import { ChatIcon } from "./icons/ChatIcon";
+import { PhotoZoomButton } from "@/components/PhotoZoom";
 import { cn } from "@/lib/utils";
+import doofenshmirtzPhoto from "@/assets/images/people/doofenshmirtz.jpeg";
+import perryPhoto from "@/assets/images/people/perry.jpeg";
+import isabellaPhoto from "@/assets/images/people/isabella.jpeg";
+import baljeetPhoto from "@/assets/images/people/baljeet.jpeg";
+import vanessaPhoto from "@/assets/images/people/vanessa.jpeg";
+import jeremyPhoto from "@/assets/images/people/jeremy.jpeg";
 
 interface StaffRecord {
   name: string;
@@ -32,7 +39,7 @@ const STAFF_DIRECTORY: Record<string, StaffRecord> = {
     npi: "1720394856",
     location: "Nashville Clinic",
     bio: "Designs and oversees the treatment plan, with a flair for elaborate, multi-step interventions that — much to his own surprise — usually work on the first try.",
-    avatar: "🧪",
+    avatar: doofenshmirtzPhoto,
     phone: "+16155550142",
     email: "h.doofenshmirtz@abadaba.clinic",
     assignedClients: ["Phineas Flynn"],
@@ -44,10 +51,10 @@ const STAFF_DIRECTORY: Record<string, StaffRecord> = {
     npi: "2938471650",
     location: "Nashville Clinic",
     bio: "Quiet, focused, and unflappable in session — the kind of technician who somehow always turns up exactly where the treatment plan needs him.",
-    avatar: "🕵️",
+    avatar: perryPhoto,
     phone: "+16155550198",
     email: "p.plat@abadaba.clinic",
-    assignedClients: ["Phineas Flynn"],
+    assignedClients: ["Phineas Flynn", "Buford Van Stomm"],
   },
   "Isabella Garcia-Shapiro": {
     name: "Isabella Garcia-Shapiro",
@@ -56,10 +63,10 @@ const STAFF_DIRECTORY: Record<string, StaffRecord> = {
     npi: "3847561029",
     location: "Nashville Clinic",
     bio: "Runs a tight, well-organized session and never misses a data point — the kind of technician other techs go to for advice.",
-    avatar: "🌺",
+    avatar: isabellaPhoto,
     phone: "+16155550176",
     email: "i.garciashapiro@abadaba.clinic",
-    assignedClients: ["Phineas Flynn"],
+    assignedClients: ["Phineas Flynn", "Stacy Hirano"],
   },
   "Baljeet Tjinder": {
     name: "Baljeet Tjinder",
@@ -68,9 +75,36 @@ const STAFF_DIRECTORY: Record<string, StaffRecord> = {
     npi: "4756102938",
     location: "Nashville Clinic",
     bio: "Meticulous with programming and progress monitoring — happiest when a graph trends exactly the way the plan predicted it would.",
-    avatar: "📚",
+    avatar: baljeetPhoto,
     phone: "+16155550163",
     email: "b.tjinder@abadaba.clinic",
+    assignedClients: ["Phineas Flynn"],
+  },
+  // Related-service providers (see ClientInfoPane's ABOUT_ME.relatedServices)
+  // — external, not clinic staff, but reuse this same directory/PersonPill
+  // machinery since a bio popup is all either one needs.
+  "Vanessa Doofenshmirtz": {
+    name: "Vanessa Doofenshmirtz",
+    title: "Speech-Language Pathologist (SLP)",
+    role: "SLP",
+    npi: "5647382910",
+    location: "Nashville Speech Partners",
+    bio: "Dry, no-nonsense, and allergic to sugar-coating feedback — articulation homework somehow always gets done.",
+    avatar: vanessaPhoto,
+    phone: "+16155550184",
+    email: "vanessa@nashvillespeechpartners.com",
+    assignedClients: ["Phineas Flynn"],
+  },
+  "Jeremy Johnson": {
+    name: "Jeremy Johnson",
+    title: "Occupational Therapist (OTR/L)",
+    role: "OT",
+    npi: "6758493021",
+    location: "Midtown Pediatric OT",
+    bio: "Easygoing and quick to build rapport — turns fine-motor drills into something closer to a jam session.",
+    avatar: jeremyPhoto,
+    phone: "+16155550157",
+    email: "jeremy@midtownpediatricot.com",
     assignedClients: ["Phineas Flynn"],
   },
 };
@@ -132,8 +166,8 @@ export function PersonPill({ name }: { name: string }) {
           <div
             className={cn(
               "absolute left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-blue-300 bg-card",
-              "-top-[7px] border-l-2 border-t-2",
-              "group-data-[side=top]:top-auto group-data-[side=top]:-bottom-[7px]",
+              "-top-[6px] border-l-2 border-t-2",
+              "group-data-[side=top]:top-auto group-data-[side=top]:-bottom-[6px]",
               "group-data-[side=top]:border-l-0 group-data-[side=top]:border-t-0",
               "group-data-[side=top]:border-r-2 group-data-[side=top]:border-b-2",
             )}
@@ -184,8 +218,8 @@ function StaffProfileDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100%-2rem)] max-w-sm rounded-xl">
         <DialogHeader className="items-center text-center sm:text-center">
-          <div className="size-16 rounded-full bg-blue-100 border-2 border-blue-300 grid place-items-center text-3xl">
-            {staff.avatar}
+          <div className="rounded-full border-2 border-blue-300 bg-blue-100 p-0.5">
+            <PhotoZoomButton avatar={staff.avatar} label={staff.name} size="size-16" />
           </div>
           <DialogTitle className="mt-1">{staff.name}</DialogTitle>
           <p className="text-sm text-muted-foreground">{staff.title}</p>
@@ -217,6 +251,12 @@ function StaffProfileDialog({
           </button>
           {clientsOpen && (
             <div className="mt-2 flex flex-wrap gap-1.5">
+              {/* Never a photo here, even for a client that has one
+                  elsewhere — a client's photo is PHI, and this list is just
+                  a passive caseload roster inside a staff member's own
+                  profile popup, not a place anyone intentionally asked to
+                  see a face. Only ClientAvatar's own tap-to-reveal flow on
+                  the Info tab is an intentional-enough action for that. */}
               {staff.assignedClients.map((client) => (
                 <span
                   key={client}
@@ -236,7 +276,7 @@ function StaffProfileDialog({
 
 function ContactButton({ icon, label, href }: { icon: React.ReactNode; label: string; href?: string }) {
   const className =
-    "flex flex-1 flex-col items-center gap-1 rounded-lg border border-stone-200 py-2 text-[11px] font-medium text-foreground/70 hover:bg-stone-50 hover:text-foreground transition-colors";
+    "flex flex-1 flex-col items-center gap-1 rounded-lg border border-stone-200 py-2 text-[11px] font-medium text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-colors";
   if (!href) {
     return (
       <button type="button" className={className}>

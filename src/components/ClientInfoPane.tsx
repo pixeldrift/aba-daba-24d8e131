@@ -3,12 +3,21 @@ import { Eye, CheckCircle2, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PersonPill } from "@/components/StaffDirectory";
+import { Avatar } from "@/components/Avatar";
+import { PhotoZoomButton, PhotoZoomDialog } from "@/components/PhotoZoom";
 import { PhoneIcon } from "./icons/PhoneIcon";
 import { RequestEditIcon } from "./icons/RequestEditIcon";
 import { useSession } from "@/components/SessionContext";
 import { useNotifications } from "@/components/NotificationContext";
+import { useScheduleData } from "@/components/ScheduleContext";
+import { formatTimeOfDay } from "@/components/TimeOfDayKeypad";
 import { useStickyTop } from "@/hooks/use-sticky-top";
 import { cn } from "@/lib/utils";
+import phineasPhoto from "@/assets/images/people/phineas.jpeg";
+import lindaPhoto from "@/assets/images/people/linda.jpeg";
+import lawrencePhoto from "@/assets/images/people/lawrence.jpeg";
+import hondaOdysseyPhoto from "@/assets/images/vehicles/honda-odyssey.webp";
+import toyotaCamryPhoto from "@/assets/images/vehicles/toyota-camry.jpeg";
 
 // How long a revealed client photo stays unblurred before hiding itself
 // again — long enough to actually register a face, short enough that the
@@ -48,17 +57,17 @@ const CLIENT = {
   firstName: "Phineas",
   lastName: "Flynn",
   dob: "2016-06-16",
-  avatar: "👦",
+  avatar: phineasPhoto,
 };
 
 const GUARDIANS: GuardianRecord[] = [
-  { id: "linda", name: "Linda Flynn-Fletcher", relationship: "Mother", phone: "+16155550111", avatar: "👩", pickupAuthorized: true },
-  { id: "lawrence", name: "Lawrence Fletcher", relationship: "Stepfather", phone: "+16155550122", avatar: "👨", pickupAuthorized: true },
+  { id: "linda", name: "Linda Flynn-Fletcher", relationship: "Mother", phone: "+16155550111", avatar: lindaPhoto, pickupAuthorized: true },
+  { id: "lawrence", name: "Lawrence Fletcher", relationship: "Stepfather", phone: "+16155550122", avatar: lawrencePhoto, pickupAuthorized: true },
 ];
 
 const VEHICLES: VehicleRecord[] = [
-  { id: "v1", guardianId: "linda", color: "Silver", make: "Honda", model: "Odyssey", plate: "BJY-4471", photo: "🚐" },
-  { id: "v2", guardianId: "lawrence", color: "Green", make: "Toyota", model: "Camry", plate: "HRT-2093", photo: "🚗" },
+  { id: "v1", guardianId: "linda", color: "Silver", make: "Honda", model: "Odyssey", plate: "BJY-4471", photo: hondaOdysseyPhoto },
+  { id: "v2", guardianId: "lawrence", color: "Green", make: "Toyota", model: "Camry", plate: "HRT-2093", photo: toyotaCamryPhoto },
 ];
 
 const TEAM_MEMBERS = ["Perry Plat", "Isabella Garcia-Shapiro", "Baljeet Tjinder"];
@@ -86,10 +95,6 @@ const ABOUT_ME = {
     "Follows multi-step verbal instructions independently. Benefits from a visual schedule ahead of any transition away from a build.",
   transitions:
     'Show the "next activity" picture card 2 minutes before transitioning away from a build. If he protests, let him finish the current step first.',
-  relatedServices: [
-    { discipline: "Speech", provider: "Vanessa Doofenshmirtz", schedule: "Tuesdays 12:00p" },
-    { discipline: "OT", provider: "Jeremy Johnson", schedule: "Wed 3:30–4:00p, Fri 1:30–2:00p" },
-  ],
 };
 
 const JUMP_SECTIONS = [
@@ -117,8 +122,17 @@ function formatUpdated(d: Date | null) {
   return sameDay ? `today (${date}) at ${time}` : `${date} at ${time}`;
 }
 
-export function ClientInfoPane() {
+// Same "HH:MMa/p" convention as the Schedule tab's own grid (formatTimeOfDay)
+// — one start/end applies to every day an appointment recurs on, unlike the
+// old hand-written relatedServices copy that could (inaccurately) give each
+// day its own time.
+function formatApptSchedule(appt: { days: string[]; start: string; end: string }): string {
+  return `${appt.days.join(", ")} ${formatTimeOfDay(appt.start)}–${formatTimeOfDay(appt.end)}`;
+}
+
+export function ClientInfoPane({ onViewSchedule }: { onViewSchedule: () => void }) {
   const { lastUpdated } = useSession();
+  const { phineasAppointments } = useScheduleData();
   // The fixed header (previous-session banner + tabs) varies in height by
   // session state — a fixed scroll-margin guess undershoots it whenever the
   // banner's expanded, leaving a jumped-to section's heading tucked out of
@@ -172,20 +186,31 @@ export function ClientInfoPane() {
           <NoteRow label="Transitions" value={ABOUT_ME.transitions} />
           <NoteRow
             label="Related Service Times"
-            value={ABOUT_ME.relatedServices.map((s) => `${s.discipline}: ${s.provider} · ${s.schedule}`).join("\n")}
+            value={phineasAppointments
+              .map((a) => `${a.type}: ${a.provider} · ${formatApptSchedule(a)}`)
+              .join("\n")}
           >
             <div className="space-y-1">
-              {ABOUT_ME.relatedServices.map((s) => (
-                <div key={s.discipline} className="flex flex-wrap items-baseline gap-x-1.5">
-                  <span className="font-semibold">{s.discipline}:</span>
-                  <span>
-                    {s.provider} &middot; {s.schedule}
-                  </span>
-                </div>
-              ))}
+              {phineasAppointments.length === 0 ? (
+                <p className="text-foreground/60">No related services on the schedule.</p>
+              ) : (
+                phineasAppointments.map((a) => (
+                  <div key={a.id} className="flex flex-wrap items-baseline gap-x-1.5">
+                    <span className="font-semibold">{a.type}:</span>
+                    <PersonPill name={a.provider} />
+                    <span>&middot; {formatApptSchedule(a)}</span>
+                  </div>
+                ))
+              )}
+              <button
+                type="button"
+                onClick={onViewSchedule}
+                className="text-blue-600 hover:text-blue-700 underline underline-offset-2"
+              >
+                View schedule
+              </button>
             </div>
           </NoteRow>
-          <NoteRow label="Session Structure/Schedule" value="See the Schedule tab." />
         </div>
       </Section>
 
@@ -193,7 +218,7 @@ export function ClientInfoPane() {
         <div className="divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white overflow-hidden">
           {GUARDIANS.map((g) => (
             <div key={g.id} className="flex items-center gap-3 p-3">
-              <PhotoZoomButton avatar={g.avatar} label={g.name} size="size-10" textSize="text-xl" />
+              <PhotoZoomButton avatar={g.avatar} label={g.name} size="size-10" />
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm truncate">{g.name}</p>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -229,9 +254,9 @@ export function ClientInfoPane() {
               <div key={v.id} className="flex items-center gap-3 p-3">
                 <PhotoZoomButton
                   avatar={v.photo}
+                  kind="vehicle"
                   label={`${v.color} ${v.make} ${v.model}`}
                   size="size-10"
-                  textSize="text-xl"
                 />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm truncate">
@@ -477,7 +502,10 @@ function ClientAvatar() {
         aria-label={revealed ? `${CLIENT.firstName}'s photo — tap to enlarge` : `Tap to reveal ${CLIENT.firstName}'s photo`}
         className="relative size-20 shrink-0 overflow-hidden rounded-full border-2 border-blue-300 bg-blue-100 grid place-items-center text-4xl"
       >
-        <span className={cn("transition-[filter] duration-300", !revealed && "blur-md")}>{CLIENT.avatar}</span>
+        <Avatar
+          value={CLIENT.avatar}
+          className={cn("h-full w-full object-cover transition-[filter] duration-300", !revealed && "blur-md")}
+        />
         {!revealed && (
           // Centered (not corner-pinned) and bare — a corner badge got
           // clipped by the circle's own rounded edge (a square positioned
@@ -500,62 +528,3 @@ function ClientAvatar() {
   );
 }
 
-// Plain (non-blurred) tap-to-zoom trigger — used by guardian rows, and
-// internally by ClientAvatar's own second-tap zoom.
-function PhotoZoomButton({
-  avatar,
-  label,
-  size,
-  textSize,
-}: {
-  avatar: string;
-  label: string;
-  size: string;
-  textSize: string;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label={`Enlarge photo of ${label}`}
-        className={cn("shrink-0 rounded-full border border-stone-200 bg-blue-50 grid place-items-center", size, textSize)}
-      >
-        {avatar}
-      </button>
-      <PhotoZoomDialog open={open} onOpenChange={setOpen} avatar={avatar} label={label} />
-    </>
-  );
-}
-
-// Full-size lightbox shared by every photo in the pane — tapping the photo
-// itself closes it, same as the dialog's own X (DialogContent already
-// renders one in the corner) or tapping outside.
-function PhotoZoomDialog({
-  open,
-  onOpenChange,
-  avatar,
-  label,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  avatar: string;
-  label: string;
-}) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-auto max-w-[min(85vw,320px)] rounded-3xl border-none bg-transparent p-0 shadow-none grid place-items-center [&>button]:bg-white/90 [&>button]:rounded-full [&>button]:p-1.5 [&>button]:right-3 [&>button]:top-3">
-        <DialogTitle className="sr-only">{label}'s photo</DialogTitle>
-        <button
-          type="button"
-          onClick={() => onOpenChange(false)}
-          aria-label="Shrink photo"
-          className="grid aspect-square w-[min(85vw,320px)] place-items-center rounded-full border-4 border-white bg-blue-100 text-[100px] leading-none shadow-2xl"
-        >
-          {avatar}
-        </button>
-      </DialogContent>
-    </Dialog>
-  );
-}
