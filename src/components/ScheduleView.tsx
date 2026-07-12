@@ -443,6 +443,15 @@ export function ScheduleView({
     (i) => nowMin >= toMin(i.start) && nowMin < toMin(i.end),
   );
   const outsideSchedule = !currentItem;
+  // An appointment overlay paints on top of (z-20) whatever regular item is
+  // happening underneath it — if "now" falls inside one, the line has to
+  // stay at the list level (see arrowTop's own rendering below) so it still
+  // shows crossing the appointment bubble, rather than the in-row treatment
+  // that would otherwise apply for the item underneath and get hidden below
+  // the appointment's higher z-index.
+  const currentAppt = showAppts
+    ? active.appointments.find((a) => nowMin >= toMin(a.start) && nowMin < toMin(a.end))
+    : undefined;
 
   // ---- Alert firing: when `now` crosses an item's priming or start time,
   // push a notification. Idempotent per (itemId, kind, day) via dedupeKey.
@@ -1307,19 +1316,24 @@ export function ScheduleView({
         </div>
 
         <div ref={listRef} className="relative" style={{ height: totalHeight }}>
-          {arrowTop !== null && !editMode && !currentItem && (
-            // Only for the blank-gap / outside-hours case — when "now"
-            // falls inside an activity, the line renders as that row's own
-            // child instead (see NOW_LINE_OPACITY below), positioned by
-            // plain DOM order between its background box and its icon/text
-            // content so it ducks fully behind an emoji (opaque, so nothing
-            // of the line shows through it) while staying faintly visible
-            // behind text. Above BOTH the item rows (z-10) and the
-            // appointment overlays (z-20) — including a flashing row's own
-            // temporary z-20 bump (see that row's className below), which
-            // used to permanently out-rank this line the instant "Now" was
-            // pressed once, since that bump never resets back down. Staying
-            // under the chevron marker (z-30) only.
+          {arrowTop !== null && !editMode && (!currentItem || currentAppt) && (
+            // For the blank-gap / outside-hours case, and whenever an
+            // appointment overlay currently covers "now" — when "now" falls
+            // inside a plain activity with no appointment on top of it, the
+            // line renders as that row's own child instead (see
+            // NOW_LINE_OPACITY below), positioned by plain DOM order between
+            // its background box and its icon/text content so it ducks fully
+            // behind an emoji (opaque, so nothing of the line shows through
+            // it) while staying faintly visible behind text. An appointment
+            // paints above (z-20) whatever regular item is underneath it, so
+            // that in-row treatment would just get hidden below it — this
+            // list-level line stays instead, at z-25, so "now" still visibly
+            // crosses the appointment bubble itself. Above BOTH the item
+            // rows (z-10) and the appointment overlays (z-20) — including a
+            // flashing row's own temporary z-20 bump (see that row's
+            // className below), which used to permanently out-rank this line
+            // the instant "Now" was pressed once, since that bump never
+            // resets back down. Staying under the chevron marker (z-30) only.
             <div
               className={cn(
                 "absolute left-0 right-0 z-[25] pointer-events-none border-t-2 border-dashed",
@@ -1512,7 +1526,7 @@ export function ScheduleView({
                     aria-hidden
                   />
                 )}
-                {isCurrent && arrowTop !== null && (
+                {isCurrent && arrowTop !== null && !currentAppt && (
                   // "Now" cutting across THIS row specifically, rendered as
                   // its own child (not the shared list-level line above)
                   // purely so plain DOM order does the layering: it paints
@@ -1521,7 +1535,12 @@ export function ScheduleView({
                   // below, so an emoji — opaque — fully covers its own
                   // stretch of the line, while text only partly does (letting
                   // the dimmed line still read through the gaps between
-                  // glyphs without competing with it for legibility).
+                  // glyphs without competing with it for legibility). Skipped
+                  // when an appointment is also covering "now" — that
+                  // appointment paints above (z-20) this row entirely, so
+                  // this in-row line would just render invisibly underneath
+                  // it; the shared list-level line (see above) handles that
+                  // case instead, at a z that clears the appointment.
                   <div
                     className={cn(
                       "absolute left-0 right-0 pointer-events-none border-t-2 border-dashed",
