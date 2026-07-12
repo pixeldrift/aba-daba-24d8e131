@@ -569,7 +569,7 @@ function RequestEditDialog({
   const handleSave = () => {
     push({
       kind: "message",
-      icon: "message",
+      icon: "edit-request",
       title: `Edit requested: ${label}`,
       body: text.trim(),
     });

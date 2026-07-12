@@ -22,7 +22,9 @@ export type NotificationIcon =
   | "bell-muted"
   | "target"
   | "message"
-  | "megaphone";
+  | "megaphone"
+  | "edit-request"
+  | "edit-approved";
 
 export interface Notification {
   id: string;
@@ -137,7 +139,7 @@ function seedNotifications(): Notification[] {
       id: "seed-edit-approved",
       kind: "edit-approved",
       title: 'Edit Approved: "About Me" for Phineas Flynn by Heinz Doofenshmirtz',
-      icon: "message",
+      icon: "edit-approved",
       createdAt: now - 24 * HOUR_MS,
       sourceRef: { type: "info", id: "section-about-me" },
       state: "archived",
