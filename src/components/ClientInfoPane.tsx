@@ -210,7 +210,7 @@ export function ClientInfoPane({ onViewSchedule }: { onViewSchedule: () => void 
         </div>
       </Section>
 
-      <Section id="section-vehicles" title="Authorized Pickup Vehicles">
+      <Section id="section-vehicles" title="Vehicles">
         <div className="divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white overflow-hidden">
           {VEHICLES.map((v) => {
             const guardian = GUARDIANS.find((g) => g.id === v.guardianId);
@@ -280,7 +280,7 @@ function AboutMeSection({
   phineasAppointments: Appointment[];
   onViewSchedule: () => void;
 }) {
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set(ABOUT_ME_ROW_IDS));
   const allCollapsed = collapsedIds.size === ABOUT_ME_ROW_IDS.length;
 
   const toggleRow = (id: string) => {
@@ -299,19 +299,24 @@ function AboutMeSection({
   return (
     <section id="section-about-me">
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-stone-400">About Me (Coverage Notes)</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-stone-400">About Me</h2>
         <button
           type="button"
           onClick={toggleAll}
-          aria-label={allCollapsed ? "Expand all" : "Collapse all"}
-          className="grid place-items-center size-6 -mr-1 text-stone-400 hover:text-stone-600 transition-colors"
+          className="flex items-center gap-1 -mr-1 text-xs font-medium text-stone-400 hover:text-stone-600 transition-colors"
         >
-          {allCollapsed ? <ChevronsUpDown className="size-4" /> : <ChevronsDownUp className="size-4" />}
+          {allCollapsed ? "Expand" : "Collapse"}
+          {allCollapsed ? (
+            <ChevronsUpDown className="size-4" aria-hidden />
+          ) : (
+            <ChevronsDownUp className="size-4" aria-hidden />
+          )}
         </button>
       </div>
       <div className="divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white overflow-hidden text-sm">
         <NoteRow
           id="seizure"
+          emoji="🚨"
           label="Seizure Action Plan?"
           value={ABOUT_ME.seizureActionPlan}
           collapsed={collapsedIds.has("seizure")}
@@ -319,6 +324,7 @@ function AboutMeSection({
         />
         <NoteRow
           id="allergies"
+          emoji="🤧"
           label="Allergies"
           value={ABOUT_ME.allergies}
           collapsed={collapsedIds.has("allergies")}
@@ -326,6 +332,7 @@ function AboutMeSection({
         />
         <NoteRow
           id="toys"
+          emoji="🧸"
           label="Favorite Toys/Activities"
           value={ABOUT_ME.favoriteActivities}
           collapsed={collapsedIds.has("toys")}
@@ -333,6 +340,7 @@ function AboutMeSection({
         />
         <NoteRow
           id="behaviors"
+          emoji="⚠️"
           label="Interfering Behaviors"
           value={ABOUT_ME.interferingBehaviors}
           collapsed={collapsedIds.has("behaviors")}
@@ -340,6 +348,7 @@ function AboutMeSection({
         />
         <NoteRow
           id="environment"
+          emoji="🏠"
           label="Environment"
           value={ABOUT_ME.environment}
           collapsed={collapsedIds.has("environment")}
@@ -347,6 +356,7 @@ function AboutMeSection({
         />
         <NoteRow
           id="meal"
+          emoji="🍽️"
           label="Meal Time/Snack"
           value={ABOUT_ME.mealTime}
           collapsed={collapsedIds.has("meal")}
@@ -354,6 +364,7 @@ function AboutMeSection({
         />
         <NoteRow
           id="successTips"
+          emoji="💡"
           label="Session Success Tips/Pairing"
           value={ABOUT_ME.successTips}
           collapsed={collapsedIds.has("successTips")}
@@ -361,6 +372,7 @@ function AboutMeSection({
         />
         <NoteRow
           id="toileting"
+          emoji="🚽"
           label="Toileting"
           value={ABOUT_ME.toileting}
           collapsed={collapsedIds.has("toileting")}
@@ -368,6 +380,7 @@ function AboutMeSection({
         />
         <NoteRow
           id="communication"
+          emoji="💬"
           label="Mode of Communication"
           value={`Expressive: ${ABOUT_ME.communicationExpressive}\n\nReceptive: ${ABOUT_ME.communicationReceptive}`}
           collapsed={collapsedIds.has("communication")}
@@ -384,6 +397,7 @@ function AboutMeSection({
         </NoteRow>
         <NoteRow
           id="transitions"
+          emoji="🔄"
           label="Transitions"
           value={ABOUT_ME.transitions}
           collapsed={collapsedIds.has("transitions")}
@@ -391,6 +405,7 @@ function AboutMeSection({
         />
         <NoteRow
           id="relatedServices"
+          emoji="📅"
           label="Related Service Times"
           value={phineasAppointments.map((a) => `${a.type}: ${a.provider} · ${formatApptSchedule(a)}`).join("\n")}
           collapsed={collapsedIds.has("relatedServices")}
@@ -434,6 +449,7 @@ function AboutMeSection({
 // rather than just hiding so a long collapsed list is actually short.
 function NoteRow({
   id,
+  emoji,
   label,
   value,
   collapsed,
@@ -441,6 +457,7 @@ function NoteRow({
   children,
 }: {
   id: string;
+  emoji: string;
   label: string;
   value: string;
   collapsed: boolean;
@@ -459,6 +476,7 @@ function NoteRow({
         <ChevronDown
           className={cn("size-3.5 shrink-0 text-stone-400 transition-transform", collapsed && "-rotate-90")}
         />
+        <span aria-hidden>{emoji}</span>
         <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">{label}</span>
       </button>
       {!collapsed && (
