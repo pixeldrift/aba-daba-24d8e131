@@ -1,9 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ComponentType } from "react";
 import { AnimatePresence, motion, useMotionValue, useTransform, animate, type MotionStyle } from "motion/react";
 import { Bell, BellRing, BellOff, Target, MessageSquare, Megaphone, X, VolumeX, ArrowRight } from "lucide-react";
 import { useNotifications, isAlert, vibrate, type Notification, type NotificationIcon, type NotificationKind } from "./NotificationContext";
 import type { AlarmSoundStyle } from "./SettingsContext";
 import { playAlarmSound } from "@/lib/alarmSounds";
+import { RequestEditIcon } from "./icons/RequestEditIcon";
+import { ApproveEditIcon } from "./icons/ApproveEditIcon";
 import { cn } from "@/lib/utils";
 
 // Swipe tuning — TODO: surface in user settings.
@@ -32,13 +34,15 @@ const ZzIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-const ICON_MAP: Record<NotificationIcon, typeof Bell> = {
+const ICON_MAP: Record<NotificationIcon, ComponentType<{ className?: string }>> = {
   bell: Bell,
   "bell-chime": BellRing,
   "bell-muted": BellOff,
   target: Target,
   message: MessageSquare,
   megaphone: Megaphone,
+  "edit-request": RequestEditIcon,
+  "edit-approved": ApproveEditIcon,
 };
 
 // Tint per kind — semantic-ish colors using existing palette. `button` matches
@@ -468,10 +472,41 @@ function NotificationListRow({
   // by this motion value rather than the `exit` variant below, so the two
   // don't fight over the same property. `exit` only ever touches opacity,
   // which still covers Clear All wiping every row at once with no individual
-  // click to slide from.
+  // click to slide from. The same value now also drives an actual drag
+  // gesture (see drag props below), so a tap on the X button and a real
+  // swipe-to-dismiss both end up animating the identical property.
+  const threshold = SWIPE_THRESHOLD_PX;
   const dismissX = useMotionValue(0);
-  const handleClear = () => {
-    animate(dismissX, -500, { type: "tween", ease: "easeIn", duration: 0.22 }).then(onClear);
+  const wasDragging = useRef(false);
+  // Fades out once dragged well past the commit point, echoing the live
+  // alert bar's own bubble fade — otherwise the row would still read as
+  // "fully there" right up until it's flung offscreen.
+  const cardOpacity = useTransform(dismissX, [-threshold * 2.5, -threshold, 0], [0, 1, 1]);
+
+  const commitDismiss = (velocity = 0) => {
+    const val = dismissX.get();
+    const target = -500;
+    const remaining = target - val;
+    const fastFlick = Math.abs(velocity) > 800;
+    animate(dismissX, target, {
+      type: "tween",
+      ease: "easeIn",
+      duration: fastFlick ? 0.12 : Math.min(0.28, Math.max(0.16, Math.abs(remaining) / 1400)),
+    }).then(onClear);
+  };
+
+  const handleDragEnd = (_e: unknown, info: { velocity: { x: number } }) => {
+    if (dismissX.get() <= -threshold) {
+      commitDismiss(info.velocity.x);
+    } else {
+      animate(dismissX, 0, {
+        type: "spring",
+        velocity: info.velocity.x,
+        stiffness: SWIPE_SPRING_STIFFNESS,
+        damping: SWIPE_SPRING_DAMPING,
+      });
+    }
+    window.setTimeout(() => { wasDragging.current = false; }, 80);
   };
 
   return (
@@ -481,8 +516,14 @@ function NotificationListRow({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, transition: { duration: 0.2, ease: "easeOut" } }}
       transition={{ layout: NOTIFICATION_AREA_TRANSITION, default: { type: "spring", stiffness: 420, damping: 20 } }}
-      style={{ x: dismissX }}
-      className="flex items-start gap-3 rounded-xl border border-stone-200 bg-white p-3 shadow-sm"
+      drag="x"
+      dragConstraints={{ left: -threshold * 1.4, right: 0 }}
+      dragElastic={0.15}
+      dragMomentum={false}
+      onDragStart={() => { wasDragging.current = true; }}
+      onDragEnd={handleDragEnd}
+      style={{ x: dismissX, opacity: cardOpacity }}
+      className="flex items-start gap-3 rounded-xl border border-stone-200 bg-white p-3 shadow-sm cursor-grab active:cursor-grabbing"
     >
       <div className={cn("flex items-center justify-center size-8 shrink-0 rounded-full", styles.ring, styles.iconFg)}>
         <Icon className="size-4" />
@@ -492,7 +533,11 @@ function NotificationListRow({
         {n.body && <p className="mt-0.5 text-xs text-stone-600">{n.body}</p>}
         <div className="mt-1 flex items-center gap-2">
           {n.sourceRef && (
-            <button type="button" onClick={onActivate} className="text-xs font-medium text-blue-600 hover:text-blue-700">
+            <button
+              type="button"
+              onClick={() => { if (!wasDragging.current) onActivate(); }}
+              className="text-xs font-medium text-blue-600 hover:text-blue-700"
+            >
               {viewLabel}
             </button>
           )}
@@ -501,7 +546,7 @@ function NotificationListRow({
       </div>
       <button
         type="button"
-        onClick={handleClear}
+        onClick={() => { if (!wasDragging.current) commitDismiss(); }}
         aria-label="Clear notification"
         className="shrink-0 grid place-items-center size-7 rounded-full text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors"
       >
