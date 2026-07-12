@@ -146,7 +146,7 @@ function NotificationTitle({ title, className }: { title: string; className?: st
 }
 
 export function NotificationBar() {
-  const { live, dismiss, snooze, silence, unsilence, activate } = useNotifications();
+  const { live, dismiss, snooze, silence, unsilence, enableChime, activate } = useNotifications();
   const { prefs } = useNotifications();
 
   // Newest on top — show up to maxStackVisible.
@@ -207,6 +207,7 @@ export function NotificationBar() {
               onSnooze={() => snooze(n.id)}
               onSilence={() => silence(n.id)}
               onUnsilence={() => unsilence(n.id)}
+              onEnableChime={() => enableChime(n.id)}
             />
           ))}
           {overflow > 0 && (
@@ -236,6 +237,7 @@ function NotificationRow({
   onSnooze,
   onSilence,
   onUnsilence,
+  onEnableChime,
 }: {
   n: Notification;
   nowMs: number;
@@ -244,6 +246,7 @@ function NotificationRow({
   onSnooze: () => void;
   onSilence: () => void;
   onUnsilence: () => void;
+  onEnableChime: () => void;
 }) {
   const silenced = n.state === "silenced";
   // Once silenced the row stays but reads as muted, regardless of the
@@ -252,14 +255,17 @@ function NotificationRow({
   const styles = KIND_STYLES[n.kind];
   const alert = isAlert(n.kind);
   const showSnooze = alert && n.allowSnooze;
-  const hasChime = n.icon === "bell-chime" && !silenced;
-  // Whether this alert HAS a chime at all — unlike hasChime, doesn't drop
-  // out once silenced, so the mute button stays put as a toggle instead of
-  // vanishing the moment it's pressed (see the RowButton below).
   const isChimeCapable = n.icon === "bell-chime";
-  const showSilence = alert && isChimeCapable;
-  const canSwipeRight = showSnooze || showSilence;
-  const rightAction = showSnooze ? onSnooze : showSilence ? (silenced ? onUnsilence : onSilence) : undefined;
+  const hasChime = isChimeCapable && !silenced;
+  // "off": never configured audible — button shows dimmed, tapping it opts
+  // the alert into audio rather than the button just being absent, so
+  // there's still a way to turn one on that wasn't originally set to be.
+  // "on"/"muted" behave as the existing mute toggle once chime-capable.
+  const audioState: "off" | "on" | "muted" = !isChimeCapable ? "off" : silenced ? "muted" : "on";
+  const showAudioButton = alert;
+  const audioAction = audioState === "off" ? onEnableChime : audioState === "muted" ? onUnsilence : onSilence;
+  const canSwipeRight = showSnooze || showAudioButton;
+  const rightAction = showSnooze ? onSnooze : showAudioButton ? audioAction : undefined;
 
   // Vibrate every 2s while an alert with chime is visible — the actual
   // repeating alarm SOUND is owned centrally (see NotificationBar), so at
@@ -282,20 +288,25 @@ function NotificationRow({
   // invisible well before the (larger) offscreen travel finishes.
   const bubbleOpacity = useTransform(dragX, [-threshold * 2.5, -threshold, 0, threshold, threshold * 2.5], [0, 1, 1, 1, 0]);
 
-  // Three points: home (dragX 0, everything full size), and a trigger point
-  // in each direction where only that direction's action stays — everything
-  // else recedes to 0 by the time you reach it, so the row buttons visually
-  // narrow down to just the one about to fire.
   const rightIsSnooze = showSnooze;
-  const rightIsSilence = !showSnooze && showSilence;
-  const dismissOpacity = useTransform(dragX, [-threshold, 0, threshold], [1, 1, 0]);
-  const dismissScale = useTransform(dragX, [-threshold, 0, threshold], [1, 1, 0.5]);
-  const snoozeOpacity = useTransform(dragX, [-threshold, 0, threshold], [0, 1, rightIsSnooze ? 1 : 0]);
-  const snoozeScale = useTransform(dragX, [-threshold, 0, threshold], [0.5, 1, rightIsSnooze ? 1 : 0.5]);
-  const silenceOpacity = useTransform(dragX, [-threshold, 0, threshold], [0, 1, rightIsSilence ? 1 : 0]);
-  const silenceScale = useTransform(dragX, [-threshold, 0, threshold], [0.5, 1, rightIsSilence ? 1 : 0.5]);
-  const openOpacity = useTransform(dragX, [-threshold, 0, threshold], [0, 1, 0]);
-  const openScale = useTransform(dragX, [-threshold, 0, threshold], [0.5, 1, 0.5]);
+  const rightIsAudio = !showSnooze && showAudioButton;
+  // The background layer's own labels — plain words revealed in the gap the
+  // bubble opens up as it slides away from that side (see the backdrop div
+  // below), rather than the buttons themselves shrinking/growing. Clamped
+  // by default past the threshold, so they hold at full opacity through the
+  // rest of a commit fling and only actually fade once the row's own exit
+  // transition takes over (see the outer motion.div's `exit`).
+  const rightLabelOpacity = useTransform(dragX, [-threshold, 0], [1, 0]);
+  const leftLabelOpacity = useTransform(dragX, [0, threshold], [0, 1]);
+  const leftLabel = rightIsSnooze
+    ? "Snooze"
+    : rightIsAudio
+      ? audioState === "off"
+        ? "Turn On"
+        : audioState === "muted"
+          ? "Unmute"
+          : "Mute"
+      : "";
 
   // Shared by both a completed drag-past-threshold and a direct button tap —
   // either way the row should fling off in the matching direction the same
@@ -313,13 +324,10 @@ function NotificationRow({
     }).then(action);
   };
 
-  // Silencing doesn't remove the notification from the list (it stays,
-  // just muted — see NotificationContext's silence()), so unlike the other
-  // actions the row must settle back to its resting position instead of
-  // flinging off: committing it off-screen left the row's own content gone
-  // but its action-button layer (which isn't part of the draggable bubble,
-  // and clamps to full opacity past the drag threshold) stranded in view.
-  const silenceInPlace = (action: () => void) => {
+  // The audio button's own actions (mute/unmute/turn-on) don't remove the
+  // notification from the list — unlike the other actions, the row must
+  // settle back to its resting position instead of flinging off.
+  const settleInPlace = (action: () => void) => {
     action();
     animate(dragX, 0, {
       type: "spring",
@@ -336,8 +344,8 @@ function NotificationRow({
     if (commitLeft) {
       commit(-1, onDismiss, vx);
     } else if (commitRight) {
-      if (rightIsSilence) {
-        silenceInPlace(rightAction!);
+      if (rightIsAudio) {
+        settleInPlace(rightAction!);
       } else {
         commit(1, rightAction!, vx);
       }
@@ -369,6 +377,24 @@ function NotificationRow({
       }}
       className="pointer-events-auto relative"
     >
+      {/* Sits behind the draggable bubble, filling the exact same rounded
+          pill shape — as the bubble slides away from one side, this shows
+          through in the gap it leaves, with a word naming what letting go
+          there would do. Its own opacity is a direct function of dragX (not
+          a fixed fade-in/out), so it reads as the bubble's own motion
+          uncovering it rather than a separately-timed animation, and it
+          only actually disappears once the row itself exits (see the outer
+          motion.div's `exit` above) — a commit fling keeps it lit the whole
+          way off rather than fading early. */}
+      <div className={cn("absolute inset-0 rounded-full flex items-center justify-between px-5", styles.button)}>
+        <motion.span style={{ opacity: leftLabelOpacity }} className="text-sm font-semibold text-white">
+          {leftLabel}
+        </motion.span>
+        <motion.span style={{ opacity: rightLabelOpacity }} className="text-sm font-semibold text-white">
+          Dismiss
+        </motion.span>
+      </div>
+
       <motion.div
         drag="x"
         dragConstraints={
@@ -418,57 +444,56 @@ function NotificationRow({
             )}
           </div>
         </div>
-      </motion.div>
 
-      {/* Action buttons sit fixed in place — NOT part of the draggable
-          bubble above — so they read as a stable preview of "what will
-          happen" that shrinks away rather than something that slides off
-          with the gesture. */}
-      <div
-        className="absolute inset-y-0 right-2 flex items-center gap-0.5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {alert ? (
-          <>
-            {showSilence && (
-              <RowButton
-                label={silenced ? "Unmute alarm" : "Mute alarm"}
-                colorClass={styles.button}
-                style={{ opacity: silenceOpacity, scale: silenceScale }}
-                onClick={() => silenceInPlace(silenced ? onUnsilence : onSilence)}
-              >
-                {/* Crossfades rather than swapping instantly — a toggle, not
-                    a one-shot action, so it needs to read as flipping a
-                    state rather than the button itself changing identity. */}
-                <AnimatePresence mode="popLayout" initial={false}>
-                  <motion.span
-                    key={silenced ? "muted" : "unmuted"}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                    className="grid"
-                  >
-                    {silenced ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
-                  </motion.span>
-                </AnimatePresence>
-              </RowButton>
-            )}
-            {showSnooze && (
-              <RowButton label="Snooze" colorClass={styles.button} style={{ opacity: snoozeOpacity, scale: snoozeScale }} onClick={() => commit(1, onSnooze)}>
-                <ZzIcon className="size-4" />
-              </RowButton>
-            )}
-          </>
-        ) : (
-          <RowButton label="Open" colorClass={styles.button} style={{ opacity: openOpacity, scale: openScale }} onClick={() => commit(1, onActivate)}>
-            <ArrowRight className="size-4" />
+        {/* Action buttons now live inside the draggable bubble itself, so
+            they ride along with it as it's dragged instead of sitting fixed
+            while the bubble slides underneath — the background labels above
+            are what communicate "what will happen" during the gesture now. */}
+        <div
+          className="absolute inset-y-0 right-2 flex items-center gap-0.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {alert ? (
+            <>
+              {showAudioButton && (
+                <RowButton
+                  label={audioState === "off" ? "Turn on alarm" : audioState === "muted" ? "Unmute alarm" : "Mute alarm"}
+                  colorClass={audioState === "off" ? "bg-stone-300 hover:bg-stone-400 active:bg-stone-500" : styles.button}
+                  onClick={() => settleInPlace(audioAction)}
+                >
+                  {/* Crossfades rather than swapping instantly — a toggle,
+                      not a one-shot action, so it needs to read as flipping
+                      a state rather than the button itself changing identity. */}
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    <motion.span
+                      key={audioState}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="grid"
+                    >
+                      {audioState === "on" ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
+                    </motion.span>
+                  </AnimatePresence>
+                </RowButton>
+              )}
+              {showSnooze && (
+                <RowButton label="Snooze" colorClass={styles.button} onClick={() => commit(1, onSnooze)}>
+                  <ZzIcon className="size-4" />
+                </RowButton>
+              )}
+            </>
+          ) : (
+            <RowButton label="Open" colorClass={styles.button} onClick={() => commit(1, onActivate)}>
+              <ArrowRight className="size-4" />
+            </RowButton>
+          )}
+          <RowButton label="Dismiss" colorClass={styles.button} onClick={() => commit(-1, onDismiss)}>
+            <X className="size-4" />
           </RowButton>
-        )}
-        <RowButton label="Dismiss" colorClass={styles.button} style={{ opacity: dismissOpacity, scale: dismissScale }} onClick={() => commit(-1, onDismiss)}>
-          <X className="size-4" />
-        </RowButton>
-      </div>
+        </div>
+      </motion.div>
     </motion.div>
   );
 }
