@@ -377,20 +377,25 @@ function NotificationRow({
       }}
       className="pointer-events-auto relative"
     >
-      {/* Sits behind the draggable bubble, filling the exact same rounded
-          pill shape — as the bubble slides away from one side, this shows
-          through in the gap it leaves, with a word naming what letting go
-          there would do. Its own opacity is a direct function of dragX (not
-          a fixed fade-in/out), so it reads as the bubble's own motion
+      {/* Sits behind the draggable bubble — as it slides away from one
+          side, this shows through in the gap it leaves, with a word naming
+          what letting go there would do. Plain text on the page's own
+          background, not a filled panel: the bubble itself still fades as
+          it clears the drag threshold (see bubbleOpacity), and a solid
+          color back there showed through as a muddy blend during that
+          fade. Matches NotificationListRow's own swipe-to-dismiss below,
+          which is likewise just a plain slide+fade with no reveal panel
+          of its own. Each label's opacity is a direct function of dragX (not a
+          fixed fade-in/out), so it reads as the bubble's own motion
           uncovering it rather than a separately-timed animation, and it
           only actually disappears once the row itself exits (see the outer
           motion.div's `exit` above) — a commit fling keeps it lit the whole
           way off rather than fading early. */}
-      <div className={cn("absolute inset-0 rounded-full flex items-center justify-between px-5", styles.button)}>
-        <motion.span style={{ opacity: leftLabelOpacity }} className="text-sm font-semibold text-white">
+      <div className="absolute inset-0 flex items-center justify-between px-5">
+        <motion.span style={{ opacity: leftLabelOpacity }} className={cn("text-sm font-semibold", styles.iconFg)}>
           {leftLabel}
         </motion.span>
-        <motion.span style={{ opacity: rightLabelOpacity }} className="text-sm font-semibold text-white">
+        <motion.span style={{ opacity: rightLabelOpacity }} className={cn("text-sm font-semibold", styles.iconFg)}>
           Dismiss
         </motion.span>
       </div>
