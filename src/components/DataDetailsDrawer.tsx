@@ -320,62 +320,70 @@ export function DataDetailsDrawer({
         <X className="size-4" />
       </button>
 
-      <div className="h-full overflow-y-auto p-4">
-        <div className="flex items-start gap-1 pr-8">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              triggerPrev();
-            }}
-            disabled={!onPrevCard || exitDir !== null}
-            aria-label="Previous card"
-            className="grid shrink-0 place-items-center size-7 rounded-full border border-stone-200 text-blue-500 hover:bg-blue-50 hover:text-blue-600 active:scale-95 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-          >
-            <ChevronLeft className="size-4" />
-          </button>
-          {/* The title's own vertical reel — a plain "cards flowing left/
-              right" slide would read oddly on multi-line text, so it moves
-              vertically instead (like an odometer digit), matching the
-              same "prev/next" direction as the horizontal content slide
-              below: prev reels upward (this exits up, the incoming title
-              rises up from below), next reels downward (opposite). */}
-          <motion.h2
-            className="font-display text-base leading-[1.15] flex-1 min-w-0 text-center"
-            initial={slideFrom ? { y: slideFrom === "right" ? -16 : 16, opacity: 0 } : false}
+      <div className="flex h-full flex-col">
+        {/* Sticky header — stays put while the content below scrolls under
+            it. bg-background keeps scrolled content from showing through;
+            the border gives scrolled content a clear edge to disappear
+            behind instead of just clipping invisibly. */}
+        <div className="shrink-0 border-b border-stone-200/70 bg-background p-4 pb-3">
+          <div className="flex items-start gap-1 pr-8">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerPrev();
+              }}
+              disabled={!onPrevCard || exitDir !== null}
+              aria-label="Previous card"
+              className="grid shrink-0 place-items-center size-7 rounded-full border border-stone-200 text-blue-500 hover:bg-blue-50 hover:text-blue-600 active:scale-95 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            {/* The title's own vertical reel — a plain "cards flowing left/
+                right" slide would read oddly on multi-line text, so it moves
+                vertically instead (like an odometer digit), matching the
+                same "prev/next" direction as the horizontal content slide
+                below: prev reels upward (this exits up, the incoming title
+                rises up from below), next reels downward (opposite). */}
+            <motion.h2
+              className="font-display text-base leading-[1.15] flex-1 min-w-0 text-center"
+              initial={slideFrom ? { y: slideFrom === "right" ? -16 : 16, opacity: 0 } : false}
+              animate={
+                exitDir ? { y: exitDir === "next" ? 16 : -16, opacity: 0 } : { y: 0, opacity: 1 }
+              }
+              transition={
+                exitDir ? { duration: EXIT_MS / 1000, ease: "easeIn" } : { type: "spring", stiffness: 380, damping: 32 }
+              }
+            >
+              {title}
+            </motion.h2>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerNext();
+              }}
+              disabled={!onNextCard || exitDir !== null}
+              aria-label="Next card"
+              className="grid shrink-0 place-items-center size-7 rounded-full border border-stone-200 text-blue-500 hover:bg-blue-50 hover:text-blue-600 active:scale-95 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            >
+              <ChevronRight className="size-4" />
+            </button>
+          </div>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          <motion.div
+            initial={slideFrom ? { x: slideFrom === "right" ? 24 : -24, opacity: 0 } : false}
             animate={
-              exitDir ? { y: exitDir === "next" ? 16 : -16, opacity: 0 } : { y: 0, opacity: 1 }
+              exitDir ? { x: exitDir === "next" ? -24 : 24, opacity: 0 } : { x: 0, opacity: 1 }
             }
             transition={
               exitDir ? { duration: EXIT_MS / 1000, ease: "easeIn" } : { type: "spring", stiffness: 380, damping: 32 }
             }
           >
-            {title}
-          </motion.h2>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              triggerNext();
-            }}
-            disabled={!onNextCard || exitDir !== null}
-            aria-label="Next card"
-            className="grid shrink-0 place-items-center size-7 rounded-full border border-stone-200 text-blue-500 hover:bg-blue-50 hover:text-blue-600 active:scale-95 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-          >
-            <ChevronRight className="size-4" />
-          </button>
+            {details && <div className="text-sm">{details}</div>}
+          </motion.div>
         </div>
-        <motion.div
-          initial={slideFrom ? { x: slideFrom === "right" ? 24 : -24, opacity: 0 } : false}
-          animate={
-            exitDir ? { x: exitDir === "next" ? -24 : 24, opacity: 0 } : { x: 0, opacity: 1 }
-          }
-          transition={
-            exitDir ? { duration: EXIT_MS / 1000, ease: "easeIn" } : { type: "spring", stiffness: 380, damping: 32 }
-          }
-        >
-          {details && <div className="mt-1 text-sm">{details}</div>}
-        </motion.div>
       </div>
     </motion.div>,
     document.body,
