@@ -1,5 +1,14 @@
 import { createPortal } from "react-dom";
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { motion } from "motion/react";
 import { X, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { TimeChevronIcon } from "./icons/TimeChevronIcon";
@@ -364,16 +373,24 @@ export function DataDetailsDrawer({
         aria-label={open ? "Close details drawer" : "Open details drawer"}
         aria-expanded={open}
         className={cn(
-          "absolute -left-7 -top-0.5 h-10 w-7 grid place-items-center rounded-l-lg bg-background text-stone-500 hover:text-stone-800 transition-colors",
+          "absolute -left-7 -top-0.5 w-7 grid place-items-center rounded-l-lg bg-background text-stone-500 hover:text-stone-800 transition-colors",
           open ? "border-2 border-blue-400/80" : "border border-stone-200/70",
           "border-r-0",
         )}
+        // Matches the toolbar's own real rendered height (see toolbarHeight's
+        // own comment) rather than a hardcoded h-10 guess — the two used to
+        // be off by a few px (the toolbar row's border/padding add up to a
+        // hair over 40px) so the tab read as slightly shorter than the bar
+        // it's straddling.
+        style={{ height: toolbarHeight }}
       >
         {/* Base orientation points right; always faces the direction the
             drawer will slide if pressed again — left (toward opening) while
             closed, right (toward closing) while open — and animates between
             the two as the drawer itself slides. */}
-        <TimeChevronIcon className={cn("size-3.5 transition-transform duration-300", !open && "rotate-180")} />
+        <TimeChevronIcon
+          className={cn("size-3.5 transition-transform duration-300", !open && "rotate-180")}
+        />
       </button>
 
       {/* Arrow — points at the card this drawer's contents belong to. Only
@@ -411,14 +428,27 @@ export function DataDetailsDrawer({
             e.stopPropagation();
             scrollToCard();
           }}
-          aria-label={offDirection === "above" ? "Active card is above — scroll to it" : "Active card is below — scroll to it"}
+          aria-label={
+            offDirection === "above"
+              ? "Active card is above — scroll to it"
+              : "Active card is below — scroll to it"
+          }
           title="Scroll to active card"
           className={cn(
             "absolute left-3 z-10 grid place-items-center size-7 rounded-full border-2 border-blue-400/80 bg-background text-blue-600 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.25)] hover:bg-blue-50 transition-colors active:scale-95",
-            offDirection === "above" ? "top-3" : "bottom-3",
+            offDirection === "below" && "bottom-3",
           )}
+          // "above" sits just below the sticky header instead of a flat
+          // top-3 — that used to land right on top of the title/nav/close
+          // row (all live in the first toolbarHeight-tall band), blocking
+          // them instead of just pointing the way back to the card.
+          style={offDirection === "above" ? { top: toolbarHeight + 12 } : undefined}
         >
-          {offDirection === "above" ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+          {offDirection === "above" ? (
+            <ChevronUp className="size-4" />
+          ) : (
+            <ChevronDown className="size-4" />
+          )}
         </button>
       )}
 
@@ -430,7 +460,10 @@ export function DataDetailsDrawer({
             too (rather than floating absolutely over the body) so it, the
             arrows, and the title's own top line all sit in one flex row and
             align naturally instead of needing separately-matched offsets. */}
-        <div className="shrink-0 border-b border-stone-200/70 bg-background p-4 pb-3">
+        <div
+          className="shrink-0 border-b border-stone-200/70 bg-background p-4 pb-3"
+          style={{ minHeight: toolbarHeight }}
+        >
           <div className="flex items-start gap-1">
             <button
               type="button"
@@ -444,7 +477,12 @@ export function DataDetailsDrawer({
             >
               <ChevronLeft className="size-4" />
             </button>
-            <DrawerTitle title={title} slideFrom={slideFrom} exitDir={exitDir} onClick={onTitleClick} />
+            <DrawerTitle
+              title={title}
+              slideFrom={slideFrom}
+              exitDir={exitDir}
+              onClick={onTitleClick}
+            />
             <button
               type="button"
               onClick={(e) => {
@@ -457,6 +495,10 @@ export function DataDetailsDrawer({
             >
               <ChevronRight className="size-4" />
             </button>
+            {/* No circular button background here (unlike the prev/next
+                arrows) — this is the drawer's own close action, not another
+                step through the card list, so it reads as a plain icon
+                control rather than matching their pill-button chrome. */}
             <button
               type="button"
               onClick={(e) => {
@@ -464,13 +506,18 @@ export function DataDetailsDrawer({
                 onOpenChange(false);
               }}
               aria-label="Close"
-              className="-mt-[5px] grid shrink-0 place-items-center size-7 rounded-full text-muted-foreground transition-colors hover:bg-stone-100 hover:text-foreground"
+              className="-mt-[5px] -mr-1 grid shrink-0 place-items-center size-7 text-muted-foreground transition-colors hover:text-foreground"
             >
               <X className="size-4" />
             </button>
           </div>
         </div>
-        <DrawerContent details={details} slideFrom={slideFrom} exitDir={exitDir} contentScrollRef={contentScrollRef} />
+        <DrawerContent
+          details={details}
+          slideFrom={slideFrom}
+          exitDir={exitDir}
+          contentScrollRef={contentScrollRef}
+        />
       </div>
     </motion.div>,
     document.body,

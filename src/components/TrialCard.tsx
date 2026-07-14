@@ -50,6 +50,8 @@ export interface TrialCardProps extends CardEditAndDrawerProps {
   phase?: string;
   dataType?: string;
   description?: string;
+  /** Omit for "No Min" — a card can set a maximum with no minimum (or vice
+   *  versa) rather than always needing both. */
   minTrials?: number;
   maxTrials?: number;
   isActive?: boolean;
@@ -72,7 +74,7 @@ export function TrialCard({
   phase = "Intervention",
   dataType = "Percent Correct",
   description = "Record whether the learner performed the target behavior independently during this trial.",
-  minTrials = 10,
+  minTrials,
   maxTrials,
   isActive = true,
   onActivate,
@@ -101,16 +103,20 @@ export function TrialCard({
   // Keyed by trial index rather than a parallel array — entries just don't
   // exist for trials that aren't "incorrect" (or don't have a level yet),
   // so it never needs to stay in sync/length with the trials array.
-  const [promptLevel, setPromptLevel] = useCardState<Record<number, string>>(cardKey, "promptLevel", {});
+  const [promptLevel, setPromptLevel] = useCardState<Record<number, string>>(
+    cardKey,
+    "promptLevel",
+    {},
+  );
   // Always one slot ahead of the highest-scored trial (so there's always a
   // next one ready), never fewer than minTrials, capped at maxTrials when
   // set. Anchored to the highest scored INDEX rather than the total scored
   // COUNT, since the expanded list lets trials be scored out of order.
   const [trials, setTrials] = useCardState<TrialResult[]>(cardKey, "trials", () =>
-    Array.from({ length: maxTrials ?? minTrials }, () => null),
+    Array.from({ length: maxTrials ?? minTrials ?? 1 }, () => null),
   );
   const highestScoredIdx = trials.reduce((max, t, i) => (t !== null ? i : max), -1);
-  const displayCount = maxTrials ?? Math.max(minTrials, highestScoredIdx + 2);
+  const displayCount = maxTrials ?? Math.max(minTrials ?? 0, highestScoredIdx + 2);
   useEffect(() => {
     setTrials((prev) => {
       if (prev.length === displayCount) return prev;
@@ -141,11 +147,32 @@ export function TrialCard({
 
   const completedCount = trials.filter((t) => t !== null).length;
   const correctCount = trials.filter((t) => t === "correct").length;
-  const target = maxTrials ?? minTrials;
-  const progress = Math.min(100, Math.round((completedCount / target) * 100));
-  const isComplete = completedCount >= target;
+  const incorrectCount = trials.filter((t) => t === "incorrect").length;
+  const target = maxTrials ?? minTrials ?? 0;
+  const progress = target > 0 ? Math.min(100, Math.round((completedCount / target) * 100)) : 0;
+  const isComplete = target > 0 && completedCount >= target;
   const isMaxReached = maxTrials !== undefined && completedCount >= maxTrials;
-  const remaining = Math.max(0, minTrials - completedCount);
+  // With no fixed minimum, "remaining" counts down toward the max instead
+  // (there's nothing to graph a fixed quota against) — and toward neither
+  // when the card has set no minimum or maximum at all.
+  const remaining =
+    minTrials !== undefined
+      ? Math.max(0, minTrials - completedCount)
+      : maxTrials !== undefined
+        ? Math.max(0, maxTrials - completedCount)
+        : 0;
+  // Percent correct only counts trials actually scored Correct/Error —
+  // No Response trials are excluded from both the numerator and
+  // denominator (they're an absence of a scoreable attempt, not a wrong
+  // one), and the figure only appears once "enough" trials are in: the
+  // card's own minimum when it has one, else at least a single scored
+  // trial (so a lone lucky/unlucky trial can't read as a definitive 0%
+  // or 100%).
+  const scoredForPercent = correctCount + incorrectCount;
+  const percentCorrectReady = completedCount >= (minTrials ?? 1) && scoredForPercent > 0;
+  const percentCorrectDisplay = percentCorrectReady
+    ? `${Math.round((correctCount / scoredForPercent) * 100)}%`
+    : "Min trials not reached";
 
   const { markDirty, resetSignal, sessionRunning } = useCardSession();
   useReportCardStatus(cardKey, completedCount > 0, isComplete);
@@ -154,7 +181,7 @@ export function TrialCard({
   useEffect(() => {
     if (!shouldReset) return;
     markResetHandled();
-    setTrials(Array.from({ length: maxTrials ?? minTrials }, () => null));
+    setTrials(Array.from({ length: maxTrials ?? minTrials ?? 1 }, () => null));
     setCurrent(0);
     setDirection(1);
     setLastAction({ id: 0, value: null });
@@ -209,7 +236,8 @@ export function TrialCard({
     markDirty();
     const isUnspecified = level === UNSPECIFIED_LEVEL;
     const isToggleOff =
-      trials[idx] === "incorrect" && (isUnspecified ? !(idx in promptLevel) : promptLevel[idx] === level);
+      trials[idx] === "incorrect" &&
+      (isUnspecified ? !(idx in promptLevel) : promptLevel[idx] === level);
     setTrials((prev) => {
       const next = [...prev];
       next[idx] = isToggleOff ? null : "incorrect";
@@ -241,7 +269,6 @@ export function TrialCard({
     setCurrentDir(clamped);
   };
 
-
   const stepWidth = BUBBLE + GAP;
   const trackOffset = useMemo(
     () => -(current * stepWidth + BUBBLE_CENTER / 2),
@@ -260,7 +287,8 @@ export function TrialCard({
   if (tileDensity) {
     const large = tileDensity === "large";
     const errorPress = () => {
-      if (promptLevels && promptLevels.length > 0) pickPromptLevel(current, UNSPECIFIED_LEVEL, true);
+      if (promptLevels && promptLevels.length > 0)
+        pickPromptLevel(current, UNSPECIFIED_LEVEL, true);
       else setResult("incorrect");
     };
     return (
@@ -293,10 +321,9 @@ export function TrialCard({
               dataTypeLabel={dataType}
               phase={phase}
               stats={[
-                { label: "Minimum trials", value: minTrials },
-                ...(maxTrials ? [{ label: "Maximum trials", value: maxTrials }] : []),
-                { label: "Correct so far", value: `${correctCount} / ${completedCount || 0}` },
-                { label: "Percent correct", value: `${progress}%` },
+                { label: "Minimum trials", value: minTrials ?? "No Min" },
+                { label: "Maximum trials", value: maxTrials ?? "No Max" },
+                { label: "Percent Correct (this session)", value: percentCorrectDisplay },
               ]}
             />
             {teachingProcedure && (
@@ -307,7 +334,13 @@ export function TrialCard({
           </>
         }
         actions={
-          <div className={cn("flex items-center justify-center", noResponse ? "gap-1.5" : "gap-2", large && (noResponse ? "gap-2.5" : "gap-3.5"))}>
+          <div
+            className={cn(
+              "flex items-center justify-center",
+              noResponse ? "gap-1.5" : "gap-2",
+              large && (noResponse ? "gap-2.5" : "gap-3.5"),
+            )}
+          >
             <button
               type="button"
               onClick={(e) => {
@@ -394,7 +427,10 @@ export function TrialCard({
                   e.stopPropagation();
                   goTo(i);
                 }}
-                className={cn("font-display font-bold tabular-nums transition-[font-size] leading-none", color)}
+                className={cn(
+                  "font-display font-bold tabular-nums transition-[font-size] leading-none",
+                  color,
+                )}
                 style={{ fontSize: isCenter ? (large ? 38 : 28) : large ? 13 : 10 }}
               >
                 {i + 1}
@@ -498,424 +534,436 @@ export function TrialCard({
       )}
     >
       <div className="relative rounded-xl overflow-hidden">
-      {/* Header */}
-      <header className={cn("flex items-start gap-1 pl-5 pt-2 pb-0", reorderEditing ? "pr-3" : "pr-9")}>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setExpanded((v) => !v);
-          }}
-          aria-expanded={expanded}
-          aria-label={expanded ? "Show standard view" : "Show all trials"}
-          className="-ml-1.5 mt-[0.5px] shrink-0 grid place-items-center rounded-md p-0.5 text-blue-500 transition-colors hover:bg-blue-50 hover:text-blue-600"
+        {/* Header */}
+        <header
+          className={cn("flex items-start gap-1 pl-5 pt-2 pb-0", reorderEditing ? "pr-3" : "pr-9")}
         >
-          <TimeChevronIcon
-            className={cn("size-4 transition-transform duration-200", expanded && "translate-y-0.5 rotate-90")}
-          />
-        </button>
-        <h2 className="font-display text-lg leading-[1.05] flex-1 mr-auto mt-0.5">{title}</h2>
-        {reorderEditing ? (
-          <CardEditControls
-            favorited={favorited}
-            onToggleFavorite={onToggleFavorite ?? (() => {})}
-            cardHidden={cardHidden}
-            onToggleHidden={onToggleHidden ?? (() => {})}
-            dragControls={dragControls}
-          />
-        ) : (
-          <div className="text-right leading-tight -mt-0.5">
-            <div className="text-xs font-medium italic text-muted-foreground">{phase}</div>
-            <div className="flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
-              <PercentCorrectIcon className="size-3 shrink-0" />
-              <span>{dataType}</span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded((v) => !v);
+            }}
+            aria-expanded={expanded}
+            aria-label={expanded ? "Show standard view" : "Show all trials"}
+            className="-ml-1.5 mt-[0.5px] shrink-0 grid place-items-center rounded-md p-0.5 text-blue-500 transition-colors hover:bg-blue-50 hover:text-blue-600"
+          >
+            <TimeChevronIcon
+              className={cn(
+                "size-4 transition-transform duration-200",
+                expanded && "translate-y-0.5 rotate-90",
+              )}
+            />
+          </button>
+          <h2 className="font-display text-lg leading-[1.05] flex-1 mr-auto mt-0.5">{title}</h2>
+          {reorderEditing ? (
+            <CardEditControls
+              favorited={favorited}
+              onToggleFavorite={onToggleFavorite ?? (() => {})}
+              cardHidden={cardHidden}
+              onToggleHidden={onToggleHidden ?? (() => {})}
+              dragControls={dragControls}
+            />
+          ) : (
+            <div className="text-right leading-tight -mt-0.5">
+              <div className="text-xs font-medium italic text-muted-foreground">{phase}</div>
+              <div className="flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
+                <PercentCorrectIcon className="size-3 shrink-0" />
+                <span>{dataType}</span>
+              </div>
             </div>
-          </div>
-        )}
-      </header>
+          )}
+        </header>
 
-      {/* Positioned so the circle's center sits at the card's own corner-radius
+        {/* Positioned so the circle's center sits at the card's own corner-radius
           center (rounded-xl = 20px), rather than in the header's flex flow.
           Hidden in edit mode along with the phase/data-type label. */}
-      {!reorderEditing && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenDetails?.();
-          }}
-          aria-label="Trial details"
-          className="absolute top-2 right-2 grid size-6 place-items-center rounded-full border border-current text-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-        >
-          <DetailsIcon className="size-4" strokeWidth={1.5} />
-        </button>
-      )}
-
-      {isActive && (
-        <DataDetailsDrawer
-          open={detailsOpen ?? false}
-          onOpenChange={onDetailsOpenChange ?? (() => {})}
-          title={title}
-          description={description}
-          onPrevCard={onPrevCard}
-          onNextCard={onNextCard}
-          slideFrom={slideFrom}
-          details={
-            <>
-              <DrawerQuickFacts
-                icon={<PercentCorrectIcon />}
-                dataTypeLabel={dataType}
-                phase={phase}
-                stats={[
-                  { label: "Minimum trials", value: minTrials },
-                  ...(maxTrials ? [{ label: "Maximum trials", value: maxTrials }] : []),
-                  { label: "Correct so far", value: `${correctCount} / ${completedCount || 0}` },
-                  { label: "Percent correct", value: `${progress}%` },
-                ]}
-              />
-              {teachingProcedure && (
-                <div className="mt-4">
-                  <TeachingProcedureAccordion data={teachingProcedure} />
-                </div>
-              )}
-            </>
-          }
-          top={stickyTop}
-          toolbarHeight={toolbarHeight}
-          cardRef={articleRef}
-        />
-      )}
-
-      {/* Universal header/body divider — present in both the standard and
-          expanded views, not just faded in while expanded. */}
-      <div className="mx-[18px] mt-2.5 border-t border-dashed border-stone-200" />
-
-      <div
-        className={cn(
-          "grid transition-[grid-template-rows] duration-300 ease-out",
-          expanded ? "grid-rows-[0fr]" : "grid-rows-[1fr]",
-        )}
-      >
-        <div className="overflow-hidden">
-      {/* Bubble row */}
-      <div className="relative px-2 mt-1">
-        <div className="relative h-16">
-          {/* Triangle nav buttons — centered with bubbles */}
-          <TriangleNav
-            direction="left"
-            onClick={() => goTo(current - 1)}
-            disabled={current === 0}
-          />
-          <TriangleNav
-            direction="right"
-            onClick={() => goTo(current + 1)}
-            disabled={
-              (trials[current] === null && current >= completedCount) ||
-              (maxTrials ? current >= maxTrials - 1 : false)
-            }
-          />
-
-
-
-          <div
-            ref={containerRef}
-            className="relative h-16 overflow-visible"
-            style={{
-              WebkitMaskImage:
-                "linear-gradient(to right, transparent 0, black 22%, black 78%, transparent 100%)",
-              maskImage:
-                "linear-gradient(to right, transparent 0, black 22%, black 78%, transparent 100%)",
+        {!reorderEditing && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenDetails?.();
             }}
+            aria-label="Trial details"
+            className="absolute top-2 right-2 grid size-6 place-items-center rounded-full border border-current text-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
           >
-            <motion.div
-              className="absolute top-1/2 left-1/2 flex items-center"
-              style={{
-                gap: GAP,
-                x: dragX,
-                translateY: "-50%",
-              }}
-              animate={{ x: trackOffset }}
-              transition={{ type: "spring", stiffness: 320, damping: 34 }}
-              drag="x"
-              dragConstraints={{ left: -((trials.length - 1) * stepWidth) - 200, right: 200 }}
-              dragElastic={0.08}
-              onDragEnd={handleDragEnd}
-            >
-              {trials.map((t, i) => {
-                const isCenter = i === current;
-                const bg =
-                  t === "correct"
-                    ? "bg-green-50 border-green-300"
-                    : t === "incorrect"
-                      ? "bg-red-50 border-red-300"
-                      : t === "no-response"
-                        ? "bg-amber-50 border-amber-300"
-                        : "bg-foreground/5 border-foreground/10";
-                const textColor =
-                  t === "correct"
-                    ? "text-green-700"
-                    : t === "incorrect"
-                      ? "text-red-700"
-                      : t === "no-response"
-                        ? "text-amber-700"
-                        : "text-foreground/40";
-                const centerTextColor =
-                  t === "correct"
-                    ? "text-green-700"
-                    : t === "incorrect"
-                      ? "text-red-700"
-                      : t === "no-response"
-                        ? "text-amber-700"
-                        : "text-foreground";
-                const centerBg =
-                  lastAction.value === "correct" && i === current - 1
-                    ? "bg-green-100 border-green-400"
-                    : lastAction.value === "incorrect" && i === current - 1
-                      ? "bg-red-100 border-red-400"
-                      : lastAction.value === "no-response" && i === current - 1
-                        ? "bg-amber-100 border-amber-400"
-                        : "";
-                return (
-                  <motion.button
-                    key={i}
-                    onClick={() => goTo(i)}
-                    className="relative shrink-0 grid place-items-center rounded-full font-medium select-none"
-                    animate={{
-                      width: isCenter ? BUBBLE_CENTER : BUBBLE,
-                      height: isCenter ? BUBBLE_CENTER : BUBBLE,
+            <DetailsIcon className="size-4" strokeWidth={1.5} />
+          </button>
+        )}
+
+        {isActive && (
+          <DataDetailsDrawer
+            open={detailsOpen ?? false}
+            onOpenChange={onDetailsOpenChange ?? (() => {})}
+            title={title}
+            description={description}
+            onPrevCard={onPrevCard}
+            onNextCard={onNextCard}
+            slideFrom={slideFrom}
+            details={
+              <>
+                <DrawerQuickFacts
+                  icon={<PercentCorrectIcon />}
+                  dataTypeLabel={dataType}
+                  phase={phase}
+                  stats={[
+                    { label: "Minimum trials", value: minTrials ?? "No Min" },
+                    { label: "Maximum trials", value: maxTrials ?? "No Max" },
+                    { label: "Percent Correct (this session)", value: percentCorrectDisplay },
+                  ]}
+                />
+                {teachingProcedure && (
+                  <div className="mt-4">
+                    <TeachingProcedureAccordion data={teachingProcedure} />
+                  </div>
+                )}
+              </>
+            }
+            top={stickyTop}
+            toolbarHeight={toolbarHeight}
+            cardRef={articleRef}
+          />
+        )}
+
+        {/* Universal header/body divider — present in both the standard and
+          expanded views, not just faded in while expanded. */}
+        <div className="mx-[18px] mt-2.5 border-t border-dashed border-stone-200" />
+
+        <div
+          className={cn(
+            "grid transition-[grid-template-rows] duration-300 ease-out",
+            expanded ? "grid-rows-[0fr]" : "grid-rows-[1fr]",
+          )}
+        >
+          <div className="overflow-hidden">
+            {/* Bubble row */}
+            <div className="relative px-2 mt-1">
+              <div className="relative h-16">
+                {/* Triangle nav buttons — centered with bubbles */}
+                <TriangleNav
+                  direction="left"
+                  onClick={() => goTo(current - 1)}
+                  disabled={current === 0}
+                />
+                <TriangleNav
+                  direction="right"
+                  onClick={() => goTo(current + 1)}
+                  disabled={
+                    (trials[current] === null && current >= completedCount) ||
+                    (maxTrials ? current >= maxTrials - 1 : false)
+                  }
+                />
+
+                <div
+                  ref={containerRef}
+                  className="relative h-16 overflow-visible"
+                  style={{
+                    WebkitMaskImage:
+                      "linear-gradient(to right, transparent 0, black 22%, black 78%, transparent 100%)",
+                    maskImage:
+                      "linear-gradient(to right, transparent 0, black 22%, black 78%, transparent 100%)",
+                  }}
+                >
+                  <motion.div
+                    className="absolute top-1/2 left-1/2 flex items-center"
+                    style={{
+                      gap: GAP,
+                      x: dragX,
+                      translateY: "-50%",
                     }}
-                    transition={{ type: "spring", stiffness: 360, damping: 28 }}
+                    animate={{ x: trackOffset }}
+                    transition={{ type: "spring", stiffness: 320, damping: 34 }}
+                    drag="x"
+                    dragConstraints={{ left: -((trials.length - 1) * stepWidth) - 200, right: 200 }}
+                    dragElastic={0.08}
+                    onDragEnd={handleDragEnd}
                   >
-                    <div
-                      key={`${i}-${t ?? "none"}`}
-                      className={cn(
-                        "absolute inset-0 rounded-full flex items-center justify-center",
-                        isCenter ? "border-2" : "border",
-                        bg,
-                        isCenter && !t && "bg-card border-foreground/30",
-                        isCenter && centerBg,
-                        isCenter && t && "animate-bubble-hop",
-                      )}
-                    >
-                      {isCenter ? (
-                        <AnimatePresence mode="wait">
-                          <motion.span
-                            key={i}
-                            initial={{ opacity: 0, y: 6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -6 }}
-                            transition={{ duration: 0.25 }}
-                            className={cn("font-display text-4xl leading-none tabular-nums", centerTextColor)}
+                    {trials.map((t, i) => {
+                      const isCenter = i === current;
+                      const bg =
+                        t === "correct"
+                          ? "bg-green-50 border-green-300"
+                          : t === "incorrect"
+                            ? "bg-red-50 border-red-300"
+                            : t === "no-response"
+                              ? "bg-amber-50 border-amber-300"
+                              : "bg-foreground/5 border-foreground/10";
+                      const textColor =
+                        t === "correct"
+                          ? "text-green-700"
+                          : t === "incorrect"
+                            ? "text-red-700"
+                            : t === "no-response"
+                              ? "text-amber-700"
+                              : "text-foreground/40";
+                      const centerTextColor =
+                        t === "correct"
+                          ? "text-green-700"
+                          : t === "incorrect"
+                            ? "text-red-700"
+                            : t === "no-response"
+                              ? "text-amber-700"
+                              : "text-foreground";
+                      const centerBg =
+                        lastAction.value === "correct" && i === current - 1
+                          ? "bg-green-100 border-green-400"
+                          : lastAction.value === "incorrect" && i === current - 1
+                            ? "bg-red-100 border-red-400"
+                            : lastAction.value === "no-response" && i === current - 1
+                              ? "bg-amber-100 border-amber-400"
+                              : "";
+                      return (
+                        <motion.button
+                          key={i}
+                          onClick={() => goTo(i)}
+                          className="relative shrink-0 grid place-items-center rounded-full font-medium select-none"
+                          animate={{
+                            width: isCenter ? BUBBLE_CENTER : BUBBLE,
+                            height: isCenter ? BUBBLE_CENTER : BUBBLE,
+                          }}
+                          transition={{ type: "spring", stiffness: 360, damping: 28 }}
+                        >
+                          <div
+                            key={`${i}-${t ?? "none"}`}
+                            className={cn(
+                              "absolute inset-0 rounded-full flex items-center justify-center",
+                              isCenter ? "border-2" : "border",
+                              bg,
+                              isCenter && !t && "bg-card border-foreground/30",
+                              isCenter && centerBg,
+                              isCenter && t && "animate-bubble-hop",
+                            )}
                           >
-                            {i + 1}
-                          </motion.span>
-                        </AnimatePresence>
-                      ) : (
-                        <span className={cn("text-[7px] font-medium leading-none", textColor)}>
-                          {i + 1}
-                        </span>
-                      )}
-                    </div>
-                    {i < minTrials && !t && (
-                      <span
-                        className="absolute -bottom-2 left-1/2 -translate-x-1/2 size-1 rounded-full bg-foreground/35"
+                            {isCenter ? (
+                              <AnimatePresence mode="wait">
+                                <motion.span
+                                  key={i}
+                                  initial={{ opacity: 0, y: 6 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  exit={{ opacity: 0, y: -6 }}
+                                  transition={{ duration: 0.25 }}
+                                  className={cn(
+                                    "font-display text-4xl leading-none tabular-nums",
+                                    centerTextColor,
+                                  )}
+                                >
+                                  {i + 1}
+                                </motion.span>
+                              </AnimatePresence>
+                            ) : (
+                              <span
+                                className={cn("text-[7px] font-medium leading-none", textColor)}
+                              >
+                                {i + 1}
+                              </span>
+                            )}
+                          </div>
+                          {minTrials !== undefined && i < minTrials && !t && (
+                            <span
+                              className="absolute -bottom-2 left-1/2 -translate-x-1/2 size-1 rounded-full bg-foreground/35"
+                              aria-hidden
+                            />
+                          )}
+                        </motion.button>
+                      );
+                    })}
+                    {maxTrials && (
+                      <div
+                        className="shrink-0 w-px bg-foreground/40 mx-2"
+                        style={{ height: 40 }}
                         aria-hidden
                       />
                     )}
-                  </motion.button>
-                );
-              })}
-              {maxTrials && (
-                <div
-                  className="shrink-0 w-px bg-foreground/40 mx-2"
-                  style={{ height: 40 }}
-                  aria-hidden
-                />
-              )}
-            </motion.div>
-          </div>
-        </div>
+                  </motion.div>
+                </div>
+              </div>
 
-        {/* Helper text under bubbles */}
-        <div className="text-center text-xs text-muted-foreground">
-          Trial {current + 1} (of {target} {maxTrials ? "max" : "required"})
-        </div>
-      </div>
+              {/* Helper text under bubbles */}
+              <div className="text-center text-xs text-muted-foreground">
+                Trial {current + 1} (of {target} {maxTrials ? "max" : "required"})
+              </div>
+            </div>
 
-
-
-      {/* Action buttons row with slide animation */}
-      <div className="relative mt-3 px-5 h-12 overflow-hidden">
-        <AnimatePresence mode="popLayout" initial={false}>
-          <motion.div
-            key={current}
-            initial={{ x: direction > 0 ? "60%" : "-60%", opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: direction > 0 ? "-60%" : "60%", opacity: 0 }}
-            transition={{ type: "spring", stiffness: 280, damping: 30 }}
-            className={cn("absolute inset-0 px-5 flex items-center", noResponse ? "gap-1.5" : "gap-3")}
-          >
-            {promptLevels && promptLevels.length > 0 ? (
-              <PromptLevelButton
-                levels={promptLevels}
-                selectedLevel={promptLevel[current] ?? null}
-                selected={trials[current] === "incorrect"}
-                disabled={!sessionRunning || (isMaxReached && trials[current] === null)}
-                onPick={(level) => pickPromptLevel(current, level, true)}
-                topInset={stickyTop + toolbarHeight}
-              />
-            ) : (
-              <ActionButton
-                variant="incorrect"
-                selected={trials[current] === "incorrect"}
-                onClick={() => setResult("incorrect")}
-                disabled={!sessionRunning || (isMaxReached && trials[current] === null)}
-                dense={noResponse}
-              />
-            )}
-            {noResponse && (
-              <ActionButton
-                variant="no-response"
-                selected={trials[current] === "no-response"}
-                onClick={() => setResult("no-response")}
-                disabled={!sessionRunning || (isMaxReached && trials[current] === null)}
-                dense
-              />
-            )}
-            <ActionButton
-              variant="correct"
-              selected={trials[current] === "correct"}
-              onClick={() => setResult("correct")}
-              disabled={!sessionRunning || (isMaxReached && trials[current] === null)}
-              dense={noResponse}
-            />
-          </motion.div>
-        </AnimatePresence>
-      </div>
-        </div>
-      </div>
-
-      {/* Expanded view — every trial as its own row, each with the same
-          Correct/Error buttons as the standard view, so a run of trials can
-          be corrected or filled in without stepping through one at a time. */}
-      <div
-        className={cn(
-          "grid transition-[grid-template-rows] duration-300 ease-out",
-          expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-        )}
-      >
-        <div className="overflow-hidden">
-          <ol className="px-3 pt-2 pb-3 space-y-1">
-            {trials.map((t, i) => (
-              <li key={i} className="flex items-center gap-2 rounded-lg px-2 py-1.5">
-                <span className="grid place-items-center size-6 rounded-full bg-stone-100 text-[11px] font-medium text-foreground/60 shrink-0">
-                  {i + 1}
-                </span>
-                <span className="flex-1" />
-                <div className="flex items-center gap-1.5 shrink-0">
+            {/* Action buttons row with slide animation */}
+            <div className="relative mt-3 px-5 h-12 overflow-hidden">
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.div
+                  key={current}
+                  initial={{ x: direction > 0 ? "60%" : "-60%", opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: direction > 0 ? "-60%" : "60%", opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 280, damping: 30 }}
+                  className={cn(
+                    "absolute inset-0 px-5 flex items-center",
+                    noResponse ? "gap-1.5" : "gap-3",
+                  )}
+                >
                   {promptLevels && promptLevels.length > 0 ? (
-                    <RowPromptLevelButton
+                    <PromptLevelButton
                       levels={promptLevels}
-                      selectedLevel={promptLevel[i] ?? null}
-                      selected={t === "incorrect"}
-                      disabled={!sessionRunning}
-                      onPick={(level) => pickPromptLevel(i, level, false)}
+                      selectedLevel={promptLevel[current] ?? null}
+                      selected={trials[current] === "incorrect"}
+                      disabled={!sessionRunning || (isMaxReached && trials[current] === null)}
+                      onPick={(level) => pickPromptLevel(current, level, true)}
                       topInset={stickyTop + toolbarHeight}
                     />
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => applyResult(i, "incorrect", false)}
-                      disabled={!sessionRunning}
-                      className={cn(
-                        "h-7 rounded-full border-2 flex items-center justify-center gap-1 px-2.5 text-[11px] font-semibold transition-colors disabled:opacity-40",
-                        "border-red-300 text-red-700 hover:bg-red-50",
-                        t === "incorrect" && "btn-bevel bg-red-500 border-red-600 text-white",
-                      )}
-                    >
-                      <X className="size-3" strokeWidth={3} />
-                      Error
-                    </button>
+                    <ActionButton
+                      variant="incorrect"
+                      selected={trials[current] === "incorrect"}
+                      onClick={() => setResult("incorrect")}
+                      disabled={!sessionRunning || (isMaxReached && trials[current] === null)}
+                      dense={noResponse}
+                    />
                   )}
                   {noResponse && (
+                    <ActionButton
+                      variant="no-response"
+                      selected={trials[current] === "no-response"}
+                      onClick={() => setResult("no-response")}
+                      disabled={!sessionRunning || (isMaxReached && trials[current] === null)}
+                      dense
+                    />
+                  )}
+                  <ActionButton
+                    variant="correct"
+                    selected={trials[current] === "correct"}
+                    onClick={() => setResult("correct")}
+                    disabled={!sessionRunning || (isMaxReached && trials[current] === null)}
+                    dense={noResponse}
+                  />
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+
+        {/* Expanded view — every trial as its own row, each with the same
+          Correct/Error buttons as the standard view, so a run of trials can
+          be corrected or filled in without stepping through one at a time. */}
+        <div
+          className={cn(
+            "grid transition-[grid-template-rows] duration-300 ease-out",
+            expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+          )}
+        >
+          <div className="overflow-hidden">
+            <ol className="px-3 pt-2 pb-3 space-y-1">
+              {trials.map((t, i) => (
+                <li key={i} className="flex items-center gap-2 rounded-lg px-2 py-1.5">
+                  <span className="grid place-items-center size-6 rounded-full bg-stone-100 text-[11px] font-medium text-foreground/60 shrink-0">
+                    {i + 1}
+                  </span>
+                  <span className="flex-1" />
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {promptLevels && promptLevels.length > 0 ? (
+                      <RowPromptLevelButton
+                        levels={promptLevels}
+                        selectedLevel={promptLevel[i] ?? null}
+                        selected={t === "incorrect"}
+                        disabled={!sessionRunning}
+                        onPick={(level) => pickPromptLevel(i, level, false)}
+                        topInset={stickyTop + toolbarHeight}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => applyResult(i, "incorrect", false)}
+                        disabled={!sessionRunning}
+                        className={cn(
+                          "h-7 rounded-full border-2 flex items-center justify-center gap-1 px-2.5 text-[11px] font-semibold transition-colors disabled:opacity-40",
+                          "border-red-300 text-red-700 hover:bg-red-50",
+                          t === "incorrect" && "btn-bevel bg-red-500 border-red-600 text-white",
+                        )}
+                      >
+                        <X className="size-3" strokeWidth={3} />
+                        Error
+                      </button>
+                    )}
+                    {noResponse && (
+                      <button
+                        type="button"
+                        onClick={() => applyResult(i, "no-response", false)}
+                        disabled={!sessionRunning}
+                        className={cn(
+                          "h-7 rounded-full border-2 flex items-center justify-center gap-1 px-2.5 text-[11px] font-semibold transition-colors disabled:opacity-40",
+                          "border-amber-300 text-amber-700 hover:bg-amber-50",
+                          t === "no-response" &&
+                            "btn-bevel bg-amber-500 border-amber-600 text-white",
+                        )}
+                      >
+                        <CircleSlash2 className="size-2.5" strokeWidth={2.5} />
+                        No Response
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => applyResult(i, "no-response", false)}
+                      onClick={() => applyResult(i, "correct", false)}
                       disabled={!sessionRunning}
                       className={cn(
                         "h-7 rounded-full border-2 flex items-center justify-center gap-1 px-2.5 text-[11px] font-semibold transition-colors disabled:opacity-40",
-                        "border-amber-300 text-amber-700 hover:bg-amber-50",
-                        t === "no-response" && "btn-bevel bg-amber-500 border-amber-600 text-white",
+                        "border-green-300 text-green-700 hover:bg-green-50",
+                        t === "correct" && "btn-bevel bg-green-500 border-green-600 text-white",
                       )}
                     >
-                      <CircleSlash2 className="size-2.5" strokeWidth={2.5} />
-                      No Response
+                      <Check className="size-3" strokeWidth={3} />
+                      Correct
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => applyResult(i, "correct", false)}
-                    disabled={!sessionRunning}
-                    className={cn(
-                      "h-7 rounded-full border-2 flex items-center justify-center gap-1 px-2.5 text-[11px] font-semibold transition-colors disabled:opacity-40",
-                      "border-green-300 text-green-700 hover:bg-green-50",
-                      t === "correct" && "btn-bevel bg-green-500 border-green-600 text-white",
-                    )}
-                  >
-                    <Check className="size-3" strokeWidth={3} />
-                    Correct
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ol>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
-      </div>
 
-      {/* Progress bar — inset from the card's own edges (not flush corner-
+        {/* Progress bar — inset from the card's own edges (not flush corner-
           to-corner) so it reads as sitting inside the card's border rather
           than touching/merging into it — most visible once a selected
           card's blue ring makes that border more prominent. Same treatment
           as CardShell's own version of this bar. */}
-      {minTrials > 0 && (
-        <div className="relative mt-3 mx-4 mb-3">
-          {/* Bar background + fill */}
-          <div className="relative h-5 rounded-md overflow-hidden">
-            <div className="absolute inset-0 bg-muted">
-              <motion.div
-                className={cn(
-                  "absolute inset-y-0 left-0",
-                  isComplete
-                    ? "bg-green-500/25"
-                    : progress >= 50
-                      ? "bg-yellow-400/25"
-                      : "bg-blue-400/25",
-                )}
-                animate={{ width: `${progress}%` }}
-                transition={{ type: "spring", stiffness: 180, damping: 26 }}
-              />
-            </div>
+        {target > 0 && (
+          <div className="relative mt-3 mx-4 mb-3">
+            {/* Bar background + fill */}
+            <div className="relative h-5 rounded-md overflow-hidden">
+              <div className="absolute inset-0 bg-muted">
+                <motion.div
+                  className={cn(
+                    "absolute inset-y-0 left-0",
+                    isComplete
+                      ? "bg-green-500/25"
+                      : progress >= 50
+                        ? "bg-yellow-400/25"
+                        : "bg-blue-400/25",
+                  )}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ type: "spring", stiffness: 180, damping: 26 }}
+                />
+              </div>
 
-            {/* Helper text inside the bar */}
-            <div className="absolute inset-0 flex items-center justify-center px-3 text-[11px] text-foreground/75 leading-none pointer-events-none">
-              {isComplete ? (
-                isMaxReached
-                  ? "Maximum trials reached! Congrats!"
-                  : "Minimum trials reached. This data can now be graphed."
-              ) : (
-                <span>
-                  Conduct at least <strong className="font-semibold">{remaining} more</strong>{" "}
-                  {remaining === 1 ? "trial" : "trials"} to graph this target.
-                </span>
-              )}
+              {/* Helper text inside the bar */}
+              <div className="absolute inset-0 flex items-center justify-center px-3 text-[11px] text-foreground/75 leading-none pointer-events-none">
+                {isComplete ? (
+                  isMaxReached ? (
+                    "Maximum trials reached! Congrats!"
+                  ) : (
+                    "Minimum trials reached. This data can now be graphed."
+                  )
+                ) : minTrials !== undefined ? (
+                  <span>
+                    Conduct at least <strong className="font-semibold">{remaining} more</strong>{" "}
+                    {remaining === 1 ? "trial" : "trials"} to graph this target.
+                  </span>
+                ) : (
+                  <span>
+                    <strong className="font-semibold">{remaining} more</strong>{" "}
+                    {remaining === 1 ? "trial" : "trials"} until the maximum.
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
-
-
-
-
+        )}
       </div>
     </article>
   );
@@ -1086,7 +1134,12 @@ function PromptLevelButton({
             />
           </span>
           {selectedLevel && (
-            <span className={cn("text-[10px] leading-none -mt-0.5", selected ? "text-white/80" : "text-red-600/70")}>
+            <span
+              className={cn(
+                "text-[10px] leading-none -mt-0.5",
+                selected ? "text-white/80" : "text-red-600/70",
+              )}
+            >
               {selectedLevel}
             </span>
           )}
@@ -1325,7 +1378,10 @@ function RowPromptLevelButton({
           <X className="size-3" strokeWidth={3} />
           {selectedLevel ?? "Error"}
           <TimeChevronIcon
-            className={cn("size-2 shrink-0 transition-transform duration-200", open && "-rotate-90")}
+            className={cn(
+              "size-2 shrink-0 transition-transform duration-200",
+              open && "-rotate-90",
+            )}
           />
         </button>
       </PopoverAnchor>
@@ -1395,4 +1451,3 @@ function RowPromptLevelButton({
     </Popover>
   );
 }
-

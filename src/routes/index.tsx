@@ -1,6 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence, LayoutGroup, Reorder, useDragControls, type DragControls } from "motion/react";
+import {
+  motion,
+  AnimatePresence,
+  LayoutGroup,
+  Reorder,
+  useDragControls,
+  type DragControls,
+} from "motion/react";
 import { ClientInfoPane } from "@/components/ClientInfoPane";
 import { TrialCard } from "@/components/TrialCard";
 import { FrequencyCard } from "@/components/FrequencyCard";
@@ -9,7 +16,12 @@ import { DurationCard } from "@/components/DurationCard";
 import { TaskAnalysisCard } from "@/components/TaskAnalysisCard";
 import { RatingCard } from "@/components/RatingCard";
 import { ScheduleView } from "@/components/ScheduleView";
-import { SessionProvider, useSession, PILL_LAND_MS, type TransitionKind } from "@/components/SessionContext";
+import {
+  SessionProvider,
+  useSession,
+  PILL_LAND_MS,
+  type TransitionKind,
+} from "@/components/SessionContext";
 import { SettingsProvider, useSettings } from "@/components/SettingsContext";
 import { ScheduleProvider } from "@/components/ScheduleContext";
 import { SettingsPane } from "@/components/SettingsPane";
@@ -47,13 +59,18 @@ export const Route = createFileRoute("/")({
 // stable identity for drag-reorder, favoriting, hiding, and active-card
 // tracking, independent of array position (which filtering/reordering
 // otherwise makes an unreliable key).
-type CardConfig = { id: string; behaviorRole?: "interfering"; teachingProcedure?: TeachingProcedure } & (
+type CardConfig = {
+  id: string;
+  behaviorRole?: "interfering";
+  teachingProcedure?: TeachingProcedure;
+} & (
   | {
       kind: "trial";
       title: string;
       phase: string;
       description: string;
-      minTrials: number;
+      /** Omit for "No Min" — cards can set a max with no min (or vice versa). */
+      minTrials?: number;
       maxTrials?: number;
       /** Adds a third, neutral "No Response" option between Error and Correct. */
       noResponse?: boolean;
@@ -61,9 +78,30 @@ type CardConfig = { id: string; behaviorRole?: "interfering"; teachingProcedure?
       promptLevels?: string[];
     }
   | { kind: "frequency"; title: string; phase: string; description: string; minCount: number }
-  | { kind: "rate"; title: string; phase: string; description: string; minDurationSec: number; locked?: boolean }
+  | {
+      kind: "rate";
+      title: string;
+      phase: string;
+      description: string;
+      minDurationSec: number;
+      locked?: boolean;
+    }
   | { kind: "duration"; title: string; phase: string; description: string; minDurationSec: number }
-  | { kind: "task-analysis"; title: string; phase: string; description: string; steps: string[] }
+  | {
+      kind: "task-analysis";
+      title: string;
+      phase: string;
+      description: string;
+      steps: string[];
+      /** "forward" (default) or "backward" chaining plan. */
+      chainingDirection?: "forward" | "backward";
+      /** Per-step expected mastery level from the chaining plan (same length
+       *  as steps) — a prompt-level name, "Independent", or omitted. */
+      stepPlan?: (string | null)[];
+      /** Prompted becomes a picker for these prompt levels instead of a
+       *  plain toggle. */
+      promptLevels?: string[];
+    }
   | {
       kind: "rating";
       title: string;
@@ -85,13 +123,12 @@ const cards: CardConfig[] = [
       "Score correct if the learner reaches for and maintains hand-hold from the start of the transition through arrival at the destination.",
     minTrials: 5,
     teachingProcedure: {
-      goal:
-        "Phineas will hold an adult's hand throughout each room-to-room transition without prompting, across 4 of 5 consecutive opportunities.",
+      goal: "Phineas will hold an adult's hand throughout each room-to-room transition without prompting, across 4 of 5 consecutive opportunities.",
       rationale:
         "Elopement risk during transitions is a safety priority; a reliable hand-hold keeps him within arm's reach in hallways and other unsecured spaces until independent safety awareness is established.",
       procedure:
         "As the transition begins, offer an open hand at his side (not directly in front of him) and pair it with the SD. Walk at his pace. If he reaches and holds, continue the transition and deliver praise once you arrive. If he doesn't take your hand within 3 seconds, move to the correction procedure.",
-      sd: "\"Take my hand, let's go to [destination].\"",
+      sd: '"Take my hand, let\'s go to [destination]."',
       measurement: {
         markCorrect:
           "He reaches for and maintains the hand-hold independently from the start of the transition through arrival, with no more than a momentary release (under 1 second).",
@@ -99,8 +136,9 @@ const cards: CardConfig[] = [
           "He does not reach for the hand within 3 seconds of the SD, pulls away and does not reinitiate within 3 seconds, or requires a physical prompt to reconnect the hold.",
       },
       correction:
-        "Model the hand-hold by gently guiding his hand to yours (partial physical), narrate \"hand together,\" and continue the transition. Do not repeat the SD — the transition continues either way, just with support.",
-      materials: "None — this target is embedded in naturally occurring transitions throughout the day.",
+        'Model the hand-hold by gently guiding his hand to yours (partial physical), narrate "hand together," and continue the transition. Do not repeat the SD — the transition continues either way, just with support.',
+      materials:
+        "None — this target is embedded in naturally occurring transitions throughout the day.",
       instructionalNotes:
         "Fades from full physical guidance to a gestural offer as he becomes more reliable; note which prompt level he needed in your session notes even though this card only scores correct/error.",
     },
@@ -115,23 +153,24 @@ const cards: CardConfig[] = [
     minTrials: 8,
     noResponse: true,
     teachingProcedure: {
-      goal:
-        "Phineas will independently request a preferred item using a full phrase (\"I want ___\") within 5 seconds of the item being visible, across 8 of 10 opportunities per baseline probe.",
+      goal: 'Phineas will independently request a preferred item using a full phrase ("I want ___") within 5 seconds of the item being visible, across 8 of 10 opportunities per baseline probe.',
       rationale:
         "Functional communication reduces reliance on grabbing or protesting to access preferred items, and a full-phrase request generalizes better across communication partners than a single-word mand.",
       procedure:
         "Present a preferred item just out of reach so it's clearly visible. Wait silently for up to 5 seconds. If he requests using a full phrase, deliver the item immediately. If the window elapses with no attempt, score No Response and move on — this is a baseline probe, so no prompting or correction is delivered.",
       sd: "The preferred item itself, visible but out of reach — no verbal prompt is given during baseline.",
       measurement: {
-        markCorrect: "A full-phrase request (\"I want [item]\") within 5 seconds of the item becoming visible.",
+        markCorrect:
+          'A full-phrase request ("I want [item]") within 5 seconds of the item becoming visible.',
         markError:
           "An unclear or partial attempt (single word, gesture only, or an unintelligible approximation) within the window; if there is no attempt at all, score No Response instead.",
       },
       correction:
         "None during baseline — this card is being probed to establish a starting point, not taught in the moment. If probes show minimal spontaneous requesting, the team will introduce a prompting procedure in a future phase.",
-      materials: "2-3 known preferred items (rotate to prevent satiation), identified via the most recent preference assessment.",
+      materials:
+        "2-3 known preferred items (rotate to prevent satiation), identified via the most recent preference assessment.",
       instructionalNotes:
-        "Keep your own language minimal during the window — resist the urge to prompt \"What do you want?\"; the point of baseline is to see what he does without support.",
+        'Keep your own language minimal during the window — resist the urge to prompt "What do you want?"; the point of baseline is to see what he does without support.',
     },
   },
   {
@@ -141,26 +180,29 @@ const cards: CardConfig[] = [
     phase: "Probing",
     description:
       "Score correct if the learner completes the direction independently. If an error occurs, record the least-to-most prompt level required.",
-    minTrials: 8,
+    // No minimum — demos the "end bar" divider + max-trials-reached state
+    // instead of the usual minimum-trials quota.
+    maxTrials: 8,
     promptLevels: ["Verbal", "Gestural", "Modeling", "Partial Physical", "Full Physical"],
     teachingProcedure: {
-      goal:
-        "Phineas will follow a novel one-step direction independently, needing no more than a gestural prompt, across 8 of 10 trials during probing.",
+      goal: "Phineas will follow a novel one-step direction independently, needing no more than a gestural prompt, across 8 of 10 trials during probing.",
       rationale:
         "Direction-following is a foundational skill for group instruction and classroom routines; probing the current prompt level needed tells us exactly where to start formal teaching.",
       procedure:
         "Give the direction once, using natural tone and pacing, then wait 3-5 seconds. If he completes it, mark Independent. If he does not respond or responds incorrectly, deliver the least intrusive prompt in the hierarchy (Verbal, Gestural, Modeling, Partial Physical, Full Physical) just sufficient to get a correct response, and record that level.",
-      sd: "A one-step direction using vocabulary and objects already in his receptive repertoire (e.g., \"Give me the block,\" \"Stand up,\" \"Touch your nose\").",
+      sd: 'A one-step direction using vocabulary and objects already in his receptive repertoire (e.g., "Give me the block," "Stand up," "Touch your nose").',
       measurement: {
-        markCorrect: "Completes the full direction within 3-5 seconds with no prompt beyond the original SD.",
+        markCorrect:
+          "Completes the full direction within 3-5 seconds with no prompt beyond the original SD.",
         markError:
           "Does not respond within the window, or responds incorrectly — record the least-intrusive prompt level required to occasion the correct response.",
       },
       correction:
         "Not applicable in the traditional sense during probing — the prompt-level picker on this card IS the correction record. Deliver only the amount of help needed, then return to an independent SD on the next trial rather than staying at the prompted level.",
-      materials: "A few familiar small objects for object-directed steps (a block, a cup, a favorite toy); none needed for body-directed steps like \"stand up.\"",
+      materials:
+        'A few familiar small objects for object-directed steps (a block, a cup, a favorite toy); none needed for body-directed steps like "stand up."',
       instructionalNotes:
-        "Vary the specific direction between trials so he's generalizing \"follow a one-step direction\" and not just memorizing one script.",
+        'Vary the specific direction between trials so he\'s generalizing "follow a one-step direction" and not just memorizing one script.',
     },
   },
   {
@@ -171,20 +213,21 @@ const cards: CardConfig[] = [
     description: "Tally each instance the learner giggles or laughs during therapist-led play.",
     minCount: 5,
     teachingProcedure: {
-      goal:
-        "Increase Phineas's spontaneous giggling/laughing during therapist-led play to at least 5 instances per session, as an index of engagement and rapport.",
+      goal: "Increase Phineas's spontaneous giggling/laughing during therapist-led play to at least 5 instances per session, as an index of engagement and rapport.",
       rationale:
         "Laughter during play is a naturalistic marker of positive affect and engagement — tracking it helps confirm sessions are reinforcing, not just compliant, and flags when an activity has stopped being fun.",
       procedure:
         "Tally each spontaneous giggle or laugh that occurs during therapist-led play (not during data-collection trials themselves). No prompting is used — this is an observational count of a naturally occurring behavior, not a taught skill.",
       sd: "None — this is passively observed during ongoing play, not evoked by a specific instruction.",
       measurement: {
-        markCorrect: "Any audible giggle or laugh clearly directed at or arising from the shared play interaction.",
-        markError: "Not applicable — there is no \"incorrect\" laugh; only tally occurrences.",
+        markCorrect:
+          "Any audible giggle or laugh clearly directed at or arising from the shared play interaction.",
+        markError: 'Not applicable — there is no "incorrect" laugh; only tally occurrences.',
       },
       correction:
         "None — nothing to correct. If the count is consistently low across sessions, that's a signal to revisit the activity choice or pacing, not the child's response.",
-      materials: "Whatever the chosen play activity calls for (see the day's activity plan) — no dedicated materials for the tally itself.",
+      materials:
+        "Whatever the chosen play activity calls for (see the day's activity plan) — no dedicated materials for the tally itself.",
       instructionalNotes:
         "If laughter seems forced or scripted rather than spontaneous, use clinical judgment and don't tally it — the goal is genuine engagement, not a performance.",
     },
@@ -199,16 +242,17 @@ const cards: CardConfig[] = [
       "During a timed observation, tally each flop/drop. Rate is reported as occurrences per minute.",
     minDurationSec: 60,
     teachingProcedure: {
-      goal:
-        "Reduce Phineas's flopping/dropping-to-floor behavior to fewer than 1 occurrence per minute across a timed observation, as it currently interferes with transitions and participation.",
+      goal: "Reduce Phineas's flopping/dropping-to-floor behavior to fewer than 1 occurrence per minute across a timed observation, as it currently interferes with transitions and participation.",
       rationale:
         "Flopping is believed to function as escape from task demands or transitions; tracking rate (not just raw count) lets us compare across sessions of different lengths and see if antecedent strategies are reducing it.",
       procedure:
         "During the timed observation window, do not stop data collection when a flop occurs — tally it and continue. If a flop happens during a demand, briefly wait it out (planned ignoring for the behavior itself) while keeping the original expectation active, then represent the demand once he's up.",
       sd: "Typically evoked by a transition cue or a non-preferred task demand — note the antecedent in session notes when possible, even though this card only tracks rate.",
       measurement: {
-        markCorrect: "Counts as an instance: he goes limp or intentionally drops to the floor, refusing to remain upright.",
-        markError: "Does not count: an accidental stumble/trip, or sitting down normally when instructed to do so.",
+        markCorrect:
+          "Counts as an instance: he goes limp or intentionally drops to the floor, refusing to remain upright.",
+        markError:
+          "Does not count: an accidental stumble/trip, or sitting down normally when instructed to do so.",
       },
       correction:
         "Do not deliver attention or comment in the moment (planned ignoring for the behavior itself). Keep the original demand or transition expectation active and calmly restate it once he's back up, rather than dropping it.",
@@ -226,16 +270,17 @@ const cards: CardConfig[] = [
     minDurationSec: 60,
     locked: true,
     teachingProcedure: {
-      goal:
-        "Increase Phineas's independent AAC-mediated requests to at least 1 per minute across the session, as his primary functional communication mode.",
+      goal: "Increase Phineas's independent AAC-mediated requests to at least 1 per minute across the session, as his primary functional communication mode.",
       rationale:
         "Consistent AAC use is the foundation for reducing frustration-driven behavior and building a communication repertoire that will scale as vocabulary grows.",
       procedure:
         "Throughout the session, tally each independent, unprompted use of the AAC device to request an item, activity, or break. This timer is linked to the session clock, so it's always running whenever a session is — there's no separate start/stop for it.",
       sd: "Naturally occurring motivation across the session — a desired item in view, a preferred activity ending, or a demand he'd like a break from — rather than a single scripted prompt.",
       measurement: {
-        markCorrect: "An independent tap/selection on the AAC device that functions as a request, with no verbal or physical prompt beforehand.",
-        markError: "A prompted or modeled selection (hand-over-hand, or after a verbal model of the exact request) — valuable, but not counted toward the independent rate.",
+        markCorrect:
+          "An independent tap/selection on the AAC device that functions as a request, with no verbal or physical prompt beforehand.",
+        markError:
+          "A prompted or modeled selection (hand-over-hand, or after a verbal model of the exact request) — valuable, but not counted toward the independent rate.",
       },
       correction:
         "If he doesn't initiate but seems to want something, model the request on the device without requiring him to imitate it, then wait — don't tally that instance, but do reinforce access to what he wanted.",
@@ -261,12 +306,15 @@ const cards: CardConfig[] = [
         "Tally each instance as it occurs. Do not stop data collection to address the behavior — score it, then respond per the correction procedure and continue the session.",
       sd: "Most often evoked by a non-preferred task being presented or a preferred item/activity being removed or denied.",
       measurement: {
-        markCorrect: "Counts as an instance: any throw, sweep, or forceful destruction of materials directed away from his own body.",
-        markError: "Does not count: normal manipulation of materials during play (e.g., building then knocking down blocks as part of the game itself).",
+        markCorrect:
+          "Counts as an instance: any throw, sweep, or forceful destruction of materials directed away from his own body.",
+        markError:
+          "Does not count: normal manipulation of materials during play (e.g., building then knocking down blocks as part of the game itself).",
       },
       correction:
         "Block the trajectory or move materials out of reach if safety requires it, but avoid extended verbal attention. Once calm, represent the original task/demand rather than letting the throw successfully end it.",
-      materials: "None specific to this card, but keep breakable/valuable items out of easy reach during high-risk activities.",
+      materials:
+        "None specific to this card, but keep breakable/valuable items out of easy reach during high-risk activities.",
       instructionalNotes:
         "If throwing reliably follows removal of a specific preferred item, flag it for the team — a scheduled, predictable transition warning may reduce the antecedent altogether.",
     },
@@ -281,20 +329,22 @@ const cards: CardConfig[] = [
       "During a timed observation, tally each head-banging instance. Rate is reported as occurrences per minute.",
     minDurationSec: 60,
     teachingProcedure: {
-      goal:
-        "Reduce Phineas's head-banging to fewer than 1 occurrence per minute across a timed observation, prioritized as a safety-critical target.",
+      goal: "Reduce Phineas's head-banging to fewer than 1 occurrence per minute across a timed observation, prioritized as a safety-critical target.",
       rationale:
         "Head-banging carries immediate physical risk and is tracked by rate (not just count) so intensity/frequency changes are visible across observations of different lengths.",
       procedure:
         "Tally each instance during the timed window. If intensity poses immediate risk of injury, prioritize safety (see Correction) over waiting to observe — data accuracy never overrides safety.",
       sd: "Review the BCBA's current hypothesis in the full behavior plan before running this card — antecedents vary and matter for intervention, even though this card only tracks rate.",
       measurement: {
-        markCorrect: "Counts as an instance: any forceful contact of the head against a person, object, or surface.",
-        markError: "Does not count: gentle self-stimulatory head movement with no forceful contact.",
+        markCorrect:
+          "Counts as an instance: any forceful contact of the head against a person, object, or surface.",
+        markError:
+          "Does not count: gentle self-stimulatory head movement with no forceful contact.",
       },
       correction:
         "Follow the safety plan's protective procedure immediately (protective equipment/blocking as trained) — do not wait for a natural pause to intervene. Log the instance once safe to do so.",
-      materials: "Any protective equipment specified in the Safety Plan (see the Client Info tab's About Me section).",
+      materials:
+        "Any protective equipment specified in the Safety Plan (see the Client Info tab's About Me section).",
       instructionalNotes:
         "This is one of the few targets where safety response always takes precedence over data-collection precision — under-count rather than delay intervention.",
     },
@@ -316,8 +366,10 @@ const cards: CardConfig[] = [
         "Start a new instance with the plus button at the first sign of a tantrum (crying, dropping, refusal escalating into distress). Pause/resume the timer if there's a brief lull, but start a new instance if he fully recovers and a new episode begins later.",
       sd: "Commonly follows a denied request, an ended preferred activity, or an unexpected transition.",
       measurement: {
-        markCorrect: "Counts as the same instance: continuous or briefly interrupted crying/distress/refusal without a full recovery in between.",
-        markError: "Does not count: brief frustration (a whine or protest) that resolves within a few seconds without escalating.",
+        markCorrect:
+          "Counts as the same instance: continuous or briefly interrupted crying/distress/refusal without a full recovery in between.",
+        markError:
+          "Does not count: brief frustration (a whine or protest) that resolves within a few seconds without escalating.",
       },
       correction:
         "Keep instructions minimal and avoid negotiating during the episode. Once he's calm for a sustained moment, redirect to the original expectation rather than dropping it.",
@@ -335,20 +387,22 @@ const cards: CardConfig[] = [
       "Track each interval the learner remains seated with the social group. Start a new instance when they rejoin.",
     minDurationSec: 60,
     teachingProcedure: {
-      goal:
-        "Increase the duration Phineas remains seated with the social group to a full 10-minute activity without leaving the seated area.",
+      goal: "Increase the duration Phineas remains seated with the social group to a full 10-minute activity without leaving the seated area.",
       rationale:
         "Tolerating group seating is a prerequisite for participating in classroom circle time and other group instruction settings he'll encounter outside of 1:1 sessions.",
       procedure:
         "Start the timer when the group activity begins and he is seated. If he gets up and leaves the seated area, pause the timer; start a new instance once he rejoins and is seated again.",
-      sd: "The group activity starting, with a seat available and the group already gathered (e.g., \"Let's sit down for circle time\").",
+      sd: 'The group activity starting, with a seat available and the group already gathered (e.g., "Let\'s sit down for circle time").',
       measurement: {
-        markCorrect: "Remains within the designated seated area, even if shifting position or briefly standing and immediately re-sitting.",
-        markError: "Fully leaves the seated area (stands and walks away) rather than staying within it.",
+        markCorrect:
+          "Remains within the designated seated area, even if shifting position or briefly standing and immediately re-sitting.",
+        markError:
+          "Fully leaves the seated area (stands and walks away) rather than staying within it.",
       },
       correction:
         "If he gets up, calmly guide him back to the seated area and represent the activity rather than ending it. Avoid making the return trip more engaging than the group activity itself.",
-      materials: "Whatever the group activity requires (see the day's activity plan); a designated seat or mat to define \"the seated area.\"",
+      materials:
+        'Whatever the group activity requires (see the day\'s activity plan); a designated seat or mat to define "the seated area."',
       instructionalNotes:
         "Reinforcement should come from the group activity itself where possible (praise, a preferred song, a turn) rather than an unrelated reward, so sitting stays connected to the activity's own value.",
     },
@@ -358,7 +412,8 @@ const cards: CardConfig[] = [
     kind: "task-analysis",
     title: "Washing hands",
     phase: "Probing",
-    description: "Score each step as Independent (I), Prompted (P), or Error (E).",
+    description:
+      "Score each step as Independent (I), Prompted (P), or Error (E). Taught backward — the last step was mastered first, and training is now working back toward the first.",
     steps: [
       "Turn on water",
       "Wet hands",
@@ -368,25 +423,69 @@ const cards: CardConfig[] = [
       "Turn off water",
       "Dry hands",
     ],
+    chainingDirection: "backward",
+    // Mastery cascades backward from the last step — steps taught longest
+    // ago (the end of the chain) are expected independent, while earlier
+    // steps (not yet reached) still need the most support.
+    stepPlan: [
+      "Full Physical",
+      "Full Physical",
+      "Partial Physical",
+      "Partial Physical",
+      "Gestural",
+      "Verbal",
+      "Independent",
+    ],
     teachingProcedure: {
-      goal:
-        "Phineas will complete the 7-step hand-washing sequence with no more than 1 prompted step, across 3 consecutive probes.",
+      goal: "Phineas will complete the 7-step hand-washing sequence with no more than 1 prompted step, across 3 consecutive probes.",
       rationale:
         "Hand-washing is a daily-living skill needed for hygiene and increasing independence at school and home; task analysis lets us pinpoint exactly which step(s) still need support.",
       procedure:
         "Present each step in sequence, waiting 3-5 seconds for a response before scoring or prompting. Score each step Independent (I), Prompted (P), or Error (E) as you go, and move to the next step regardless of how the current one was scored.",
-      sd: "\"Wash your hands\" at the sink, given once at the start of the sequence — no further verbal SD is given per step; each step's own natural cue (e.g., water now running) should occasion the next action.",
+      sd: '"Wash your hands" at the sink, given once at the start of the sequence — no further verbal SD is given per step; each step\'s own natural cue (e.g., water now running) should occasion the next action.',
       measurement: {
-        markCorrect: "Independent (I): completes the step within the window with no prompt beyond the initial SD.",
+        markCorrect:
+          "Independent (I): completes the step within the window with no prompt beyond the initial SD.",
         markError:
           "Error (E): does not attempt the step, or attempts it incorrectly, within the window with no prompt given in that moment (contrast with Prompted, used when help was given).",
       },
       correction:
         "For a Prompted score, use the least intrusive prompt that gets the step done (a gesture toward the soap, a verbal reminder, or physical guidance for a step like scrubbing) and move on to the next step — don't repeat the whole sequence from the start.",
-      materials: "Accessible sink, soap, and a towel within reach; step stool if needed for sink height.",
+      materials:
+        "Accessible sink, soap, and a towel within reach; step stool if needed for sink height.",
       instructionalNotes:
         "Steps often regress in the same order they were mastered under stress/fatigue — if a normally-independent step slips to Prompted, note it rather than assuming it's a one-off.",
     },
+  },
+  {
+    id: "brushing-teeth",
+    kind: "task-analysis",
+    title: "Brushing teeth",
+    phase: "Intervention",
+    description:
+      "Score each step as Independent (I), Prompted (P), or Error (E). If prompted, record the least-to-most prompt level required. Taught forward — the first step was mastered first.",
+    steps: [
+      "Get toothbrush and toothpaste",
+      "Apply toothpaste to brush",
+      "Brush outer surfaces",
+      "Brush inner surfaces",
+      "Brush chewing surfaces",
+      "Rinse mouth",
+      "Rinse toothbrush",
+    ],
+    chainingDirection: "forward",
+    // Mastery cascades forward from the first step — the opposite of
+    // Washing hands, to demo both directions side by side.
+    stepPlan: [
+      "Independent",
+      "Verbal",
+      "Gestural",
+      "Partial Physical",
+      "Partial Physical",
+      "Full Physical",
+      "Full Physical",
+    ],
+    promptLevels: ["Verbal", "Gestural", "Modeling", "Partial Physical", "Full Physical"],
   },
   {
     id: "overall-session-engagement",
@@ -453,7 +552,14 @@ function Index() {
   );
 }
 
-const CARD_KINDS_IN_ORDER: CardKind[] = ["trial", "frequency", "rate", "duration", "task-analysis", "rating"];
+const CARD_KINDS_IN_ORDER: CardKind[] = [
+  "trial",
+  "frequency",
+  "rate",
+  "duration",
+  "task-analysis",
+  "rating",
+];
 
 // Clinical progression order, not the cards' own declaration order — the
 // filter popover's Phase chips should read left-to-right the way a plan
@@ -474,9 +580,14 @@ function getVisibleCards(
   const byId = new Map(cards.map((c) => [c.id, c]));
   const orderedIds =
     order.length > 0
-      ? [...order.filter((id) => byId.has(id)), ...cards.map((c) => c.id).filter((id) => !order.includes(id))]
+      ? [
+          ...order.filter((id) => byId.has(id)),
+          ...cards.map((c) => c.id).filter((id) => !order.includes(id)),
+        ]
       : cards.map((c) => c.id);
-  const ordered = orderedIds.map((id) => byId.get(id)).filter((c): c is CardConfig => c !== undefined);
+  const ordered = orderedIds
+    .map((id) => byId.get(id))
+    .filter((c): c is CardConfig => c !== undefined);
 
   const q = searchQuery.trim().toLowerCase();
   return ordered.filter((card) => {
@@ -617,12 +728,24 @@ function IndexInner() {
   const availablePhases = useMemo(() => {
     const present = new Set(cards.map((c) => c.phase));
     const known = PHASE_ORDER.filter((p) => present.has(p));
-    const rest = Array.from(present).filter((p) => !PHASE_ORDER.includes(p)).sort();
+    const rest = Array.from(present)
+      .filter((p) => !PHASE_ORDER.includes(p))
+      .sort();
     return [...known, ...rest];
   }, []);
 
   const visibleCards = useMemo(
-    () => getVisibleCards(order, filters, searchQuery, favorites, hidden, hasData, completion, editMode),
+    () =>
+      getVisibleCards(
+        order,
+        filters,
+        searchQuery,
+        favorites,
+        hidden,
+        hasData,
+        completion,
+        editMode,
+      ),
     [order, filters, searchQuery, favorites, hidden, hasData, completion, editMode],
   );
 
@@ -651,19 +774,22 @@ function IndexInner() {
       setDrawerSlideOpen(true);
       return;
     }
-    drawerSlideTimeoutRef.current = window.setTimeout(() => {
-      setDrawerSlideOpen(true);
-      // The reflow just collapsed every tile into a single left column,
-      // which can shift the active tile to a completely different row —
-      // bring it back into view now that it's settled (respecting the same
-      // centered-vs-gentle choice as the effect below), rather than leaving
-      // it wherever the reflow happened to land it.
-      const el = cardRefs.current.get(activeId);
-      if (el) {
-        if (keepActiveCardCentered) scrollActiveCardIntoView(el, stickyTop + toolbarHeight);
-        else scrollCardFullyIntoView(el, stickyTop + toolbarHeight);
-      }
-    }, CARD_MORPH_TRANSITION.duration * 1000 + 50);
+    drawerSlideTimeoutRef.current = window.setTimeout(
+      () => {
+        setDrawerSlideOpen(true);
+        // The reflow just collapsed every tile into a single left column,
+        // which can shift the active tile to a completely different row —
+        // bring it back into view now that it's settled (respecting the same
+        // centered-vs-gentle choice as the effect below), rather than leaving
+        // it wherever the reflow happened to land it.
+        const el = cardRefs.current.get(activeId);
+        if (el) {
+          if (keepActiveCardCentered) scrollActiveCardIntoView(el, stickyTop + toolbarHeight);
+          else scrollCardFullyIntoView(el, stickyTop + toolbarHeight);
+        }
+      },
+      CARD_MORPH_TRANSITION.duration * 1000 + 50,
+    );
     return () => window.clearTimeout(drawerSlideTimeoutRef.current ?? undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drawerOpen, isGridDisplayMode]);
@@ -694,12 +820,15 @@ function IndexInner() {
   // so this doesn't fight that anchor's own scroll compensation while it's
   // still running.
   useEffect(() => {
-    const id = window.setTimeout(() => {
-      const el = cardRefs.current.get(activeId);
-      if (!el) return;
-      if (keepActiveCardCentered) scrollActiveCardIntoView(el, stickyTop + toolbarHeight);
-      else scrollCardFullyIntoView(el, stickyTop + toolbarHeight);
-    }, CARD_MORPH_TRANSITION.duration * 1000 + 50);
+    const id = window.setTimeout(
+      () => {
+        const el = cardRefs.current.get(activeId);
+        if (!el) return;
+        if (keepActiveCardCentered) scrollActiveCardIntoView(el, stickyTop + toolbarHeight);
+        else scrollCardFullyIntoView(el, stickyTop + toolbarHeight);
+      },
+      CARD_MORPH_TRANSITION.duration * 1000 + 50,
+    );
     return () => window.clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayMode]);
@@ -739,7 +868,10 @@ function IndexInner() {
   }
   useEffect(() => {
     if (!suppressCardLayout) return;
-    const t = setTimeout(() => setSuppressCardLayout(false), CARD_MORPH_TRANSITION.duration * 1000 + 50);
+    const t = setTimeout(
+      () => setSuppressCardLayout(false),
+      CARD_MORPH_TRANSITION.duration * 1000 + 50,
+    );
     return () => clearTimeout(t);
   }, [suppressCardLayout]);
 
@@ -789,7 +921,9 @@ function IndexInner() {
   // any of this), and submit keeps its own separate, more elaborate
   // per-card staggered animation for now.
   const [cardsGen, setCardsGen] = useState(0);
-  const [cardsAnimKind, setCardsAnimKind] = useState<"start-new" | "discard" | "submit">("start-new");
+  const [cardsAnimKind, setCardsAnimKind] = useState<"start-new" | "discard" | "submit">(
+    "start-new",
+  );
 
   // Stage 1 (old stuff exits) needs the card list to unmount the INSTANT
   // transitionKind is set (not one effect-tick later), so the exit and the
@@ -899,79 +1033,85 @@ function IndexInner() {
 
   return (
     <NotificationProvider onActivate={handleNotificationActivate}>
-    <main className="min-h-screen bg-background">
-      {/* Shared across StatusBar's tab nav and this section's panel so their
+      <main className="min-h-screen bg-background">
+        {/* Shared across StatusBar's tab nav and this section's panel so their
           `layout="position"` FLIPs are batched into one coordinated motion
           instead of two independent trees that can drift a frame apart —
           see LayoutGroup's docs on coordinating layout detection across
           separate components. */}
-      <LayoutGroup id="session-bar">
-      <StatusBar activeTab={tab} onTabChange={handleTabChange} suppressNavLayout={suppressCardLayout} />
+        <LayoutGroup id="session-bar">
+          <StatusBar
+            activeTab={tab}
+            onTabChange={handleTabChange}
+            suppressNavLayout={suppressCardLayout}
+          />
 
-      {/* Rendered as a sibling of (not nested inside) the motion.section
+          {/* Rendered as a sibling of (not nested inside) the motion.section
           below — that section's own `layout="position"` tracking applies a
           (near-identity, but non-"none") transform, which makes it establish
           a stacking context that traps any z-index inside it. */}
-      {tab === "data" && (
-        <DataToolbar
-          stickyTop={stickyTop}
-          availableKinds={availableKinds}
-          availablePhases={availablePhases}
-        >
-          <AnimatePresence initial={false}>
-            {!sessionActive && (
-              <motion.div
-                key="start-session-banner"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{
-                  height: { duration: DATA_BANNER_EXIT_MS / 1000, ease: [0.4, 0, 0.2, 1] },
-                  opacity: { duration: 0.25 },
-                }}
-                className="overflow-hidden border-t border-stone-200/70"
-              >
-                <motion.div
-                  initial={{ y: -16 }}
-                  animate={{ y: 0 }}
-                  exit={{ y: -16 }}
-                  transition={{ duration: DATA_BANNER_EXIT_MS / 1000, ease: [0.4, 0, 0.2, 1] }}
-                  className="py-1.5 px-8 text-center"
-                >
-                  <span className="text-sm text-muted-foreground">Start session to record data.</span>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </DataToolbar>
-      )}
+          {tab === "data" && (
+            <DataToolbar
+              stickyTop={stickyTop}
+              availableKinds={availableKinds}
+              availablePhases={availablePhases}
+            >
+              <AnimatePresence initial={false}>
+                {!sessionActive && (
+                  <motion.div
+                    key="start-session-banner"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{
+                      height: { duration: DATA_BANNER_EXIT_MS / 1000, ease: [0.4, 0, 0.2, 1] },
+                      opacity: { duration: 0.25 },
+                    }}
+                    className="overflow-hidden border-t border-stone-200/70"
+                  >
+                    <motion.div
+                      initial={{ y: -16 }}
+                      animate={{ y: 0 }}
+                      exit={{ y: -16 }}
+                      transition={{ duration: DATA_BANNER_EXIT_MS / 1000, ease: [0.4, 0, 0.2, 1] }}
+                      className="py-1.5 px-8 text-center"
+                    >
+                      <span className="text-sm text-muted-foreground">
+                        Start session to record data.
+                      </span>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </DataToolbar>
+          )}
 
-      <motion.section
-        layout={suppressPaneLayout ? false : "position"}
-        transition={{ layout: NOTIFICATION_AREA_TRANSITION }}
-        className={cn(
-          "px-5 pb-16 max-w-5xl mx-auto border-t border-stone-200",
-          // Only the Data tab has a toolbar directly above this pane, with
-          // its own border-b — -mt-px there merges the two lines into one
-          // instead of a visible double line. Every other tab sits directly
-          // below the (sticky, higher-stacked) tabs row itself, so pulling
-          // the border under it here instead erased it completely across
-          // the whole width — not just blended under the active tab the way
-          // its own -bottom-px overlay (see StatusBar) is meant to.
-          tab === "data" && "-mt-px",
-          tab === "schedule" ? "pt-2" : tab === "data" ? "pt-0" : "pt-5",
-        )}
-      >
-        {tab === "data" && (
-          <>
-          {/* -mx-2 cancels 8px of the section's px-5, so the cards sit 12px
+          <motion.section
+            layout={suppressPaneLayout ? false : "position"}
+            transition={{ layout: NOTIFICATION_AREA_TRANSITION }}
+            className={cn(
+              "px-5 pb-16 max-w-5xl mx-auto border-t border-stone-200",
+              // Only the Data tab has a toolbar directly above this pane, with
+              // its own border-b — -mt-px there merges the two lines into one
+              // instead of a visible double line. Every other tab sits directly
+              // below the (sticky, higher-stacked) tabs row itself, so pulling
+              // the border under it here instead erased it completely across
+              // the whole width — not just blended under the active tab the way
+              // its own -bottom-px overlay (see StatusBar) is meant to.
+              tab === "data" && "-mt-px",
+              tab === "schedule" ? "pt-2" : tab === "data" ? "pt-0" : "pt-5",
+            )}
+          >
+            {tab === "data" && (
+              <>
+                {/* -mx-2 cancels 8px of the section's px-5, so the cards sit 12px
               from the viewport edge — the same as the gap-3 between them,
               instead of the wider 20px inherited from the shared tab padding.
               The two quick-action grids get a touch less top margin than
               list/card — their own tiles already sit close under the
               toolbar with little breathing room built into the tile itself,
               so the fuller list/card margin read as an oversized gap there. */}
-          {/* overflow-x-hidden: SINGLE_UNIT_VARIANTS' start-new/discard exit
+                {/* overflow-x-hidden: SINGLE_UNIT_VARIANTS' start-new/discard exit
               slides the whole card grid a full extra width off to the
               side — without this, that briefly inflates the document's
               scrollable width, which some mobile browsers respond to by
@@ -983,90 +1123,95 @@ function IndexInner() {
               right past this div (still `static`) and the exit keeps
               inflating scrollWidth even though nothing is visibly seen
               sticking out. */}
-          <div className={cn("relative flex flex-col items-center -mx-2 overflow-x-hidden", isGridDisplayMode ? "pt-4" : "pt-5")}>
-            <div
-              className={cn(
-                "transition-[opacity,width] duration-300",
-                !sessionActive && "opacity-50",
-                // The open drawer is half the viewport wide (see
-                // DataListRow/CardShell) — left-anchored and just over half
-                // width itself (rather than the usual full width, centered)
-                // so the cards/rows and the open drawer stay visible side by
-                // side instead of the drawer covering them entirely. Card
-                // mode's full-size cards are much denser than a list row,
-                // though — squeezing them to the same 55% at phone widths
-                // left button labels truncating and text wrapping badly, so
-                // that mode only compresses at sm+ (tablet/desktop, where 55%
-                // is still wide enough to hold a full card); below that the
-                // drawer just overlays on top full-width instead (see
-                // DataDetailsDrawer's own mobile-width default). List's rows
-                // are minimal enough to compress at any width. The two
-                // quick-action grids don't compress this container at all —
-                // unlike a card (which is already a fixed intrinsic size
-                // regardless of its grid track's own width) a tile's size
-                // IS its grid track's width, so shrinking the container here
-                // would shrink every tile with it. Instead their own tiles
-                // stay pinned to column 1 of their normal (unchanged)
-                // multi-column grid — see gridClasses/the per-card
-                // `gridColumn` override below — so they keep their usual
-                // size and just stack into the left column the drawer
-                // doesn't cover, rather than a general-purpose "compress the
-                // pane" approach.
-                drawerOpen
-                  ? displayMode === "card"
-                    ? "w-full sm:w-[55%] sm:self-start"
-                    : displayMode === "list"
-                      ? "w-[55%] self-start"
-                      : "w-full"
-                  : "w-full",
-              )}
-            >
-              {/* Each card's own wrapper carries `layout` (see DataCardList)
+                <div
+                  className={cn(
+                    "relative flex flex-col items-center -mx-2 overflow-x-hidden",
+                    isGridDisplayMode ? "pt-4" : "pt-5",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "transition-[opacity,width] duration-300",
+                      !sessionActive && "opacity-50",
+                      // The open drawer is half the viewport wide (see
+                      // DataListRow/CardShell) — left-anchored and just over half
+                      // width itself (rather than the usual full width, centered)
+                      // so the cards/rows and the open drawer stay visible side by
+                      // side instead of the drawer covering them entirely. Card
+                      // mode's full-size cards are much denser than a list row,
+                      // though — squeezing them to the same 55% at phone widths
+                      // left button labels truncating and text wrapping badly, so
+                      // that mode only compresses at sm+ (tablet/desktop, where 55%
+                      // is still wide enough to hold a full card); below that the
+                      // drawer just overlays on top full-width instead (see
+                      // DataDetailsDrawer's own mobile-width default). List's rows
+                      // are minimal enough to compress at any width. The two
+                      // quick-action grids don't compress this container at all —
+                      // unlike a card (which is already a fixed intrinsic size
+                      // regardless of its grid track's own width) a tile's size
+                      // IS its grid track's width, so shrinking the container here
+                      // would shrink every tile with it. Instead their own tiles
+                      // stay pinned to column 1 of their normal (unchanged)
+                      // multi-column grid — see gridClasses/the per-card
+                      // `gridColumn` override below — so they keep their usual
+                      // size and just stack into the left column the drawer
+                      // doesn't cover, rather than a general-purpose "compress the
+                      // pane" approach.
+                      drawerOpen
+                        ? displayMode === "card"
+                          ? "w-full sm:w-[55%] sm:self-start"
+                          : displayMode === "list"
+                            ? "w-[55%] self-start"
+                            : "w-full"
+                        : "w-full",
+                    )}
+                  >
+                    {/* Each card's own wrapper carries `layout` (see DataCardList)
                   so switching card/list/grid morphs every box from one
                   size/shape to the other in place, rather than either
                   snapping instantly or crossfading the whole list as one
                   flat unit — that requires the wrapper to persist across
                   the switch, which an outer keyed remount here would break. */}
-              <DataCardList
-                cardsGen={cardsGen}
-                cardsAnimKind={cardsAnimKind}
-                transitionHidden={cardsHidden}
-                visibleCards={visibleCards}
-                activeId={activeId}
-                setActiveId={setActiveId}
-                cardRefs={cardRefs}
-                editMode={editMode}
-                favorites={favorites}
-                toggleFavorite={toggleFavorite}
-                hidden={hidden}
-                toggleHidden={toggleHidden}
-                order={order}
-                setOrder={setOrder}
-                displayMode={displayMode}
-                suppressCardLayout={suppressCardLayout}
-                drawerOpen={drawerOpen}
-                drawerSlideOpen={drawerSlideOpen}
-                onDrawerOpenChange={setDrawerOpen}
-                stickyTop={stickyTop}
-                toolbarHeight={toolbarHeight}
-              />
-            </div>
-          </div>
-          </>
-        )}
+                    <DataCardList
+                      cardsGen={cardsGen}
+                      cardsAnimKind={cardsAnimKind}
+                      transitionHidden={cardsHidden}
+                      visibleCards={visibleCards}
+                      activeId={activeId}
+                      setActiveId={setActiveId}
+                      cardRefs={cardRefs}
+                      editMode={editMode}
+                      favorites={favorites}
+                      toggleFavorite={toggleFavorite}
+                      hidden={hidden}
+                      toggleHidden={toggleHidden}
+                      order={order}
+                      setOrder={setOrder}
+                      displayMode={displayMode}
+                      suppressCardLayout={suppressCardLayout}
+                      drawerOpen={drawerOpen}
+                      drawerSlideOpen={drawerSlideOpen}
+                      onDrawerOpenChange={setDrawerOpen}
+                      stickyTop={stickyTop}
+                      toolbarHeight={toolbarHeight}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
 
-        {tab === "info" && <ClientInfoPane onViewSchedule={() => setTab("schedule")} />}
-        {tab === "schedule" && (
-          <ScheduleView
-            scrollTargetId={scheduleScrollId}
-            onScrolledToTarget={() => setScheduleScrollId(null)}
-          />
-        )}
-        {tab === "notifications" && <NotificationsPane />}
-        {tab === "settings" && <SettingsPane />}
-      </motion.section>
-      </LayoutGroup>
-    </main>
+            {tab === "info" && <ClientInfoPane onViewSchedule={() => setTab("schedule")} />}
+            {tab === "schedule" && (
+              <ScheduleView
+                scrollTargetId={scheduleScrollId}
+                onScrolledToTarget={() => setScheduleScrollId(null)}
+              />
+            )}
+            {tab === "notifications" && <NotificationsPane />}
+            {tab === "settings" && <SettingsPane />}
+          </motion.section>
+        </LayoutGroup>
+      </main>
     </NotificationProvider>
   );
 }
@@ -1160,6 +1305,9 @@ function renderCard(
           phase={card.phase}
           description={card.description}
           steps={card.steps}
+          chainingDirection={card.chainingDirection}
+          stepPlan={card.stepPlan}
+          promptLevels={card.promptLevels}
           {...common}
         />
       );
@@ -1206,7 +1354,13 @@ const CARD_MORPH_TRANSITION = { duration: 0.3, ease: [0.4, 0, 0.2, 1] } as const
 // real content height and animating the wrapper's `height` (clipped via
 // overflow: hidden) instead means the content never gets scaled — only
 // revealed or clipped — so it always renders at its true, undistorted size.
-function MorphContent({ displayMode, children }: { displayMode: DisplayMode; children: React.ReactNode }) {
+function MorphContent({
+  displayMode,
+  children,
+}: {
+  displayMode: DisplayMode;
+  children: React.ReactNode;
+}) {
   const measureRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number | null>(null);
   const isFirstMeasure = useRef(true);
@@ -1323,12 +1477,20 @@ const SINGLE_UNIT_VARIANTS = {
   },
   discard: {
     initial: { x: "100%", opacity: 0 },
-    animate: { x: 0, opacity: 1, transition: { duration: CARD_SLIDE_ENTER_MS / 1000, ease: [0, 0, 0.2, 1] } },
+    animate: {
+      x: 0,
+      opacity: 1,
+      transition: { duration: CARD_SLIDE_ENTER_MS / 1000, ease: [0, 0, 0.2, 1] },
+    },
     // Shrinks and dissolves in place — unlike start-new's slide, this exit
     // has fully finished (see CARD_SLIDE_EXIT_MS delay in IndexInner) before
     // the fresh set enters, so discard reads as "gone, then a new one
     // arrives" rather than an overlapping relay.
-    exit: { opacity: 0, scale: 0.7, transition: { duration: CARD_SLIDE_EXIT_MS / 1000, ease: [0.4, 0, 1, 1] } },
+    exit: {
+      opacity: 0,
+      scale: 0.7,
+      transition: { duration: CARD_SLIDE_EXIT_MS / 1000, ease: [0.4, 0, 1, 1] },
+    },
   },
 } as const;
 
@@ -1410,7 +1572,9 @@ const DataCardList = memo(function DataCardList({
   const prevCard = hasMultipleCards
     ? visibleCards[(activeIdx - 1 + visibleCards.length) % visibleCards.length]
     : undefined;
-  const nextCard = hasMultipleCards ? visibleCards[(activeIdx + 1) % visibleCards.length] : undefined;
+  const nextCard = hasMultipleCards
+    ? visibleCards[(activeIdx + 1) % visibleCards.length]
+    : undefined;
   const goToPrevCard = prevCard
     ? () => {
         setSlideFrom("left");
@@ -1435,7 +1599,9 @@ const DataCardList = memo(function DataCardList({
   // per-card `gridColumn` override below, which pins each one into column 1
   // of that unchanged template instead.
   const gridClasses =
-    drawerOpen && displayMode === "card" ? "grid-cols-1 gap-3" : DISPLAY_MODE_GRID_CLASSES[displayMode];
+    drawerOpen && displayMode === "card"
+      ? "grid-cols-1 gap-3"
+      : DISPLAY_MODE_GRID_CLASSES[displayMode];
   // Only the two quick-action grids need the per-card column pin above —
   // list is already single-column and card's own template change already
   // achieves the same "one per row" result without it.
@@ -1476,7 +1642,8 @@ const DataCardList = memo(function DataCardList({
       cardHidden: hidden.has(card.id),
       onToggleHidden: () => toggleHidden(card.id),
       dragControls,
-      tileDensity: displayMode === "grid-large" ? "large" : displayMode === "grid-small" ? "small" : undefined,
+      tileDensity:
+        displayMode === "grid-large" ? "large" : displayMode === "grid-small" ? "small" : undefined,
       listMode: displayMode === "list",
       teachingProcedure: card.teachingProcedure,
       // Only wired for the card that's actually active — the newly-active
@@ -1542,8 +1709,16 @@ const DataCardList = memo(function DataCardList({
               style={stackToLeftColumn ? { gridColumn: 1 } : undefined}
               variants={{
                 enter: { opacity: 0, x: -40 },
-                center: { opacity: 1, x: 0, transition: { duration: DATA_SUBMIT_ENTER_DURATION_MS / 1000 } },
-                exit: { opacity: 0, x: 80, transition: { duration: DATA_SUBMIT_EXIT_DURATION_MS / 1000 } },
+                center: {
+                  opacity: 1,
+                  x: 0,
+                  transition: { duration: DATA_SUBMIT_ENTER_DURATION_MS / 1000 },
+                },
+                exit: {
+                  opacity: 0,
+                  x: 80,
+                  transition: { duration: DATA_SUBMIT_EXIT_DURATION_MS / 1000 },
+                },
               }}
               transition={{ layout: suppressCardLayout ? { duration: 0 } : CARD_MORPH_TRANSITION }}
             >
@@ -1621,4 +1796,3 @@ function EditableCardItem({
     </Reorder.Item>
   );
 }
-

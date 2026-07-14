@@ -20,10 +20,7 @@ export interface NumberKeypadProps {
   /** Optional callback when open state changes. */
   onOpenChange?: (open: boolean) => void;
   /** Renders the trigger (the on-card number). Receives editing state. */
-  children: (state: {
-    isEditing: boolean;
-    open: () => void;
-  }) => React.ReactNode;
+  children: (state: { isEditing: boolean; open: () => void }) => React.ReactNode;
 }
 
 export function NumberKeypad({
@@ -103,7 +100,9 @@ export function NumberKeypad({
         {/* flex + h-full — see TimeKeypad's identical comment: keeps this
             trigger filling the anchor span's full height instead of sitting
             top-aligned inside it whenever a parent stretches the span. */}
-        <span ref={anchorRef} className="flex h-full">{children({ isEditing: open, open: openKeypad })}</span>
+        <span ref={anchorRef} className="flex h-full">
+          {children({ isEditing: open, open: openKeypad })}
+        </span>
       </PopoverAnchor>
       <PopoverContent
         side="top"
@@ -116,7 +115,10 @@ export function NumberKeypad({
         className="group z-[70] w-auto border-none bg-transparent p-0 shadow-none"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <div ref={contentRef} className="relative w-[200px] rounded-2xl border-2 border-blue-400/80 bg-card p-2.5 shadow-[0_10px_30px_-4px_rgba(0,0,0,0.25)]">
+        <div
+          ref={contentRef}
+          className="relative w-[200px] rounded-2xl border-2 border-blue-400/80 bg-card p-2.5 shadow-[0_10px_30px_-4px_rgba(0,0,0,0.25)]"
+        >
           {/* Hidden input — catches native + physical keyboard */}
           <input
             ref={hiddenInputRef}
@@ -152,8 +154,11 @@ export function NumberKeypad({
             tabIndex={-1}
           />
 
-          {/* Display */}
-          <div className="mb-2 flex h-8 items-end justify-end overflow-hidden rounded-lg border border-stone-200 bg-muted/60 px-3 py-1">
+          {/* Display — same blue-bordered, inner-shadowed well as the app's
+              standard text entry fields (see ui/input.tsx), not the plain
+              gray box this used to be, so an actively-edited value reads
+              the same "carved in" way typing anywhere else does. */}
+          <div className="mb-2 flex h-8 items-end justify-end overflow-hidden rounded-lg border-2 border-blue-400/80 bg-white px-3 py-1 shadow-[inset_0_2px_5px_rgba(0,0,0,0.22)]">
             <AnimatePresence mode="popLayout" initial={false}>
               <motion.span
                 key={pending || "empty"}
