@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Check, X, Link2 } from "lucide-react";
 import { CardShell, type CardEditAndDrawerProps } from "./CardShell";
 import { DataListRow } from "./DataListRow";
@@ -23,6 +23,10 @@ export interface TimestampCardProps extends CardEditAndDrawerProps {
   intervalMin: number;
   /** Total number of intervals across the whole observation window. */
   intervalCount: number;
+  /** Button + measurement-row label for the positive outcome. */
+  positiveLabel?: string;
+  /** Button + measurement-row label for the negative outcome. */
+  negativeLabel?: string;
   isActive?: boolean;
   onActivate?: () => void;
 }
@@ -45,11 +49,18 @@ function formatBoundary(min: number, hourMode: boolean): string {
   return rem === 0 ? `${h}h` : `${h}hr${rem}m`;
 }
 
-export function intervalLabel(index: number, intervalMin: number): string {
+/** Just the time range, e.g. "0-30m" — no leading number/colon. */
+function intervalRange(index: number, intervalMin: number): string {
   const start = index * intervalMin;
   const end = (index + 1) * intervalMin;
   const hourMode = end > 60;
   return `${formatBoundary(start, hourMode)}-${formatBoundary(end, hourMode)}`;
+}
+
+/** "1: 0-30m" — same number/colon/text convention as Task Analysis's own
+ *  step labels ("1: Turn on water"). */
+export function intervalLabel(index: number, intervalMin: number): string {
+  return `${index + 1}: ${intervalRange(index, intervalMin)}`;
 }
 
 function formatCompactTime(ms: number) {
@@ -61,6 +72,19 @@ function formatCompactTime(ms: number) {
   return h > 0 ? `${h}:${mm}:${s.toString().padStart(2, "0")}` : `${mm}:${s.toString().padStart(2, "0")}`;
 }
 
+// Bubble/badge coloring shared by the timeline's own numbers and the
+// expanded view's per-row badges — gray until an interval has actually been
+// scored, then the same green/red as its button. The current interval gets
+// an outlined (not flat-gray) treatment while still unscored, so it reads
+// as "this one's active" rather than just another blank slot.
+function statusColors(status: IntervalStatus, isCurrent: boolean) {
+  if (status === "correct") return { bg: "bg-green-50 border-green-300", text: "text-green-700" };
+  if (status === "incorrect") return { bg: "bg-red-50 border-red-300", text: "text-red-700" };
+  return isCurrent
+    ? { bg: "bg-card border-foreground/30", text: "text-foreground" }
+    : { bg: "bg-foreground/5 border-foreground/10", text: "text-foreground/40" };
+}
+
 export function TimestampCard({
   id,
   title,
@@ -68,6 +92,8 @@ export function TimestampCard({
   description,
   intervalMin,
   intervalCount,
+  positiveLabel = "Correct",
+  negativeLabel = "Incorrect",
   isActive = true,
   onActivate,
   reorderEditing,
@@ -97,6 +123,7 @@ export function TimestampCard({
   // interval is current" is a pure function of session time, not something
   // a user can navigate ahead of or pause independently.
   const [elapsed, setElapsed] = useCardState(cardKey, "elapsed", 0); // ms
+  const [expanded, setExpanded] = useState(false);
   const { sessionRunning, subscribeTick } = useSession();
   const { markDirty, resetSignal } = useCardSession();
 
@@ -121,15 +148,22 @@ export function TimestampCard({
   const scoredCount = statuses.filter((s) => s !== null).length;
   const isComplete = scoredCount === intervalCount;
   useReportCardStatus(cardKey, scoredCount > 0, isComplete);
-  const progress = (scoredCount / intervalCount) * 100;
 
-  const score = (value: Exclude<IntervalStatus, null>) => {
+  // Generalized to an arbitrary index (not just `currentIndex`) — the
+  // expanded view lets any interval be scored or corrected directly,
+  // mirroring Task Analysis's own expanded per-step editing.
+  const score = (index: number, value: Exclude<IntervalStatus, null>) => {
     markDirty();
     setStatuses((prev) => {
       const next = [...prev];
-      next[currentIndex] = next[currentIndex] === value ? null : value;
+      next[index] = next[index] === value ? null : value;
       return next;
     });
+  };
+
+  const measurementLabelOverride = {
+    positive: `Mark ${positiveLabel} if`,
+    negative: `Mark ${negativeLabel} if`,
   };
 
   const details = (
@@ -145,7 +179,11 @@ export function TimestampCard({
       />
       {teachingProcedure && (
         <div className="mt-4">
-          <TeachingProcedureAccordion data={teachingProcedure} kind="timestamp" />
+          <TeachingProcedureAccordion
+            data={teachingProcedure}
+            kind="timestamp"
+            measurementLabelOverride={measurementLabelOverride}
+          />
         </div>
       )}
     </>
@@ -175,7 +213,7 @@ export function TimestampCard({
         onNextCard={onNextCard}
         slideFrom={slideFrom}
         details={details}
-        progress={progress}
+        progress={(scoredCount / intervalCount) * 100}
         isComplete={isComplete}
         actions={
           <div className={cn("flex items-center justify-center", large ? "gap-2.5" : "gap-1.5")}>
@@ -183,10 +221,10 @@ export function TimestampCard({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                score("incorrect");
+                score(currentIndex, "incorrect");
               }}
               disabled={!sessionRunning}
-              aria-label="Incorrect"
+              aria-label={negativeLabel}
               className={cn(
                 "btn-bevel shrink-0 rounded-full grid place-items-center border-[1.5px] transition-colors disabled:opacity-40",
                 large ? "size-[42px]" : "size-7",
@@ -201,10 +239,10 @@ export function TimestampCard({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                score("correct");
+                score(currentIndex, "correct");
               }}
               disabled={!sessionRunning}
-              aria-label="Correct"
+              aria-label={positiveLabel}
               className={cn(
                 "btn-bevel shrink-0 rounded-full grid place-items-center border-[1.5px] transition-colors disabled:opacity-40",
                 large ? "size-[42px]" : "size-7",
@@ -258,7 +296,7 @@ export function TimestampCard({
         onPrevCard={onPrevCard}
         onNextCard={onNextCard}
         slideFrom={slideFrom}
-        progress={progress}
+        progress={(scoredCount / intervalCount) * 100}
         isComplete={isComplete}
         actions={
           <div className="flex items-center gap-1">
@@ -268,16 +306,16 @@ export function TimestampCard({
               variant="red"
               selected={currentStatus === "incorrect"}
               disabled={!sessionRunning}
-              ariaLabel="Incorrect"
-              onClick={() => score("incorrect")}
+              ariaLabel={negativeLabel}
+              onClick={() => score(currentIndex, "incorrect")}
             />
             <ListActionButton
               icon={Check}
               variant="green"
               selected={currentStatus === "correct"}
               disabled={!sessionRunning}
-              ariaLabel="Correct"
-              onClick={() => score("correct")}
+              ariaLabel={positiveLabel}
+              onClick={() => score(currentIndex, "correct")}
             />
           </div>
         }
@@ -308,20 +346,27 @@ export function TimestampCard({
       onPrevCard={onPrevCard}
       onNextCard={onNextCard}
       slideFrom={slideFrom}
-      progress={progress}
-      isComplete={isComplete}
       details={details}
+      expanded={expanded}
+      onToggleExpanded={() => setExpanded((v) => !v)}
+      expandedView={
+        <TimestampExpandedView
+          intervalCount={intervalCount}
+          intervalMin={intervalMin}
+          statuses={statuses}
+          currentIndex={currentIndex}
+          elapsedMs={elapsed}
+          totalMs={totalMs}
+          sessionRunning={sessionRunning}
+          positiveLabel={positiveLabel}
+          negativeLabel={negativeLabel}
+          onScore={score}
+        />
+      }
     >
       <div className="px-5 pt-2 pb-4 flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <div className="text-sm font-semibold">
-              Interval {currentIndex + 1} of {intervalCount}
-            </div>
-            <div className="text-xs text-muted-foreground tabular-nums">
-              {intervalLabel(currentIndex, intervalMin)}
-            </div>
-          </div>
+          <div className="text-sm font-semibold tabular-nums">{intervalLabel(currentIndex, intervalMin)}</div>
           <span
             aria-label="Locked to session time"
             title="Locked to session time"
@@ -332,37 +377,29 @@ export function TimestampCard({
           </span>
         </div>
 
-        <IntervalTimeline intervalCount={intervalCount} elapsedMs={elapsed} totalMs={totalMs} currentIndex={currentIndex} />
+        <IntervalTimeline
+          intervalCount={intervalCount}
+          elapsedMs={elapsed}
+          totalMs={totalMs}
+          currentIndex={currentIndex}
+          statuses={statuses}
+        />
 
-        <div className="mt-1 flex items-center justify-center gap-4">
-          <button
-            type="button"
-            onClick={() => score("incorrect")}
+        <div className="mt-2 flex items-center gap-3">
+          <ScoreButton
+            variant="negative"
+            label={negativeLabel}
+            selected={currentStatus === "incorrect"}
             disabled={!sessionRunning}
-            aria-label="Incorrect"
-            className={cn(
-              "btn-bevel size-14 shrink-0 aspect-square rounded-full grid place-items-center border-[1.5px] transition-colors disabled:opacity-40",
-              currentStatus === "incorrect"
-                ? "bg-red-400 border-red-500 text-white"
-                : "border-red-300 bg-red-50 text-red-700 hover:bg-red-100",
-            )}
-          >
-            <X className="size-6" strokeWidth={3} />
-          </button>
-          <button
-            type="button"
-            onClick={() => score("correct")}
+            onClick={() => score(currentIndex, "incorrect")}
+          />
+          <ScoreButton
+            variant="positive"
+            label={positiveLabel}
+            selected={currentStatus === "correct"}
             disabled={!sessionRunning}
-            aria-label="Correct"
-            className={cn(
-              "btn-bevel size-14 shrink-0 aspect-square rounded-full grid place-items-center border-[1.5px] transition-colors disabled:opacity-40",
-              currentStatus === "correct"
-                ? "bg-green-400 border-green-500 text-white"
-                : "border-green-300 bg-green-50 text-green-700 hover:bg-green-100",
-            )}
-          >
-            <Check className="size-6" strokeWidth={3} />
-          </button>
+            onClick={() => score(currentIndex, "correct")}
+          />
         </div>
       </div>
     </CardShell>
@@ -371,8 +408,9 @@ export function TimestampCard({
 
 // The "now" chevron is the Schedule tab's own arrow (see ScheduleView.tsx),
 // which points RIGHT to cross a vertical list from its left edge — rotated
-// -90° here so it instead points UP, crossing this horizontal bar from
-// underneath it.
+// -90° for the horizontal timeline (below) so it instead points UP,
+// crossing that bar from underneath; used un-rotated for the expanded
+// view's own vertical bar, where it already points the right way as-is.
 const NOW_CHEVRON_PATH = "M3 2 Q1 2 1 4 V16 Q1 18 3 18 L13 11.5 Q15 10 13 8.5 Z";
 
 function IntervalTimeline({
@@ -380,28 +418,49 @@ function IntervalTimeline({
   elapsedMs,
   totalMs,
   currentIndex,
+  statuses,
 }: {
   intervalCount: number;
   elapsedMs: number;
   totalMs: number;
   currentIndex: number;
+  statuses: IntervalStatus[];
 }) {
   const pct = totalMs > 0 ? Math.min(100, Math.max(0, (elapsedMs / totalMs) * 100)) : 0;
+  const BUBBLE = 20;
+  const BUBBLE_CURRENT = 34;
   return (
-    <div className="pt-2">
-      <div className="relative flex text-center">
-        {Array.from({ length: intervalCount }, (_, i) => (
-          <span
-            key={i}
-            className={cn(
-              "flex-1 text-[10px] tabular-nums",
-              i === currentIndex ? "font-bold text-blue-600" : "font-semibold text-muted-foreground",
-            )}
-          >
-            {i + 1}
-          </span>
-        ))}
+    <div className="pt-1">
+      {/* Period bubbles — parked in place above their own segment (not a
+          draggable/swipeable strip like Percent Correct's trial bubbles),
+          same "current is biggest" idiom, gray until scored then colored
+          to match the button that scored it. */}
+      <div className="flex items-end justify-between" style={{ height: BUBBLE_CURRENT }}>
+        {Array.from({ length: intervalCount }, (_, i) => {
+          const isCurrent = i === currentIndex;
+          const { bg, text } = statusColors(statuses[i], isCurrent);
+          const size = isCurrent ? BUBBLE_CURRENT : BUBBLE;
+          return (
+            <div key={i} className="flex-1 flex justify-center">
+              <div
+                className={cn(
+                  "rounded-full flex items-center justify-center font-display font-bold tabular-nums transition-all duration-200",
+                  isCurrent ? "border-2" : "border",
+                  bg,
+                  text,
+                )}
+                style={{ width: size, height: size, fontSize: isCurrent ? 15 : 10 }}
+              >
+                {i + 1}
+              </div>
+            </div>
+          );
+        })}
       </div>
+      {/* The single combined progress indicator: the gray track fills light
+          blue as the session clock advances, and the chevron below marks
+          exactly how far the fill has reached — no separate "percent
+          scored" bar duplicating this one. */}
       <div className="relative h-2.5 rounded-full bg-stone-200 overflow-hidden mt-0.5">
         <div
           className="absolute inset-y-0 left-0 bg-blue-200 transition-[width]"
@@ -418,10 +477,7 @@ function IntervalTimeline({
         ))}
       </div>
       <div className="relative h-4" aria-hidden>
-        <div
-          className="absolute top-0 -translate-x-1/2"
-          style={{ left: `${pct}%` }}
-        >
+        <div className="absolute top-0 -translate-x-1/2" style={{ left: `${pct}%` }}>
           <svg
             width="14"
             height="18"
@@ -433,5 +489,190 @@ function IntervalTimeline({
         </div>
       </div>
     </div>
+  );
+}
+
+const ROW_H = 28; // matches h-7 row buttons
+const ROW_GAP = 6; // matches space-y-1.5
+
+/** Twirl-down alternative to the standard view's horizontal timeline — same
+ *  progress fill and "now" indicator, just running vertically alongside a
+ *  list of every interval, each with its own working score buttons (not
+ *  gated to only the current one), mirroring Task Analysis's own expanded
+ *  per-step editing. */
+function TimestampExpandedView({
+  intervalCount,
+  intervalMin,
+  statuses,
+  currentIndex,
+  elapsedMs,
+  totalMs,
+  sessionRunning,
+  positiveLabel,
+  negativeLabel,
+  onScore,
+}: {
+  intervalCount: number;
+  intervalMin: number;
+  statuses: IntervalStatus[];
+  currentIndex: number;
+  elapsedMs: number;
+  totalMs: number;
+  sessionRunning: boolean;
+  positiveLabel: string;
+  negativeLabel: string;
+  onScore: (index: number, value: Exclude<IntervalStatus, null>) => void;
+}) {
+  const pct = totalMs > 0 ? Math.min(100, Math.max(0, (elapsedMs / totalMs) * 100)) : 0;
+  const totalHeight = intervalCount * ROW_H + (intervalCount - 1) * ROW_GAP;
+  return (
+    <div className="px-5 pt-1 pb-4">
+      <div className="flex gap-3">
+        <div className="relative shrink-0" style={{ width: 10, height: totalHeight }}>
+          <div className="absolute inset-0 rounded-full bg-stone-200 overflow-hidden">
+            <div
+              className="absolute inset-x-0 top-0 bg-blue-200 transition-[height]"
+              style={{ height: `${pct}%` }}
+              aria-hidden
+            />
+            {Array.from({ length: intervalCount - 1 }, (_, i) => (
+              <div
+                key={i}
+                className="absolute inset-x-0 h-px bg-white"
+                style={{ top: `${((i + 1) / intervalCount) * 100}%` }}
+                aria-hidden
+              />
+            ))}
+          </div>
+          <div className="absolute -right-2 -translate-y-1/2" style={{ top: `${pct}%` }} aria-hidden>
+            <svg
+              width="14"
+              height="18"
+              viewBox="0 0 16 20"
+              style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.25))" }}
+            >
+              <path d={NOW_CHEVRON_PATH} fill="#2563eb" />
+            </svg>
+          </div>
+        </div>
+        <ol className="flex-1 min-w-0 space-y-1.5">
+          {Array.from({ length: intervalCount }, (_, i) => {
+            const status = statuses[i];
+            const isCurrent = i === currentIndex;
+            const { bg, text } = statusColors(status, isCurrent);
+            return (
+              <li key={i} className="flex items-center gap-2" style={{ height: ROW_H }}>
+                <span
+                  className={cn(
+                    "shrink-0 grid place-items-center size-6 rounded-full font-display font-bold text-[11px] tabular-nums",
+                    isCurrent ? "border-2" : "border",
+                    bg,
+                    text,
+                  )}
+                >
+                  {i + 1}
+                </span>
+                <span className="flex-1 min-w-0 truncate text-xs text-muted-foreground tabular-nums">
+                  {intervalRange(i, intervalMin)}
+                </span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <RowScoreButton
+                    variant="negative"
+                    label={negativeLabel}
+                    selected={status === "incorrect"}
+                    disabled={!sessionRunning}
+                    onClick={() => onScore(i, "incorrect")}
+                  />
+                  <RowScoreButton
+                    variant="positive"
+                    label={positiveLabel}
+                    selected={status === "correct"}
+                    disabled={!sessionRunning}
+                    onClick={() => onScore(i, "correct")}
+                  />
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    </div>
+  );
+}
+
+function ScoreButton({
+  variant,
+  label,
+  selected,
+  disabled,
+  onClick,
+}: {
+  variant: "positive" | "negative";
+  label: string;
+  selected: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  const isPositive = variant === "positive";
+  const Icon = isPositive ? Check : X;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        "btn-bevel flex-1 min-w-0 h-10 rounded-full border-2 flex items-center justify-center gap-1.5 px-2 transition-colors disabled:opacity-40",
+        isPositive
+          ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
+          : "border-red-300 bg-red-50 text-red-700 hover:bg-red-100",
+        selected &&
+          (isPositive
+            ? "bg-green-500 border-green-600 text-white hover:bg-green-500"
+            : "bg-red-500 border-red-600 text-white hover:bg-red-500"),
+      )}
+    >
+      <Icon className="size-4 shrink-0" strokeWidth={3} />
+      <span className="text-sm font-medium truncate">{label}</span>
+    </button>
+  );
+}
+
+function RowScoreButton({
+  variant,
+  label,
+  selected,
+  disabled,
+  onClick,
+}: {
+  variant: "positive" | "negative";
+  label: string;
+  selected: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  const isPositive = variant === "positive";
+  const Icon = isPositive ? Check : X;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        "h-7 rounded-full border-2 flex items-center justify-center gap-1 px-2.5 text-[11px] font-semibold transition-colors disabled:opacity-40 shrink-0",
+        isPositive
+          ? "border-green-300 text-green-700 hover:bg-green-50"
+          : "border-red-300 text-red-700 hover:bg-red-50",
+        selected &&
+          cn(
+            "btn-bevel text-white",
+            isPositive
+              ? "bg-green-500 border-green-600 hover:bg-green-500"
+              : "bg-red-500 border-red-600 hover:bg-red-500",
+          ),
+      )}
+    >
+      <Icon className="size-3" strokeWidth={3} />
+      {label}
+    </button>
   );
 }

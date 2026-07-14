@@ -71,14 +71,21 @@ const DEFAULT_EXPANDED = new Set<string>(["procedure", "measurement"]);
 export function TeachingProcedureAccordion({
   data,
   kind,
+  measurementLabelOverride,
 }: {
   data: TeachingProcedure;
   kind: CardKind;
+  /** Overrides the kind's default positive/negative row labels — for a card
+   *  whose own scoring buttons use bespoke wording (e.g. a Timestamp card
+   *  scoring "Dry"/"Wet/Soiled" instead of the generic "Correct"/
+   *  "Incorrect") so the drawer's Measurement row always names the exact
+   *  button it's describing. */
+  measurementLabelOverride?: { positive: string; negative: string };
 }) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(
     () => new Set(ROW_IDS.filter((id) => !DEFAULT_EXPANDED.has(id))),
   );
-  const measurementLabels = MEASUREMENT_LABELS[kind];
+  const measurementLabels = measurementLabelOverride ?? MEASUREMENT_LABELS[kind];
   // Frequency/Rate are plain tallies — the badge below should read as the
   // exact +/- button the instructions refer to, not a generic correct/error
   // checkmark, since there's no "response" being scored, just a count.

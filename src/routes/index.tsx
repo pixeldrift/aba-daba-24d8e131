@@ -131,6 +131,12 @@ type CardConfig = {
       intervalMin: number;
       /** Total number of intervals across the whole observation window. */
       intervalCount: number;
+      /** Button + measurement-row label for the positive outcome — defaults
+       *  to "Correct" when omitted. */
+      positiveLabel?: string;
+      /** Button + measurement-row label for the negative outcome — defaults
+       *  to "Incorrect" when omitted. */
+      negativeLabel?: string;
     }
 );
 
@@ -558,6 +564,8 @@ const cards: CardConfig[] = [
       "Score the current interval Correct if he was dry at the check, Incorrect if there was an accident. The interval shown is locked to session time — you can only score whichever one is happening right now.",
     intervalMin: 30,
     intervalCount: 3,
+    positiveLabel: "Dry",
+    negativeLabel: "Wet/Soiled",
     teachingProcedure: {
       goal: "Phineas will remain dry through 3 consecutive 30-minute checks (90 minutes total) across 3 consecutive sessions.",
       rationale:
@@ -1391,6 +1399,8 @@ function renderCard(
           description={card.description}
           intervalMin={card.intervalMin}
           intervalCount={card.intervalCount}
+          positiveLabel={card.positiveLabel}
+          negativeLabel={card.negativeLabel}
           {...common}
         />
       );
