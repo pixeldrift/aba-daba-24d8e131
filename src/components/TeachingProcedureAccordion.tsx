@@ -1,4 +1,16 @@
 import { useState } from "react";
+import {
+  Target,
+  Brain,
+  ClipboardList,
+  ArrowRight,
+  Ruler,
+  HandHelping,
+  Package,
+  Lightbulb,
+  CircleCheck,
+  CircleX,
+} from "lucide-react";
 import { AccordionRow } from "./AccordionRow";
 import type { CardKind } from "./DataToolbarContext";
 
@@ -74,7 +86,7 @@ export function TeachingProcedureAccordion({
     <div className="divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white overflow-hidden text-sm">
       <AccordionRow
         id="goal"
-        emoji="🎯"
+        icon={<Target className="size-3.5" />}
         label="Goal"
         collapsed={collapsedIds.has("goal")}
         onToggle={toggleRow}
@@ -83,7 +95,7 @@ export function TeachingProcedureAccordion({
       </AccordionRow>
       <AccordionRow
         id="rationale"
-        emoji="💭"
+        icon={<Brain className="size-3.5" />}
         label="Rationale"
         collapsed={collapsedIds.has("rationale")}
         onToggle={toggleRow}
@@ -92,7 +104,7 @@ export function TeachingProcedureAccordion({
       </AccordionRow>
       <AccordionRow
         id="procedure"
-        emoji="📝"
+        icon={<ClipboardList className="size-3.5" />}
         label="Procedure"
         collapsed={collapsedIds.has("procedure")}
         onToggle={toggleRow}
@@ -101,7 +113,7 @@ export function TeachingProcedureAccordion({
       </AccordionRow>
       <AccordionRow
         id="sd"
-        emoji="👉"
+        icon={<ArrowRight className="size-3.5" />}
         label="SD"
         collapsed={collapsedIds.has("sd")}
         onToggle={toggleRow}
@@ -110,7 +122,7 @@ export function TeachingProcedureAccordion({
       </AccordionRow>
       <AccordionRow
         id="measurement"
-        emoji="📏"
+        icon={<Ruler className="size-3.5" />}
         label="Measurement"
         collapsed={collapsedIds.has("measurement")}
         onToggle={toggleRow}
@@ -119,19 +131,25 @@ export function TeachingProcedureAccordion({
             getting its own — you almost always want both at once when
             checking how to score something, not one at a time. */}
         <div className="space-y-2">
-          <p>
-            <span className="font-semibold">✅ {measurementLabels.positive}: </span>
-            {data.measurement.markCorrect}
+          <p className="flex gap-1.5">
+            <CircleCheck className="size-4 shrink-0 mt-0.5 text-green-600" aria-hidden />
+            <span>
+              <span className="font-semibold">{measurementLabels.positive}: </span>
+              {data.measurement.markCorrect}
+            </span>
           </p>
-          <p>
-            <span className="font-semibold">❌ {measurementLabels.negative}: </span>
-            {data.measurement.markError}
+          <p className="flex gap-1.5">
+            <CircleX className="size-4 shrink-0 mt-0.5 text-red-600" aria-hidden />
+            <span>
+              <span className="font-semibold">{measurementLabels.negative}: </span>
+              {data.measurement.markError}
+            </span>
           </p>
         </div>
       </AccordionRow>
       <AccordionRow
         id="correction"
-        emoji="🤲"
+        icon={<HandHelping className="size-3.5" />}
         label="Correction"
         collapsed={collapsedIds.has("correction")}
         onToggle={toggleRow}
@@ -140,7 +158,7 @@ export function TeachingProcedureAccordion({
       </AccordionRow>
       <AccordionRow
         id="materials"
-        emoji="📦"
+        icon={<Package className="size-3.5" />}
         label="Materials"
         collapsed={collapsedIds.has("materials")}
         onToggle={toggleRow}
@@ -149,7 +167,7 @@ export function TeachingProcedureAccordion({
       </AccordionRow>
       <AccordionRow
         id="notes"
-        emoji="💡"
+        icon={<Lightbulb className="size-3.5" />}
         label="Instructional Notes"
         collapsed={collapsedIds.has("notes")}
         onToggle={toggleRow}
