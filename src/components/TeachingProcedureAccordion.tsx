@@ -10,10 +10,13 @@ import {
   Lightbulb,
   Check,
   X,
+  Plus,
+  Minus,
   Star,
 } from "lucide-react";
 import { AccordionRow } from "./AccordionRow";
 import type { CardKind } from "./DataToolbarContext";
+import { cn } from "@/lib/utils";
 
 export interface TeachingProcedure {
   goal: string;
@@ -53,6 +56,7 @@ const MEASUREMENT_LABELS: Record<CardKind, { positive: string; negative: string 
   rate: { positive: "Counts as an instance if", negative: "Does not count if" },
   duration: { positive: "Counts as the same instance if", negative: "Does not count if" },
   rating: { positive: "Mark Correct if", negative: "Mark Error if" },
+  timestamp: { positive: "Mark Correct if", negative: "Mark Incorrect if" },
 };
 
 // Procedure and Measurement are what staff actually reach for mid-session —
@@ -67,14 +71,25 @@ const DEFAULT_EXPANDED = new Set<string>(["procedure", "measurement"]);
 export function TeachingProcedureAccordion({
   data,
   kind,
+  measurementLabelOverride,
 }: {
   data: TeachingProcedure;
   kind: CardKind;
+  /** Overrides the kind's default positive/negative row labels — for a card
+   *  whose own scoring buttons use bespoke wording (e.g. a Timestamp card
+   *  scoring "Dry"/"Wet/Soiled" instead of the generic "Correct"/
+   *  "Incorrect") so the drawer's Measurement row always names the exact
+   *  button it's describing. */
+  measurementLabelOverride?: { positive: string; negative: string };
 }) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(
     () => new Set(ROW_IDS.filter((id) => !DEFAULT_EXPANDED.has(id))),
   );
-  const measurementLabels = MEASUREMENT_LABELS[kind];
+  const measurementLabels = measurementLabelOverride ?? MEASUREMENT_LABELS[kind];
+  // Frequency/Rate are plain tallies — the badge below should read as the
+  // exact +/- button the instructions refer to, not a generic correct/error
+  // checkmark, since there's no "response" being scored, just a count.
+  const isTally = kind === "frequency" || kind === "rate";
 
   const toggleRow = (id: string) => {
     setCollapsedIds((prev) => {
@@ -161,9 +176,18 @@ export function TeachingProcedureAccordion({
               <p className="flex gap-1.5">
                 <span
                   aria-hidden
-                  className="shrink-0 mt-0.5 grid place-items-center size-4 rounded-full border-[1.5px] border-green-300 bg-green-50 text-green-700"
+                  className={cn(
+                    "shrink-0 mt-0.5 grid place-items-center size-4 rounded-full",
+                    isTally
+                      ? "bg-blue-500 text-white"
+                      : "border-[1.5px] border-green-300 bg-green-50 text-green-700",
+                  )}
                 >
-                  <Check className="size-2.5" strokeWidth={3} />
+                  {isTally ? (
+                    <Plus className="size-2.5" strokeWidth={3} />
+                  ) : (
+                    <Check className="size-2.5" strokeWidth={3} />
+                  )}
                 </span>
                 <span>
                   <span className="font-semibold">{measurementLabels.positive}: </span>
@@ -173,9 +197,18 @@ export function TeachingProcedureAccordion({
               <p className="flex gap-1.5">
                 <span
                   aria-hidden
-                  className="shrink-0 mt-0.5 grid place-items-center size-4 rounded-full border-[1.5px] border-red-300 bg-red-50 text-red-700"
+                  className={cn(
+                    "shrink-0 mt-0.5 grid place-items-center size-4 rounded-full border-[1.5px]",
+                    isTally
+                      ? "border-stone-300 bg-white text-foreground/70"
+                      : "border-red-300 bg-red-50 text-red-700",
+                  )}
                 >
-                  <X className="size-2.5" strokeWidth={3} />
+                  {isTally ? (
+                    <Minus className="size-2.5" strokeWidth={3} />
+                  ) : (
+                    <X className="size-2.5" strokeWidth={3} />
+                  )}
                 </span>
                 <span>
                   <span className="font-semibold">{measurementLabels.negative}: </span>

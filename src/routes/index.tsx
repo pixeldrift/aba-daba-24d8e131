@@ -15,6 +15,7 @@ import { RateCard } from "@/components/RateCard";
 import { DurationCard } from "@/components/DurationCard";
 import { TaskAnalysisCard } from "@/components/TaskAnalysisCard";
 import { RatingCard } from "@/components/RatingCard";
+import { TimestampCard } from "@/components/TimestampCard";
 import { ScheduleView } from "@/components/ScheduleView";
 import {
   SessionProvider,
@@ -83,10 +84,20 @@ type CardConfig = {
       title: string;
       phase: string;
       description: string;
-      minDurationSec: number;
+      /** Omit for interfering behaviors — there's no minimum window; every
+       *  instance counts regardless. */
+      minDurationSec?: number;
       locked?: boolean;
     }
-  | { kind: "duration"; title: string; phase: string; description: string; minDurationSec: number }
+  | {
+      kind: "duration";
+      title: string;
+      phase: string;
+      description: string;
+      /** Omit for interfering behaviors — there's no minimum; every
+       *  instance counts regardless. */
+      minDurationSec?: number;
+    }
   | {
       kind: "task-analysis";
       title: string;
@@ -110,6 +121,30 @@ type CardConfig = {
       min?: number;
       max: number;
       levelDescriptions?: string[];
+    }
+  | {
+      kind: "timestamp";
+      title: string;
+      phase: string;
+      description: string;
+      /** Length of each scored interval, in minutes (e.g. 30 or 60). */
+      intervalMin: number;
+      /** Total number of intervals across the whole observation window —
+       *  omit for an open-ended card that just keeps showing (and scoring)
+       *  intervals for as long as the session runs. */
+      intervalCount?: number;
+      /** Only relevant when `intervalCount` is omitted — how many hours of
+       *  intervals to show by default (defaults to 4). */
+      defaultWindowHours?: number;
+      /** Button + measurement-row label for the positive outcome — defaults
+       *  to "Correct" when omitted. */
+      positiveLabel?: string;
+      /** Button + measurement-row label for the negative outcome — defaults
+       *  to "Incorrect" when omitted. */
+      negativeLabel?: string;
+      /** TEMPORARY test hook — unlocks the elapsed-time pill for manual
+       *  entry instead of following the session clock. Defaults to locked. */
+      locked?: boolean;
     }
 );
 
@@ -240,7 +275,6 @@ const cards: CardConfig[] = [
     phase: "Baseline",
     description:
       "During a timed observation, tally each flop/drop. Rate is reported as occurrences per minute.",
-    minDurationSec: 60,
     teachingProcedure: {
       goal: "Reduce Phineas's flopping/dropping-to-floor behavior to fewer than 1 occurrence per minute across a timed observation, as it currently interferes with transitions and participation.",
       rationale:
@@ -326,24 +360,25 @@ const cards: CardConfig[] = [
     phase: "Intervention",
     description:
       "During a timed observation, tally each head-banging instance. Rate is reported as occurrences per minute.",
-    minDurationSec: 60,
     teachingProcedure: {
       goal: "Reduce Phineas's head-banging to fewer than 1 occurrence per minute across a timed observation, prioritized as a safety-critical target.",
       rationale:
         "Head-banging carries immediate physical risk and is tracked by rate (not just count) so intensity/frequency changes are visible across observations of different lengths.",
       procedure:
-        "Tally each instance during the timed window. If intensity poses immediate risk of injury, prioritize safety (see Correction) over waiting to observe — data accuracy never overrides safety.",
+        "Tally a new instance once forceful head contact has continued for at least 10 seconds — a single isolated bang that doesn't repeat or continue isn't tallied on its own. If intensity poses immediate risk of injury, prioritize safety (see Correction) over waiting to observe — data accuracy never overrides safety.",
       sd: "Review the BCBA's current hypothesis in the full behavior plan before running this card — antecedents vary and matter for intervention, even though this card only tracks rate.",
       measurement: {
-        markCorrect: "Any forceful contact of the head against a person, object, or surface.",
-        markError: "Gentle self-stimulatory head movement with no forceful contact.",
+        markCorrect:
+          "Forceful head contact sustained for at least 10 seconds (onset) — count it as one instance regardless of how many individual bangs occur within that stretch, or within a following gap shorter than 60 continuous seconds.",
+        markError:
+          "A single forceful contact that doesn't repeat or continue for 10 seconds, or a resumption after a full 60-second gap with no head-banging has already closed the instance out (offset) — that's a new instance, not a continuation of the last one.",
       },
       correction:
         "Follow the safety plan's protective procedure immediately (protective equipment/blocking as trained) — do not wait for a natural pause to intervene. Log the instance once safe to do so.",
       materials:
         "Any protective equipment specified in the Safety Plan (see the Client Info tab's About Me section).",
       instructionalNotes:
-        "This is one of the few targets where safety response always takes precedence over data-collection precision — under-count rather than delay intervention.",
+        "Onset/offset thresholds: 10 continuous seconds before an instance counts, 60 continuous quiet seconds before it closes out — a recurrence within that 60-second window is still the same instance, not a new tally. Never delay the safety response to make this judgment call, though — under-count rather than wait.",
     },
   },
   {
@@ -354,25 +389,24 @@ const cards: CardConfig[] = [
     phase: "Intervention",
     description:
       "Track each tantrum instance separately. Start a new instance with the plus button; pause/resume the current instance with the play/pause button.",
-    minDurationSec: 30,
     teachingProcedure: {
       goal: "Reduce the total duration of Phineas's tantrums to less than 2 cumulative minutes per session.",
       rationale:
         "Duration (not just count) captures both how often tantrums occur and how long they last — useful since intervention can shorten episodes even before it reduces their frequency.",
       procedure:
-        "Start a new instance with the plus button at the first sign of a tantrum (crying, dropping, refusal escalating into distress). Pause/resume the timer if there's a brief lull, but start a new instance if he fully recovers and a new episode begins later.",
+        "Start the timer with the plus button once crying, dropping, or refusal has continued for at least 10 seconds (onset) — don't start it for a brief flash of protest. Pause/resume through any lull shorter than 60 continuous seconds; only start a NEW instance if a full 60 seconds passes with no tantrum behavior (offset) and it resumes afterward.",
       sd: "Commonly follows a denied request, an ended preferred activity, or an unexpected transition.",
       measurement: {
         markCorrect:
-          "Continuous or briefly interrupted crying/distress/refusal without a full recovery in between.",
+          "Crying/distress/refusal sustained for at least 10 continuous seconds — the same instance keeps running through any gap shorter than 60 continuous seconds.",
         markError:
-          "Brief frustration (a whine or protest) that resolves within a few seconds without escalating.",
+          "A protest that never reaches 10 continuous seconds, or a resumption after a full 60-second gap has already closed the instance out — that starts a new instance instead of extending the old one.",
       },
       correction:
         "Keep instructions minimal and avoid negotiating during the episode. Once he's calm for a sustained moment, redirect to the original expectation rather than dropping it.",
       materials: "None.",
       instructionalNotes:
-        "Resist the urge to end the timer the instant crying stops — a brief pause-then-resume within the same episode is normal; only start a new instance after a genuine recovery.",
+        "Onset/offset thresholds: 10 continuous seconds before starting the timer, 60 continuous quiet seconds before the instance is considered over. If a tantrum resumes within that 60-second window, keep the same instance running (pause/resume) instead of closing it out and starting a new one.",
     },
   },
   {
@@ -529,6 +563,37 @@ const cards: CardConfig[] = [
         'Rate what you observed, not what you hoped for — a generous "Fully ready" on a rough session makes the data less useful for spotting real patterns.',
     },
   },
+  {
+    id: "remains-dry",
+    kind: "timestamp",
+    title: "Remains dry",
+    phase: "Intervention",
+    description:
+      "Score the current interval Dry if he was dry at the check, Wet/Soiled if there was an accident. The interval shown is locked to session time — you can only score whichever one is happening right now. Runs the whole session on a 30-minute check schedule.",
+    intervalMin: 30,
+    positiveLabel: "Dry",
+    negativeLabel: "Wet/Soiled",
+    // TEMPORARY — unlocked so elapsed time can be typed in directly to test
+    // the timeline at arbitrary points; revert to locked (or omit) once done.
+    locked: false,
+    teachingProcedure: {
+      goal: "Phineas will remain dry through every 30-minute check across 3 consecutive sessions.",
+      rationale:
+        "Time-sampling at fixed intervals (rather than only logging accidents) gives a true dry/wet rate instead of just an accident count, since a session with no logged accident could still mean nobody checked.",
+      procedure:
+        "At each interval's check, ask him to tell you if he's dry or take him to the bathroom to check directly, then score that interval before moving on — the next interval starts automatically at the 30-minute mark regardless of when you scored the current one.",
+      sd: "The interval boundary arriving (see the timeline's blue marker) — not a request from the learner.",
+      measurement: {
+        markCorrect: "Dry at the time of the check, for the entire interval being scored.",
+        markError: "A wet/soiled accident occurred at any point during the interval being scored.",
+      },
+      correction:
+        "For an accident, follow the standard bathroom/change routine calmly and without extended attention, then resume the schedule at the next interval — don't re-score the interval that already closed out.",
+      materials: "Change of clothes, standard bathroom supplies.",
+      instructionalNotes:
+        "Only the current interval (locked to session time) can be scored — if a check is missed, that interval is simply left blank rather than back-filled once the next one has already started.",
+    },
+  },
 ];
 
 // Data-submitted animation timing — TODO: surface in user settings.
@@ -571,6 +636,7 @@ const CARD_KINDS_IN_ORDER: CardKind[] = [
   "duration",
   "task-analysis",
   "rating",
+  "timestamp",
 ];
 
 // Clinical progression order, not the cards' own declaration order — the
@@ -1332,6 +1398,21 @@ function renderCard(
           min={card.min}
           max={card.max}
           levelDescriptions={card.levelDescriptions}
+          {...common}
+        />
+      );
+    case "timestamp":
+      return (
+        <TimestampCard
+          title={card.title}
+          phase={card.phase}
+          description={card.description}
+          intervalMin={card.intervalMin}
+          intervalCount={card.intervalCount}
+          defaultWindowHours={card.defaultWindowHours}
+          positiveLabel={card.positiveLabel}
+          negativeLabel={card.negativeLabel}
+          locked={card.locked}
           {...common}
         />
       );

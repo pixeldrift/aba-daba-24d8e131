@@ -6,11 +6,11 @@ export interface DrawerStat {
   value: ReactNode;
 }
 
-/** Compact replacement for the old one-column Phase/Data-type/... dl —
- *  icon + data-type label sit on the left, phase (with its own icon) on the
- *  right of the same line, and the remaining numbers run in a 2-column grid
- *  instead of a full-width row each, so the whole block takes noticeably
- *  less vertical room in the details drawer. */
+/** Compact replacement for the old one-column Phase/Data-type/... dl — data
+ *  type and phase are just two more entries in the same 2-column stats
+ *  grid (each keeping its own icon next to the value), rather than a
+ *  separately-styled block above it, so every fact in the drawer reads off
+ *  the same label/value rhythm. */
 export function DrawerQuickFacts({
   icon,
   dataTypeLabel,
@@ -24,31 +24,33 @@ export function DrawerQuickFacts({
 }) {
   const PhaseIcon = PHASE_ICONS[phase];
   return (
-    <div>
-      <div className="flex flex-col gap-0.5 text-sm text-foreground/80">
-        <span className="flex items-center gap-1 min-w-0">
-          <span className="shrink-0 [&>svg]:size-4" aria-hidden>
+    <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+      <div>
+        <dt className="text-xs text-muted-foreground">Data type</dt>
+        <dd className="font-medium flex items-center gap-1 min-w-0">
+          <span className="shrink-0 [&>svg]:size-3.5" aria-hidden>
             {icon}
           </span>
-          <span className="font-medium truncate">{dataTypeLabel}</span>
-        </span>
-        <span className="flex items-center gap-1 min-w-0 text-muted-foreground">
+          <span className="truncate">{dataTypeLabel}</span>
+        </dd>
+      </div>
+      <div>
+        <dt className="text-xs text-muted-foreground">Phase</dt>
+        <dd className="font-medium flex items-center gap-1 min-w-0">
           {PhaseIcon && (
             <span className="shrink-0 [&>svg]:size-3.5" aria-hidden>
               <PhaseIcon />
             </span>
           )}
           <span className="truncate">{phase}</span>
-        </span>
+        </dd>
       </div>
-      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-        {stats.map((stat) => (
-          <div key={stat.label}>
-            <dt className="text-xs text-muted-foreground">{stat.label}</dt>
-            <dd className="font-medium tabular-nums">{stat.value}</dd>
-          </div>
-        ))}
-      </dl>
-    </div>
+      {stats.map((stat) => (
+        <div key={stat.label}>
+          <dt className="text-xs text-muted-foreground">{stat.label}</dt>
+          <dd className="font-medium tabular-nums">{stat.value}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
