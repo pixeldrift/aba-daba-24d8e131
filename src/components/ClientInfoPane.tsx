@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Eye, CheckCircle2, X, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogHeader,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PersonPill } from "@/components/StaffDirectory";
 import { Avatar } from "@/components/Avatar";
@@ -62,13 +69,43 @@ const CLIENT = {
 };
 
 const GUARDIANS: GuardianRecord[] = [
-  { id: "linda", name: "Linda Flynn-Fletcher", relationship: "Mother", phone: "+16155550111", avatar: lindaPhoto, pickupAuthorized: true },
-  { id: "lawrence", name: "Lawrence Fletcher", relationship: "Stepfather", phone: "+16155550122", avatar: lawrencePhoto, pickupAuthorized: true },
+  {
+    id: "linda",
+    name: "Linda Flynn-Fletcher",
+    relationship: "Mother",
+    phone: "+16155550111",
+    avatar: lindaPhoto,
+    pickupAuthorized: true,
+  },
+  {
+    id: "lawrence",
+    name: "Lawrence Fletcher",
+    relationship: "Stepfather",
+    phone: "+16155550122",
+    avatar: lawrencePhoto,
+    pickupAuthorized: true,
+  },
 ];
 
 const VEHICLES: VehicleRecord[] = [
-  { id: "v1", guardianId: "linda", color: "Silver", make: "Honda", model: "Odyssey", plate: "BJY-4471", photo: hondaOdysseyPhoto },
-  { id: "v2", guardianId: "lawrence", color: "Green", make: "Toyota", model: "Camry", plate: "HRT-2093", photo: toyotaCamryPhoto },
+  {
+    id: "v1",
+    guardianId: "linda",
+    color: "Silver",
+    make: "Honda",
+    model: "Odyssey",
+    plate: "BJY-4471",
+    photo: hondaOdysseyPhoto,
+  },
+  {
+    id: "v2",
+    guardianId: "lawrence",
+    color: "Green",
+    make: "Toyota",
+    model: "Camry",
+    plate: "HRT-2093",
+    photo: toyotaCamryPhoto,
+  },
 ];
 
 const TEAM_MEMBERS = ["Perry Plat", "Isabella Garcia-Shapiro", "Baljeet Tjinder"];
@@ -230,7 +267,9 @@ export function ClientInfoPane({ onViewSchedule }: { onViewSchedule: () => void 
                   <p className="font-semibold text-sm truncate">
                     {v.color} {v.make} {v.model}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">{guardian?.name ?? "Unknown"}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {guardian?.name ?? "Unknown"}
+                  </p>
                 </div>
                 <span className="shrink-0 font-mono text-xs font-semibold text-stone-600 bg-stone-100 px-2 py-1 rounded-md tracking-wide">
                   {v.plate}
@@ -264,7 +303,15 @@ export function ClientInfoPane({ onViewSchedule }: { onViewSchedule: () => void 
   );
 }
 
-function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+function Section({
+  id,
+  title,
+  children,
+}: {
+  id: string;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <section id={id}>
       <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">{title}</h2>
@@ -419,7 +466,9 @@ function AboutMeSection({
           id="relatedServices"
           emoji="🤝"
           label="Related Services"
-          value={phineasAppointments.map((a) => `${a.type}: ${a.provider} · ${formatApptSchedule(a)}`).join("\n")}
+          value={phineasAppointments
+            .map((a) => `${a.type}: ${a.provider} · ${formatApptSchedule(a)}`)
+            .join("\n")}
           collapsed={collapsedIds.has("relatedServices")}
           onToggle={toggleRow}
         >
@@ -481,7 +530,7 @@ function NoteRow({
     <>
       <AccordionRow
         id={id}
-        emoji={emoji}
+        icon={emoji}
         label={label}
         collapsed={collapsed}
         onToggle={onToggle}
@@ -501,7 +550,12 @@ function NoteRow({
       >
         {children ?? value}
       </AccordionRow>
-      <RequestEditDialog open={requestOpen} onOpenChange={setRequestOpen} label={label} currentValue={value} />
+      <RequestEditDialog
+        open={requestOpen}
+        onOpenChange={setRequestOpen}
+        label={label}
+        currentValue={value}
+      />
     </>
   );
 }
@@ -631,8 +685,12 @@ function ClientHeader() {
     <div className="flex items-center gap-4">
       <ClientAvatar />
       <div className="min-w-0">
-        <h1 className="font-display text-3xl font-bold leading-none truncate">{CLIENT.firstName}</h1>
-        <p className="mt-1 text-lg text-muted-foreground leading-tight truncate">{CLIENT.lastName}</p>
+        <h1 className="font-display text-3xl font-bold leading-none truncate">
+          {CLIENT.firstName}
+        </h1>
+        <p className="mt-1 text-lg text-muted-foreground leading-tight truncate">
+          {CLIENT.lastName}
+        </p>
         <p className="mt-1.5 text-sm text-foreground/70">
           Age {age} &middot; Born {birthday}
         </p>
@@ -677,7 +735,11 @@ function ClientAvatar() {
       <button
         type="button"
         onClick={handleClick}
-        aria-label={revealed ? `${CLIENT.firstName}'s photo — tap to enlarge` : `Tap to reveal ${CLIENT.firstName}'s photo`}
+        aria-label={
+          revealed
+            ? `${CLIENT.firstName}'s photo — tap to enlarge`
+            : `Tap to reveal ${CLIENT.firstName}'s photo`
+        }
         className="relative size-20 shrink-0"
       >
         {/* Its own overflow-hidden/clip-path box, separate from the ring
@@ -689,12 +751,18 @@ function ClientAvatar() {
         <div className="absolute inset-0 overflow-hidden rounded-full [clip-path:circle(50%)] bg-blue-100">
           <Avatar
             value={CLIENT.avatar}
-            className={cn("h-full w-full object-cover transition-[filter] duration-300", !revealed && "blur-md")}
+            className={cn(
+              "h-full w-full object-cover transition-[filter] duration-300",
+              !revealed && "blur-md",
+            )}
           />
         </div>
         {/* The ring, drawn as its own layer on top of the clipping circle
             above instead of sharing its box — see that div's comment. */}
-        <div className="absolute inset-0 rounded-full border-2 border-blue-300 pointer-events-none" aria-hidden />
+        <div
+          className="absolute inset-0 rounded-full border-2 border-blue-300 pointer-events-none"
+          aria-hidden
+        />
         {!revealed && (
           // Centered (not corner-pinned) and bare — a corner badge got
           // clipped by the circle's own rounded edge (a square positioned
@@ -716,4 +784,3 @@ function ClientAvatar() {
     </>
   );
 }
-

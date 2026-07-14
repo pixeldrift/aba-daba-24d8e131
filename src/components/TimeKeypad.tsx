@@ -15,10 +15,7 @@ export interface TimeKeypadProps {
   /** Optional callback when open state changes. */
   onOpenChange?: (open: boolean) => void;
   /** Renders the trigger. */
-  children: (state: {
-    isEditing: boolean;
-    open: () => void;
-  }) => React.ReactNode;
+  children: (state: { isEditing: boolean; open: () => void }) => React.ReactNode;
 }
 
 const MAX_DIGITS = 6;
@@ -28,16 +25,10 @@ function pendingToMs(pending: string) {
   const h = parseInt(padded.slice(0, 2), 10);
   const m = parseInt(padded.slice(2, 4), 10);
   const s = parseInt(padded.slice(4, 6), 10);
-  return ((h * 3600) + (m * 60) + s) * 1000;
+  return (h * 3600 + m * 60 + s) * 1000;
 }
 
-export function TimeKeypad({
-  valueMs,
-  onReplace,
-  onAdd,
-  onOpenChange,
-  children,
-}: TimeKeypadProps) {
+export function TimeKeypad({ valueMs, onReplace, onAdd, onOpenChange, children }: TimeKeypadProps) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState("");
   const hiddenInputRef = useRef<HTMLInputElement>(null);
@@ -101,15 +92,14 @@ export function TimeKeypad({
   for (let i = 0; i < MAX_DIGITS; i++) {
     if (i === 2 || i === 4) {
       charNodes.push(
-        <span key={`sep-${i}`} className="text-muted-foreground/40">:</span>,
+        <span key={`sep-${i}`} className="text-muted-foreground/40">
+          :
+        </span>,
       );
     }
     const isReal = i >= MAX_DIGITS - entered;
     charNodes.push(
-      <span
-        key={`d-${i}`}
-        className={isReal ? "text-blue-600" : "text-muted-foreground/40"}
-      >
+      <span key={`d-${i}`} className={isReal ? "text-blue-600" : "text-muted-foreground/40"}>
         {padded[i]}
       </span>,
     );
@@ -127,7 +117,9 @@ export function TimeKeypad({
             sits top-aligned inside that taller box, since a plain block
             doesn't stretch its children. Making the span itself a flex
             container lets the button stretch (or center) to match. */}
-        <span ref={anchorRef} className="flex h-full">{children({ isEditing: open, open: openKeypad })}</span>
+        <span ref={anchorRef} className="flex h-full">
+          {children({ isEditing: open, open: openKeypad })}
+        </span>
       </PopoverAnchor>
       <PopoverContent
         side="top"
@@ -137,7 +129,10 @@ export function TimeKeypad({
         className="group z-[70] w-auto border-none bg-transparent p-0 shadow-none"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <div ref={contentRef} className="relative w-[220px] rounded-2xl border-2 border-blue-400/80 bg-card p-2.5 shadow-[0_10px_30px_-4px_rgba(0,0,0,0.25)]">
+        <div
+          ref={contentRef}
+          className="relative w-[220px] rounded-2xl border-2 border-blue-400/80 bg-card p-2.5 shadow-[0_10px_30px_-4px_rgba(0,0,0,0.25)]"
+        >
           <input
             ref={hiddenInputRef}
             type="text"
@@ -170,10 +165,10 @@ export function TimeKeypad({
             tabIndex={-1}
           />
 
-          <div className="mb-2 flex h-8 items-center justify-center overflow-hidden rounded-lg border border-stone-200 bg-muted/60 px-3 py-1">
-            <span className="font-display text-2xl leading-none tabular-nums">
-              {charNodes}
-            </span>
+          {/* Same blue-bordered, inner-shadowed well as standard text entry
+              fields (see ui/input.tsx) — matches NumberKeypad's own display. */}
+          <div className="mb-2 flex h-8 items-center justify-center overflow-hidden rounded-lg border-2 border-blue-400/80 bg-white px-3 py-1 shadow-[inset_0_2px_5px_rgba(0,0,0,0.22)]">
+            <span className="font-display text-2xl leading-none tabular-nums">{charNodes}</span>
           </div>
 
           <div className="grid grid-cols-3 gap-1.5">

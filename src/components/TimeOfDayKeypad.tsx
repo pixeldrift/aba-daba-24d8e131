@@ -16,8 +16,8 @@ export interface TimeOfDayKeypadProps {
 }
 
 const MAX_DIGITS = 4;
-const BUSINESS_START = 8;  // 8 AM
-const BUSINESS_END = 18;   // 6 PM
+const BUSINESS_START = 8; // 8 AM
+const BUSINESS_END = 18; // 6 PM
 
 function from24h(value: string): { hour12: number; minute: number; isPM: boolean } {
   const [hStr, mStr] = (value || "00:00").split(":");
@@ -46,7 +46,12 @@ function autoPeriod(hh: number, manualLeadingZero: boolean): boolean | null {
   return null;
 }
 
-export function TimeOfDayKeypad({ value: _value, onChange, onEditingChange, children }: TimeOfDayKeypadProps) {
+export function TimeOfDayKeypad({
+  value: _value,
+  onChange,
+  onEditingChange,
+  children,
+}: TimeOfDayKeypadProps) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState("");
   const [isPM, setIsPM] = useState(false);
@@ -136,15 +141,14 @@ export function TimeOfDayKeypad({ value: _value, onChange, onEditingChange, chil
   for (let i = 0; i < MAX_DIGITS; i++) {
     if (i === 2) {
       charNodes.push(
-        <span key="sep" className="text-muted-foreground/40">:</span>,
+        <span key="sep" className="text-muted-foreground/40">
+          :
+        </span>,
       );
     }
     const isReal = entered > 0 && i >= MAX_DIGITS - entered;
     charNodes.push(
-      <span
-        key={`d-${i}`}
-        className={isReal ? "text-blue-600" : "text-muted-foreground/40"}
-      >
+      <span key={`d-${i}`} className={isReal ? "text-blue-600" : "text-muted-foreground/40"}>
         {padded[i]}
       </span>,
     );
@@ -181,9 +185,16 @@ export function TimeOfDayKeypad({ value: _value, onChange, onEditingChange, chil
               e.target.value = "";
             }}
             onKeyDown={(e) => {
-              if (e.key === "Backspace") { e.preventDefault(); backspace(); }
-              else if (e.key === "Enter") { e.preventDefault(); commit(); }
-              else if (e.key === "Escape") { e.preventDefault(); setOpen(false); }
+              if (e.key === "Backspace") {
+                e.preventDefault();
+                backspace();
+              } else if (e.key === "Enter") {
+                e.preventDefault();
+                commit();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                setOpen(false);
+              }
             }}
             // text-base (16px): see NumberKeypad's identical hidden input —
             // iOS zooms in on focus of any sub-16px input and back out on
@@ -194,12 +205,12 @@ export function TimeOfDayKeypad({ value: _value, onChange, onEditingChange, chil
             tabIndex={-1}
           />
 
-          {/* Display row: digits + stacked AM/PM */}
-          <div className="mb-2 flex h-10 items-stretch overflow-hidden rounded-lg border border-stone-200 bg-muted/60 pl-3 pr-1.5">
+          {/* Display row: digits + stacked AM/PM — same blue-bordered,
+              inner-shadowed well as standard text entry fields (see
+              ui/input.tsx) rather than the old plain gray box. */}
+          <div className="mb-2 flex h-10 items-stretch overflow-hidden rounded-lg border-2 border-blue-400/80 bg-white pl-3 pr-1.5 shadow-[inset_0_2px_5px_rgba(0,0,0,0.22)]">
             <div className="flex flex-1 items-center justify-end">
-              <span className="font-display text-2xl leading-none tabular-nums">
-                {charNodes}
-              </span>
+              <span className="font-display text-2xl leading-none tabular-nums">{charNodes}</span>
             </div>
             <div className="ml-1.5 flex flex-col justify-center gap-0.5 py-0.5">
               <button
@@ -236,10 +247,14 @@ export function TimeOfDayKeypad({ value: _value, onChange, onEditingChange, chil
           </div>
 
           <div className="grid grid-cols-3 gap-1.5">
-            {["1","2","3","4","5","6","7","8","9"].map((d) => (
-              <KeyButton key={d} onClick={() => applyDigit(d)}>{d}</KeyButton>
+            {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
+              <KeyButton key={d} onClick={() => applyDigit(d)}>
+                {d}
+              </KeyButton>
             ))}
-            <KeyButton onClick={clear} variant="muted">C</KeyButton>
+            <KeyButton onClick={clear} variant="muted">
+              C
+            </KeyButton>
             <KeyButton onClick={() => applyDigit("0")}>0</KeyButton>
             <KeyButton onClick={backspace} variant="muted">
               <Delete className="size-4" />
@@ -292,8 +307,14 @@ export function TimeOfDayKeypad({ value: _value, onChange, onEditingChange, chil
 }
 
 function KeyButton({
-  children, onClick, variant = "default",
-}: { children: React.ReactNode; onClick: () => void; variant?: "default" | "muted" }) {
+  children,
+  onClick,
+  variant = "default",
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  variant?: "default" | "muted";
+}) {
   return (
     <motion.button
       type="button"

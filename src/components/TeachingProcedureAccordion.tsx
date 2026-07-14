@@ -1,5 +1,18 @@
 import { useState } from "react";
+import {
+  Target,
+  Brain,
+  ClipboardList,
+  ArrowRight,
+  Ruler,
+  HandHelping,
+  Package,
+  Lightbulb,
+  Check,
+  X,
+} from "lucide-react";
 import { AccordionRow } from "./AccordionRow";
+import type { CardKind } from "./DataToolbarContext";
 
 export interface TeachingProcedure {
   goal: string;
@@ -15,7 +28,29 @@ export interface TeachingProcedure {
   instructionalNotes: string;
 }
 
-const ROW_IDS = ["goal", "rationale", "procedure", "sd", "measurement", "correction", "materials", "notes"] as const;
+const ROW_IDS = [
+  "goal",
+  "rationale",
+  "procedure",
+  "sd",
+  "measurement",
+  "correction",
+  "materials",
+  "notes",
+] as const;
+
+// The two measurement fields always describe the same underlying "counts /
+// doesn't count" distinction, but each card kind scores it with different
+// buttons — label the row after whichever one the card actually shows, so
+// the instructions never say "correct" when the button says "Independent".
+const MEASUREMENT_LABELS: Record<CardKind, { positive: string; negative: string }> = {
+  trial: { positive: "Mark Correct if", negative: "Mark Error if" },
+  "task-analysis": { positive: "Mark Independent if", negative: "Mark Error if" },
+  frequency: { positive: "Counts as an instance if", negative: "Does not count if" },
+  rate: { positive: "Counts as an instance if", negative: "Does not count if" },
+  duration: { positive: "Counts as the same instance if", negative: "Does not count if" },
+  rating: { positive: "Mark Correct if", negative: "Mark Error if" },
+};
 
 // Procedure and Measurement are what staff actually reach for mid-session —
 // default those open, leave the rest (context you'd check once, not per
@@ -26,10 +61,17 @@ const DEFAULT_EXPANDED = new Set<string>(["procedure", "measurement"]);
  *  drawer — same flat twirldown-row pattern as About Me, so a tech running
  *  a session can jump straight to just the row they need (usually
  *  Procedure or Measurement) instead of scrolling a wall of text. */
-export function TeachingProcedureAccordion({ data }: { data: TeachingProcedure }) {
+export function TeachingProcedureAccordion({
+  data,
+  kind,
+}: {
+  data: TeachingProcedure;
+  kind: CardKind;
+}) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(
     () => new Set(ROW_IDS.filter((id) => !DEFAULT_EXPANDED.has(id))),
   );
+  const measurementLabels = MEASUREMENT_LABELS[kind];
 
   const toggleRow = (id: string) => {
     setCollapsedIds((prev) => {
@@ -42,12 +84,18 @@ export function TeachingProcedureAccordion({ data }: { data: TeachingProcedure }
 
   return (
     <div className="divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white overflow-hidden text-sm">
-      <AccordionRow id="goal" emoji="🎯" label="Goal" collapsed={collapsedIds.has("goal")} onToggle={toggleRow}>
+      <AccordionRow
+        id="goal"
+        icon={<Target className="size-3.5" />}
+        label="Goal"
+        collapsed={collapsedIds.has("goal")}
+        onToggle={toggleRow}
+      >
         {data.goal}
       </AccordionRow>
       <AccordionRow
         id="rationale"
-        emoji="💭"
+        icon={<Brain className="size-3.5" />}
         label="Rationale"
         collapsed={collapsedIds.has("rationale")}
         onToggle={toggleRow}
@@ -56,40 +104,66 @@ export function TeachingProcedureAccordion({ data }: { data: TeachingProcedure }
       </AccordionRow>
       <AccordionRow
         id="procedure"
-        emoji="📝"
+        icon={<ClipboardList className="size-3.5" />}
         label="Procedure"
         collapsed={collapsedIds.has("procedure")}
         onToggle={toggleRow}
       >
         {data.procedure}
       </AccordionRow>
-      <AccordionRow id="sd" emoji="👉" label="SD" collapsed={collapsedIds.has("sd")} onToggle={toggleRow}>
+      <AccordionRow
+        id="sd"
+        icon={<ArrowRight className="size-3.5" />}
+        label="SD"
+        collapsed={collapsedIds.has("sd")}
+        onToggle={toggleRow}
+      >
         {data.sd}
       </AccordionRow>
       <AccordionRow
         id="measurement"
-        emoji="📏"
+        icon={<Ruler className="size-3.5" />}
         label="Measurement"
         collapsed={collapsedIds.has("measurement")}
         onToggle={toggleRow}
       >
         {/* Correct/error live together under one twirl rather than each
             getting its own — you almost always want both at once when
-            checking how to score something, not one at a time. */}
+            checking how to score something, not one at a time. Each badge
+            below is a small copy of the actual scoring button it refers to
+            (same Check/X glyph, same green/red circle), not a generic
+            checkmark/cross, so the instructions visually point at the exact
+            button they describe. */}
         <div className="space-y-2">
-          <p>
-            <span className="font-semibold">✅ Mark correct if: </span>
-            {data.measurement.markCorrect}
+          <p className="flex gap-1.5">
+            <span
+              aria-hidden
+              className="shrink-0 mt-0.5 grid place-items-center size-4 rounded-full border-[1.5px] border-green-300 bg-green-50 text-green-700"
+            >
+              <Check className="size-2.5" strokeWidth={3} />
+            </span>
+            <span>
+              <span className="font-semibold">{measurementLabels.positive}: </span>
+              {data.measurement.markCorrect}
+            </span>
           </p>
-          <p>
-            <span className="font-semibold">❌ Mark error if: </span>
-            {data.measurement.markError}
+          <p className="flex gap-1.5">
+            <span
+              aria-hidden
+              className="shrink-0 mt-0.5 grid place-items-center size-4 rounded-full border-[1.5px] border-red-300 bg-red-50 text-red-700"
+            >
+              <X className="size-2.5" strokeWidth={3} />
+            </span>
+            <span>
+              <span className="font-semibold">{measurementLabels.negative}: </span>
+              {data.measurement.markError}
+            </span>
           </p>
         </div>
       </AccordionRow>
       <AccordionRow
         id="correction"
-        emoji="🤲"
+        icon={<HandHelping className="size-3.5" />}
         label="Correction"
         collapsed={collapsedIds.has("correction")}
         onToggle={toggleRow}
@@ -98,7 +172,7 @@ export function TeachingProcedureAccordion({ data }: { data: TeachingProcedure }
       </AccordionRow>
       <AccordionRow
         id="materials"
-        emoji="📦"
+        icon={<Package className="size-3.5" />}
         label="Materials"
         collapsed={collapsedIds.has("materials")}
         onToggle={toggleRow}
@@ -107,7 +181,7 @@ export function TeachingProcedureAccordion({ data }: { data: TeachingProcedure }
       </AccordionRow>
       <AccordionRow
         id="notes"
-        emoji="💡"
+        icon={<Lightbulb className="size-3.5" />}
         label="Instructional Notes"
         collapsed={collapsedIds.has("notes")}
         onToggle={toggleRow}

@@ -1,8 +1,18 @@
 import { createPortal } from "react-dom";
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { motion } from "motion/react";
 import { X, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { TimeChevronIcon } from "./icons/TimeChevronIcon";
+import { useElementHeight } from "@/hooks/use-element-height";
 import { cn } from "@/lib/utils";
 
 /** Breathing room left between a hugCardRight drawer's panel edge and the
@@ -196,6 +206,13 @@ export function DataDetailsDrawer({
   widthClassName = "w-[88%] sm:w-[calc(50%+14px)]",
   hugCardRight = false,
 }: DataDetailsDrawerProps) {
+  // Just the toolbar row's own collapsed height — not `toolbarHeight` (which
+  // also grows by the "Start session" banner's variable height below it).
+  // The pull tab and sticky header should track "the filter bar" itself at
+  // its normal height, not balloon whenever that banner happens to be
+  // showing — measured directly here (rather than threaded down as a prop)
+  // since it's a different element than whatever positions this drawer.
+  const toolbarRowHeight = useElementHeight("[data-toolbar-row]");
   const [mounted, setMounted] = useState(false);
   const [arrowTop, setArrowTop] = useState(0);
   const [hugWidth, setHugWidth] = useState<number | null>(null);
@@ -342,19 +359,18 @@ export function DataDetailsDrawer({
       {/* Pull tab — attached to the panel's own left edge (a child of the
           same animated element) so it rides along with the slide instead of
           staying fixed in the toolbar while the panel moves out from under
-          it. Sized to the toolbar's own primary row (its py-1.5/size-7
-          bounds: 6px + 28px + 6px = 40px = h-10), not `toolbarHeight` —
-          that also includes the "Start session" banner's variable height
-          below the row, which isn't part of "the filter bar" this tab
-          should span. No border on the right so it blends seamlessly into
-          the drawer — `border-r-0` has to come after the border-color/width
-          utilities below (not just after `border-r-0` in this string) or
-          `cn`'s tailwind-merge treats `border-2`/`border` as the later,
-          winning declaration for every side, right included. -top-0.5
-          shifts it up by the panel's own 2px border width, so the tab's
-          outer top edge lines up with the panel's outer top edge instead of
-          sitting a couple pixels below it (top-0 aligns with the inside of
-          that border, not the outside). */}
+          it. Sized to toolbarRowHeight (the toolbar's own primary row, not
+          `toolbarHeight`, which also includes the "Start session" banner's
+          variable height below the row — that isn't part of "the filter
+          bar" this tab should span). No border on the right so it blends
+          seamlessly into the drawer — `border-r-0` has to come after the
+          border-color/width utilities below (not just after `border-r-0` in
+          this string) or `cn`'s tailwind-merge treats `border-2`/`border` as
+          the later, winning declaration for every side, right included.
+          -top-0.5 shifts it up by the panel's own 2px border width, so the
+          tab's outer top edge lines up with the panel's outer top edge
+          instead of sitting a couple pixels below it (top-0 aligns with the
+          inside of that border, not the outside). */}
       <button
         type="button"
         onClick={(e) => {
@@ -364,16 +380,19 @@ export function DataDetailsDrawer({
         aria-label={open ? "Close details drawer" : "Open details drawer"}
         aria-expanded={open}
         className={cn(
-          "absolute -left-7 -top-0.5 h-10 w-7 grid place-items-center rounded-l-lg bg-background text-stone-500 hover:text-stone-800 transition-colors",
+          "absolute -left-7 -top-0.5 w-7 grid place-items-center rounded-l-lg bg-background text-stone-500 hover:text-stone-800 transition-colors",
           open ? "border-2 border-blue-400/80" : "border border-stone-200/70",
           "border-r-0",
         )}
+        style={{ height: toolbarRowHeight }}
       >
         {/* Base orientation points right; always faces the direction the
             drawer will slide if pressed again — left (toward opening) while
             closed, right (toward closing) while open — and animates between
             the two as the drawer itself slides. */}
-        <TimeChevronIcon className={cn("size-3.5 transition-transform duration-300", !open && "rotate-180")} />
+        <TimeChevronIcon
+          className={cn("size-3.5 transition-transform duration-300", !open && "rotate-180")}
+        />
       </button>
 
       {/* Arrow — points at the card this drawer's contents belong to. Only
@@ -411,14 +430,27 @@ export function DataDetailsDrawer({
             e.stopPropagation();
             scrollToCard();
           }}
-          aria-label={offDirection === "above" ? "Active card is above — scroll to it" : "Active card is below — scroll to it"}
+          aria-label={
+            offDirection === "above"
+              ? "Active card is above — scroll to it"
+              : "Active card is below — scroll to it"
+          }
           title="Scroll to active card"
           className={cn(
             "absolute left-3 z-10 grid place-items-center size-7 rounded-full border-2 border-blue-400/80 bg-background text-blue-600 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.25)] hover:bg-blue-50 transition-colors active:scale-95",
-            offDirection === "above" ? "top-3" : "bottom-3",
+            offDirection === "below" && "bottom-3",
           )}
+          // "above" sits just below the sticky header instead of a flat
+          // top-3 — that used to land right on top of the title/nav/close
+          // row (all live in the first toolbarHeight-tall band), blocking
+          // them instead of just pointing the way back to the card.
+          style={offDirection === "above" ? { top: toolbarHeight + 12 } : undefined}
         >
-          {offDirection === "above" ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+          {offDirection === "above" ? (
+            <ChevronUp className="size-4" />
+          ) : (
+            <ChevronDown className="size-4" />
+          )}
         </button>
       )}
 
@@ -430,7 +462,10 @@ export function DataDetailsDrawer({
             too (rather than floating absolutely over the body) so it, the
             arrows, and the title's own top line all sit in one flex row and
             align naturally instead of needing separately-matched offsets. */}
-        <div className="shrink-0 border-b border-stone-200/70 bg-background p-4 pb-3">
+        <div
+          className="shrink-0 border-b border-stone-200/70 bg-background p-4 pb-3"
+          style={{ minHeight: toolbarRowHeight }}
+        >
           <div className="flex items-start gap-1">
             <button
               type="button"
@@ -444,7 +479,12 @@ export function DataDetailsDrawer({
             >
               <ChevronLeft className="size-4" />
             </button>
-            <DrawerTitle title={title} slideFrom={slideFrom} exitDir={exitDir} onClick={onTitleClick} />
+            <DrawerTitle
+              title={title}
+              slideFrom={slideFrom}
+              exitDir={exitDir}
+              onClick={onTitleClick}
+            />
             <button
               type="button"
               onClick={(e) => {
@@ -457,6 +497,10 @@ export function DataDetailsDrawer({
             >
               <ChevronRight className="size-4" />
             </button>
+            {/* No circular button background here (unlike the prev/next
+                arrows) — this is the drawer's own close action, not another
+                step through the card list, so it reads as a plain icon
+                control rather than matching their pill-button chrome. */}
             <button
               type="button"
               onClick={(e) => {
@@ -464,13 +508,18 @@ export function DataDetailsDrawer({
                 onOpenChange(false);
               }}
               aria-label="Close"
-              className="-mt-[5px] grid shrink-0 place-items-center size-7 rounded-full text-muted-foreground transition-colors hover:bg-stone-100 hover:text-foreground"
+              className="-mt-[5px] -mr-1 grid shrink-0 place-items-center size-7 text-muted-foreground transition-colors hover:text-foreground"
             >
               <X className="size-4" />
             </button>
           </div>
         </div>
-        <DrawerContent details={details} slideFrom={slideFrom} exitDir={exitDir} contentScrollRef={contentScrollRef} />
+        <DrawerContent
+          details={details}
+          slideFrom={slideFrom}
+          exitDir={exitDir}
+          contentScrollRef={contentScrollRef}
+        />
       </div>
     </motion.div>,
     document.body,
