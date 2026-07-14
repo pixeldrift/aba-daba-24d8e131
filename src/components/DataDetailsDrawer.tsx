@@ -181,9 +181,18 @@ export interface DataDetailsDrawerProps {
    *  of the tile's edge or overshoot past it, rather than the two meeting
    *  exactly). Measured the same way `arrowTop` already is, from the same
    *  card rect. Unlike widthClassName's own fallback, this doesn't add any
-   *  extra overlap past that edge — see its own comment where hugWidth is
-   *  computed. */
+   *  extra overlap past that edge by default — see `hugGapPx` to change that. */
   hugCardRight?: boolean;
+  /** How far past `cardRef`'s own right edge the panel's left edge sits,
+   *  when `hugCardRight` is set — positive leaves breathing room (the
+   *  default, DRAWER_TILE_GAP_PX), negative has the panel intentionally
+   *  overlap INTO the tile instead of stopping short of it. Large grid
+   *  tiles pass a negative value here since their action controls sit
+   *  centered with room to spare on the right edge, so a small overlap
+   *  reads as a wider, more confident panel rather than covering anything
+   *  clickable — small grid tiles are too narrow for that margin, so they
+   *  keep the default gap. */
+  hugGapPx?: number;
 }
 
 /** A single shared, non-modal details panel — mounted only by whichever card
@@ -206,6 +215,7 @@ export function DataDetailsDrawer({
   cardRef,
   widthClassName = "w-[88%] sm:w-[calc(50%+14px)]",
   hugCardRight = false,
+  hugGapPx = DRAWER_TILE_GAP_PX,
 }: DataDetailsDrawerProps) {
   // Just the toolbar row's own collapsed height — not `toolbarHeight` (which
   // also grows by the "Start session" banner's variable height below it).
@@ -270,7 +280,7 @@ export function DataDetailsDrawer({
       // inset, unaffected by this gap) and the pull tab still dip into the
       // tile a little, the same intentional, localized overlap Card/List's
       // fallback width has always accepted.
-      if (hugCardRight) setHugWidth(window.innerWidth - rect.right - DRAWER_TILE_GAP_PX);
+      if (hugCardRight) setHugWidth(window.innerWidth - rect.right - hugGapPx);
       // Same thresholds as clampedArrowTop below (minArrowTop/maxArrowTop) —
       // switch to the scroll-to-card button as soon as the arrow's natural
       // position would need clamping to the drawer's top (toolbar) or
@@ -300,7 +310,7 @@ export function DataDetailsDrawer({
       window.removeEventListener("resize", update);
       ro.disconnect();
     };
-  }, [open, top, toolbarHeight, cardRef, hugCardRight]);
+  }, [open, top, toolbarHeight, cardRef, hugCardRight, hugGapPx]);
 
   useEffect(() => {
     if (!open) return;

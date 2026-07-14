@@ -179,6 +179,14 @@ export function MiniTileShell({
           // can for card/list's more predictable half-viewport split.
           // hugCardRight measures the real thing instead.
           hugCardRight
+          // Large tiles center their content/actions with real margin to
+          // spare on the right edge (see PROGRESS_BAR_WIDTH / the actions
+          // wrapper's own self-center above), so a small negative gap here
+          // lets the panel's left edge read as confidently wider — reaching
+          // slightly onto the tile — without the (still further-out) arrow
+          // landing on anything clickable. Small tiles are too narrow for
+          // that margin, so they keep the default breathing-room gap.
+          hugGapPx={density === "large" ? -14 : undefined}
           title={title}
           description={description}
           details={details}
