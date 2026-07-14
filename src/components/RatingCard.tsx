@@ -70,6 +70,17 @@ export function RatingCard({
   slideFrom,
 }: RatingCardProps) {
   const numStars = max - min;
+  // Fed into the drawer's teaching-procedure Measurement row (as a
+  // `scale`, rather than the fixed correct/error pair every other kind
+  // uses) — same value/description pairing the expanded view's own list
+  // renders, so the two never drift out of sync.
+  const scaleRows = Array.from({ length: numStars }, (_, i) => {
+    const value = min + i + 1;
+    return {
+      value,
+      description: levelDescriptions?.[i] ?? `Describe what a score of ${value} looks like.`,
+    };
+  });
   // A single subjective score for the whole session — unlike the other card
   // types there's no running count or trial list to fill in, just one value
   // that later interactions simply overwrite.
@@ -119,50 +130,19 @@ export function RatingCard({
           <>
             <DrawerQuickFacts
               icon={<Star />}
-              dataTypeLabel="Rating (quality)"
+              dataTypeLabel="Score (quality)"
               phase={phase}
               stats={[
                 { label: "Range", value: `${min}–${max}` },
-                { label: "Current rating", value: rating > 0 ? String(rating) : "Not yet rated" },
+                { label: "Current score", value: rating > 0 ? String(rating) : "Not yet scored" },
               ]}
             />
-            <div className="mt-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                Rating scale
-              </h3>
-              <ol className="space-y-2">
-                {Array.from({ length: numStars }, (_, i) => {
-                  const value = min + i + 1;
-                  const desc = levelDescriptions?.[i] ?? `Describe what a rating of ${value} looks like.`;
-                  const filled = rating >= value;
-                  const isTop = filled && value === rating;
-                  return (
-                    <li key={value} className="flex items-start gap-2.5">
-                      <RatingStar
-                        value={value}
-                        size={24}
-                        maxSize={24}
-                        filled={filled}
-                        isTop={isTop}
-                        disabled={!sessionRunning}
-                        onClick={() => pick(value)}
-                      />
-                      <span
-                        className={cn(
-                          "flex-1 text-sm leading-tight",
-                          isTop ? "text-foreground" : "text-foreground/70",
-                        )}
-                      >
-                        {desc}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ol>
-            </div>
             {teachingProcedure && (
               <div className="mt-4">
-                <TeachingProcedureAccordion data={teachingProcedure} kind="rating" />
+                <TeachingProcedureAccordion
+                  data={{ ...teachingProcedure, measurement: { scale: scaleRows } }}
+                  kind="rating"
+                />
               </div>
             )}
           </>
@@ -184,7 +164,7 @@ export function RatingCard({
                 whileTap={{ scale: 0.88 }}
                 animate={filled ? { scale: [1, 1.14, 1] } : { scale: 1 }}
                 transition={{ duration: 0.3 }}
-                aria-label={`Rate ${value}`}
+                aria-label={`Score ${value}`}
                 aria-pressed={filled}
                 className="shrink-0 disabled:opacity-40"
               >
@@ -209,7 +189,7 @@ export function RatingCard({
         title={title}
         description={description}
         dataTypeIcon={<Star />}
-        dataTypeLabel="Rating"
+        dataTypeLabel="Score"
         isActive={isActive}
         onActivate={onActivate}
         reorderEditing={reorderEditing}
@@ -242,7 +222,7 @@ export function RatingCard({
     <CardShell
       title={title}
       phase={phase}
-      dataType="Rating"
+      dataType="Score"
       dataTypeIcon={<Star />}
       description={description}
       isActive={isActive}
@@ -268,50 +248,19 @@ export function RatingCard({
         <>
           <DrawerQuickFacts
             icon={<Star />}
-            dataTypeLabel="Rating (quality)"
+            dataTypeLabel="Score (quality)"
             phase={phase}
             stats={[
               { label: "Range", value: `${min}–${max}` },
-              { label: "Current rating", value: rating > 0 ? String(rating) : "Not yet rated" },
+              { label: "Current score", value: rating > 0 ? String(rating) : "Not yet scored" },
             ]}
           />
-          <div className="mt-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-              Rating scale
-            </h3>
-            <ol className="space-y-2">
-              {Array.from({ length: numStars }, (_, i) => {
-                const value = min + i + 1;
-                const desc = levelDescriptions?.[i] ?? `Describe what a rating of ${value} looks like.`;
-                const filled = rating >= value;
-                const isTop = filled && value === rating;
-                return (
-                  <li key={value} className="flex items-start gap-2.5">
-                    <RatingStar
-                      value={value}
-                      size={24}
-                      maxSize={24}
-                      filled={filled}
-                      isTop={isTop}
-                      disabled={!sessionRunning}
-                      onClick={() => pick(value)}
-                    />
-                    <span
-                      className={cn(
-                        "flex-1 text-sm leading-tight",
-                        isTop ? "text-foreground" : "text-foreground/70",
-                      )}
-                    >
-                      {desc}
-                    </span>
-                  </li>
-                );
-              })}
-            </ol>
-          </div>
           {teachingProcedure && (
             <div className="mt-4">
-              <TeachingProcedureAccordion data={teachingProcedure} kind="rating" />
+              <TeachingProcedureAccordion
+                data={{ ...teachingProcedure, measurement: { scale: scaleRows } }}
+                kind="rating"
+              />
             </div>
           )}
         </>
@@ -320,7 +269,7 @@ export function RatingCard({
         <ol className="px-4 pt-1 pb-3 space-y-2">
           {Array.from({ length: numStars }, (_, i) => {
             const value = min + i + 1;
-            const desc = levelDescriptions?.[i] ?? `Describe what a rating of ${value} looks like.`;
+            const desc = levelDescriptions?.[i] ?? `Describe what a score of ${value} looks like.`;
             const filled = rating >= value;
             const isTop = filled && value === rating;
             return (
@@ -368,10 +317,10 @@ export function RatingCard({
         <span className="text-xs text-muted-foreground">
           {rating > 0 ? (
             <>
-              Rated as <strong className="font-semibold text-foreground">{rating}</strong> out of {max}.
+              Scored <strong className="font-semibold text-foreground">{rating}</strong> out of {max}.
             </>
           ) : (
-            "Tap a star to rate."
+            "Tap a star to score."
           )}
         </span>
       </div>
@@ -451,7 +400,7 @@ function ListRatingButton({
             setOpen((o) => !o);
           }}
           disabled={disabled}
-          aria-label={rating > 0 ? `Rated ${rating}` : "Rate"}
+          aria-label={rating > 0 ? `Scored ${rating}` : "Score"}
           aria-haspopup
           className={cn(
             "btn-bevel relative shrink-0 size-7 rounded-full grid place-items-center border-[1.5px] transition-colors disabled:opacity-40",
@@ -509,7 +458,7 @@ function ListRatingButton({
                 whileTap={{ scale: 0.88 }}
                 animate={filled ? { scale: [1, 1.14, 1] } : { scale: 1 }}
                 transition={{ duration: 0.3 }}
-                aria-label={`Rate ${value}`}
+                aria-label={`Score ${value}`}
                 aria-pressed={filled}
                 className="shrink-0 disabled:opacity-40"
               >
@@ -587,7 +536,7 @@ function RatingStar({
       whileTap={{ scale: 0.88 }}
       animate={filled ? { scale: [1, 1.14, 1] } : { scale: 1 }}
       transition={{ duration: 0.3 }}
-      aria-label={`Rate ${value}`}
+      aria-label={`Score ${value}`}
       aria-pressed={filled}
       className={cn(
         "relative shrink-0 disabled:opacity-40",

@@ -10,6 +10,7 @@ import {
   Lightbulb,
   Check,
   X,
+  Star,
 } from "lucide-react";
 import { AccordionRow } from "./AccordionRow";
 import type { CardKind } from "./DataToolbarContext";
@@ -19,10 +20,12 @@ export interface TeachingProcedure {
   rationale: string;
   procedure: string;
   sd: string;
-  measurement: {
-    markCorrect: string;
-    markError: string;
-  };
+  /** Most kinds score a binary correct/error distinction; rating cards
+   *  instead have a multi-point scale — one row per level rather than a
+   *  fixed positive/negative pair. */
+  measurement:
+    | { markCorrect: string; markError: string }
+    | { scale: { value: number; description: string }[] };
   correction: string;
   materials: string;
   instructionalNotes: string;
@@ -133,32 +136,54 @@ export function TeachingProcedureAccordion({
             below is a small copy of the actual scoring button it refers to
             (same Check/X glyph, same green/red circle), not a generic
             checkmark/cross, so the instructions visually point at the exact
-            button they describe. */}
+            button they describe. Rating cards score a multi-point scale
+            instead of a binary correct/error, so they get one row per
+            level (same badge + bold-label + description shape, just
+            repeated) rather than the fixed positive/negative pair. */}
         <div className="space-y-2">
-          <p className="flex gap-1.5">
-            <span
-              aria-hidden
-              className="shrink-0 mt-0.5 grid place-items-center size-4 rounded-full border-[1.5px] border-green-300 bg-green-50 text-green-700"
-            >
-              <Check className="size-2.5" strokeWidth={3} />
-            </span>
-            <span>
-              <span className="font-semibold">{measurementLabels.positive}: </span>
-              {data.measurement.markCorrect}
-            </span>
-          </p>
-          <p className="flex gap-1.5">
-            <span
-              aria-hidden
-              className="shrink-0 mt-0.5 grid place-items-center size-4 rounded-full border-[1.5px] border-red-300 bg-red-50 text-red-700"
-            >
-              <X className="size-2.5" strokeWidth={3} />
-            </span>
-            <span>
-              <span className="font-semibold">{measurementLabels.negative}: </span>
-              {data.measurement.markError}
-            </span>
-          </p>
+          {"scale" in data.measurement ? (
+            data.measurement.scale.map((level) => (
+              <p key={level.value} className="flex gap-1.5">
+                <span
+                  aria-hidden
+                  className="shrink-0 mt-0.5 grid place-items-center size-4 rounded-full border-[1.5px] border-blue-300 bg-blue-50 text-blue-700"
+                >
+                  <Star className="size-2.5" strokeWidth={3} />
+                </span>
+                <span>
+                  <span className="font-semibold">Score {level.value}: </span>
+                  {level.description}
+                </span>
+              </p>
+            ))
+          ) : (
+            <>
+              <p className="flex gap-1.5">
+                <span
+                  aria-hidden
+                  className="shrink-0 mt-0.5 grid place-items-center size-4 rounded-full border-[1.5px] border-green-300 bg-green-50 text-green-700"
+                >
+                  <Check className="size-2.5" strokeWidth={3} />
+                </span>
+                <span>
+                  <span className="font-semibold">{measurementLabels.positive}: </span>
+                  {data.measurement.markCorrect}
+                </span>
+              </p>
+              <p className="flex gap-1.5">
+                <span
+                  aria-hidden
+                  className="shrink-0 mt-0.5 grid place-items-center size-4 rounded-full border-[1.5px] border-red-300 bg-red-50 text-red-700"
+                >
+                  <X className="size-2.5" strokeWidth={3} />
+                </span>
+                <span>
+                  <span className="font-semibold">{measurementLabels.negative}: </span>
+                  {data.measurement.markError}
+                </span>
+              </p>
+            </>
+          )}
         </div>
       </AccordionRow>
       <AccordionRow
