@@ -28,11 +28,11 @@ const FAMILY_HEX: Record<string, Record<number, string>> = {
 // that share one deliberate 50/300/500/600/700 pattern (see
 // NotificationBar.tsx's own NOTIFICATION_STYLES).
 const CORE_PALETTE: { family: string; counts: Record<number, number> }[] = [
-  { family: "stone", counts: { 50: 6, 100: 35, 200: 27, 300: 18, 400: 33, 500: 15, 600: 22, 700: 5, 800: 8, 900: 2 } },
-  { family: "blue", counts: { 50: 33, 100: 13, 200: 10, 300: 21, 400: 51, 500: 90, 600: 110, 700: 34, 800: 5, 900: 2 } },
-  { family: "red", counts: { 50: 24, 100: 12, 300: 23, 400: 3, 500: 24, 600: 24, 700: 27 } },
-  { family: "green", counts: { 50: 15, 100: 11, 200: 1, 300: 14, 400: 3, 500: 20, 600: 18, 700: 22 } },
-  { family: "amber", counts: { 50: 13, 100: 9, 300: 17, 400: 1, 500: 13, 600: 13, 700: 16 } },
+  { family: "stone", counts: { 50: 6, 100: 33, 200: 27, 300: 18, 400: 33, 500: 15, 600: 22, 700: 5, 800: 8, 900: 2 } },
+  { family: "blue", counts: { 50: 38, 100: 13, 200: 4, 300: 21, 400: 51, 500: 90, 600: 110, 700: 39 } },
+  { family: "red", counts: { 50: 25, 100: 11, 300: 23, 400: 3, 500: 24, 600: 24, 700: 27 } },
+  { family: "green", counts: { 50: 17, 100: 10, 300: 14, 400: 3, 500: 20, 600: 18, 700: 22 } },
+  { family: "amber", counts: { 50: 14, 100: 8, 300: 17, 400: 1, 500: 13, 600: 13, 700: 16 } },
   { family: "yellow", counts: { 300: 1, 400: 5 } },
 ];
 
