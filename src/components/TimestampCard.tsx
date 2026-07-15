@@ -915,6 +915,12 @@ function TimestampExpandedView({
 
   return (
     <div className="px-5 pt-1 pb-4">
+      {/* The timer pill stays put here, above the whole track — unlike the
+          standard view's own horizontal chevron, this one doesn't attach to
+          it: the chevron still slides continuously along the vertical bar
+          below, but pairing a moving pill with it down there reads as too
+          unstable for a value that's otherwise always anchored in place. */}
+      <div className="flex justify-center mb-2">{timerPill}</div>
       <div
         className="relative overflow-hidden"
         style={{ height: viewportHeight }}
@@ -924,20 +930,17 @@ function TimestampExpandedView({
           animate={{ y: trackOffsetPx + CHEVRON_PAD_Y }}
           transition={SPRING_TRANSITION}
         >
-          {/* Current-time arrow and the mini timer pill, paired together
-              (pill to the left, chevron's own tip overlapping into the bar
-              to its right) rather than the pill sitting separately pinned
-              above the whole track. Fixed width on the gutter itself since
-              its only child is absolutely positioned (for the vertical
-              follow) and so can't otherwise size its own parent — without
-              this the column collapses to zero width and pushes the whole
-              group off the left edge of the card. */}
-          <div className="relative shrink-0" style={{ width: 96 }}>
+          {/* Current-time arrow, its own tip overlapping into the bar to its
+              right. Fixed width on the gutter itself since its only child is
+              absolutely positioned (for the vertical follow) and so can't
+              otherwise size its own parent — without this the column
+              collapses to zero width and pushes the chevron off the left
+              edge of the card. */}
+          <div className="relative shrink-0" style={{ width: 16 }}>
             <div
-              className="absolute -translate-y-1/2 flex items-center gap-0"
+              className="absolute -translate-y-1/2"
               style={{ top: fillPx, right: -CHEVRON_OVERLAP_PX }}
             >
-              {timerPill}
               <svg width="16" height="16" viewBox="0 0 16 16" style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.25))" }} aria-hidden>
                 <path d={NOW_CHEVRON_PATH} fill="#2563eb" />
               </svg>
