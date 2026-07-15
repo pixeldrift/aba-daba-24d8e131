@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSettings, type AlarmSoundStyle } from "./SettingsContext";
-import { playAlarmSound } from "@/lib/alarmSounds";
+import { playAlarmSound, primeAlarmAudio } from "@/lib/alarmSounds";
 
 
 
@@ -46,6 +46,13 @@ export interface Notification {
   // passes, instead of a string frozen at whatever it said the moment the
   // alert fired.
   activityAt?: number;
+  // Overrides the user's own Settings-configured Default Alarm Sound for
+  // this one notification's repeating alarm (see NotificationBar's own
+  // activeAlarm effect) — for alerts where the sound needs to stay fixed
+  // regardless of what the user picked as their general default (e.g. a
+  // routine Timestamp interval check always uses a gentle "chime" rather
+  // than whatever louder style the user may have set as their default).
+  soundOverride?: AlarmSoundStyle;
   // Present only for a Timestamp card's own "time to check" alert — adds 3
   // extra buttons to the row (scroll-to-card, negative, positive) alongside
   // the standard audio/snooze/dismiss ones. The callbacks close directly
@@ -73,6 +80,7 @@ interface PushInput {
   allowSnooze?: boolean;
   sourceRef?: Notification["sourceRef"];
   activityAt?: number;
+  soundOverride?: AlarmSoundStyle;
   timestampCheck?: Notification["timestampCheck"];
 }
 
@@ -98,6 +106,14 @@ interface NotificationContextValue {
   // are the only things that actually remove it from that list for good.
   clear: (id: string) => void;
   clearAll: () => void;
+  // Looks up a still-tracked notification by its own dedupeKey and clears
+  // it outright — used by TimestampCard so scoring an interval directly on
+  // the card (not via the alert's own buttons) also retires that interval's
+  // now-pointless "time to check" alert, rather than leaving it to sit as
+  // dead history in the Notifications tab. A no-op if nothing was ever
+  // pushed under that key (e.g. scoring an interval before its alert has
+  // even fired) or if it's already been cleared.
+  clearByDedupeKey: (dedupeKey: string) => void;
   activate: (n: Notification) => void;
   prefs: UserPrefs;
 }
@@ -201,6 +217,24 @@ export function NotificationProvider({ children, onActivate }: { children: React
   const onActivateRef = useRef(onActivate);
   useEffect(() => { onActivateRef.current = onActivate; }, [onActivate]);
 
+  // Unlocks alarm audio the moment the user makes ANY first gesture
+  // anywhere in the app — long before a real alert has a reason to fire —
+  // rather than leaving that first unlock to whatever button happens to get
+  // pressed on the first alert itself (see primeAlarmAudio's own comment).
+  useEffect(() => {
+    const unlock = () => {
+      primeAlarmAudio();
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
+
   const activate = useCallback((n: Notification) => {
     onActivateRef.current?.(n);
     setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, state: "archived" } : x)));
@@ -257,6 +291,11 @@ export function NotificationProvider({ children, onActivate }: { children: React
     dedupeRef.current.clear();
   }, []);
 
+  const clearByDedupeKey = useCallback((dedupeKey: string) => {
+    const id = dedupeRef.current.get(dedupeKey);
+    if (id) clear(id);
+  }, [clear]);
+
   const push = useCallback((input: PushInput): string | null => {
     const dedupeKey = input.dedupeKey ?? input.id;
     if (dedupeKey) {
@@ -283,6 +322,7 @@ export function NotificationProvider({ children, onActivate }: { children: React
       allowSnooze: input.allowSnooze,
       sourceRef: input.sourceRef,
       activityAt: input.activityAt,
+      soundOverride: input.soundOverride,
       timestampCheck: input.timestampCheck,
       state: "live",
     };
@@ -335,8 +375,8 @@ export function NotificationProvider({ children, onActivate }: { children: React
   );
 
   const value = useMemo<NotificationContextValue>(
-    () => ({ notifications, live, push, dismiss, snooze, silence, unsilence, enableChime, archive, clear, clearAll, activate, prefs }),
-    [notifications, live, push, dismiss, snooze, silence, unsilence, enableChime, archive, clear, clearAll, activate, prefs],
+    () => ({ notifications, live, push, dismiss, snooze, silence, unsilence, enableChime, archive, clear, clearAll, clearByDedupeKey, activate, prefs }),
+    [notifications, live, push, dismiss, snooze, silence, unsilence, enableChime, archive, clear, clearAll, clearByDedupeKey, activate, prefs],
   );
 
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;

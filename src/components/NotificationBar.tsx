@@ -167,7 +167,7 @@ function NotificationTitle({ title, className }: { title: string; className?: st
 }
 
 export function NotificationBar() {
-  const { live, dismiss, snooze, silence, unsilence, enableChime, activate } = useNotifications();
+  const { live, dismiss, clear, snooze, silence, unsilence, enableChime, activate } = useNotifications();
   const { prefs } = useNotifications();
 
   // Newest on top — show up to maxStackVisible.
@@ -188,10 +188,11 @@ export function NotificationBar() {
   );
   useEffect(() => {
     if (!activeAlarm) return;
-    playAlarmSound(prefs.alarmSound);
-    const id = window.setInterval(() => playAlarmSound(prefs.alarmSound), 2000);
+    const style = activeAlarm.soundOverride ?? prefs.alarmSound;
+    playAlarmSound(style);
+    const id = window.setInterval(() => playAlarmSound(style), 2000);
     return () => window.clearInterval(id);
-  }, [activeAlarm?.id, prefs.alarmSound]);
+  }, [activeAlarm?.id, activeAlarm?.soundOverride, prefs.alarmSound]);
 
   // Drives the live "In 5 minutes" / "Now" / "3 minutes ago" label next to
   // an alert's location (see formatActivityRelativeTime) — coarse enough
@@ -225,6 +226,7 @@ export function NotificationBar() {
               nowMs={nowMs}
               onActivate={() => activate(n)}
               onDismiss={() => dismiss(n.id)}
+              onClear={() => clear(n.id)}
               onSnooze={() => snooze(n.id)}
               onSilence={() => silence(n.id)}
               onUnsilence={() => unsilence(n.id)}
@@ -255,6 +257,7 @@ function NotificationRow({
   nowMs,
   onActivate,
   onDismiss,
+  onClear,
   onSnooze,
   onSilence,
   onUnsilence,
@@ -264,6 +267,7 @@ function NotificationRow({
   nowMs: number;
   onActivate: () => void;
   onDismiss: () => void;
+  onClear: () => void;
   onSnooze: () => void;
   onSilence: () => void;
   onUnsilence: () => void;
@@ -279,10 +283,21 @@ function NotificationRow({
   // card's own score() toggle-on-repeat-press semantics) rather than
   // re-reading the card's live state on every render.
   const [intervalStatus, setIntervalStatus] = useState(n.timestampCheck?.initialStatus ?? null);
+  const dismissTimeoutRef = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (dismissTimeoutRef.current != null) window.clearTimeout(dismissTimeoutRef.current);
+  }, []);
   const handleIntervalScore = (value: "correct" | "incorrect") => {
     if (!n.timestampCheck) return;
     setIntervalStatus((prev) => (prev === value ? null : value));
     n.timestampCheck.onScore(value);
+    // A brief pause — long enough to actually see the button fill in — then
+    // clear outright (the same slide-off `commit` every other dismissal
+    // uses, just backed by `clear` instead of `dismiss`) so a recorded
+    // interval's alert doesn't linger as dead history in the Notifications
+    // tab. Scoring from the alert is meant to fully resolve the check, not
+    // just leave it sitting there waiting for a separate manual dismiss.
+    dismissTimeoutRef.current = window.setTimeout(() => commit(-1, onClear), 550);
   };
   const styles = KIND_STYLES[n.kind];
   const alert = isAlert(n.kind);
