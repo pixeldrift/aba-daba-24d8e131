@@ -533,6 +533,14 @@ const NOW_CHEVRON_PATH = "M3 2 Q1 2 1 4 V16 Q1 18 3 18 L13 11.5 Q15 10 13 8.5 Z"
 // strip.
 const SEG_W = 64;
 const BAR_H = 10;
+// Same diameter as every period bubble (see IntervalTimeline's own comment) —
+// hoisted here so the nav arrows below can vertically center themselves on
+// the bubble row specifically, rather than the timeline's full height
+// (bubbles + bar + chevron).
+const BUBBLE = 24;
+// Matches IntervalTimeline's own leading `pt-1` before the bubble row.
+const BUBBLE_ROW_TOP_PX = 4;
+const NAV_CENTER_PX = BUBBLE_ROW_TOP_PX + BUBBLE / 2;
 // How many segments comfortably fit before scrolling kicks in — while
 // `viewIdx` is still within this first window, the track stays flush at
 // its own start (division 0 sitting at the viewport's own left edge, no
@@ -566,7 +574,7 @@ function IntervalTimeline({
   // Every period is an equal length of time, so its bubble is the same size
   // as every other's — only the border weight and the solid/faded/gray
   // recency treatment set one apart from another, not a bigger diameter.
-  const BUBBLE = 24;
+  // (BUBBLE itself lives at module scope — the nav arrows need it too.)
   // Every interval before `currentIndex` is fully elapsed; `currentIndex`
   // itself is partially filled; nothing after it is filled at all — a
   // single continuous fill width follows directly from that, rather than a
@@ -820,8 +828,12 @@ function TriangleNav({
       whileTap={{ scale: 0.82 }}
       whileHover={{ scale: 1.08 }}
       transition={{ type: "spring", stiffness: 500, damping: 22 }}
+      // Vertically centered on the period-bubble row specifically (not the
+      // full bubbles+bar+chevron height), so the arrows sit above the time
+      // bar rather than straddling it.
+      style={{ top: NAV_CENTER_PX }}
       className={cn(
-        "absolute top-1/2 -translate-y-1/2 z-20 grid place-items-center size-12 shrink-0 aspect-square text-blue-500 hover:text-blue-600 active:text-blue-700 transition-colors disabled:text-foreground/25 disabled:pointer-events-none",
+        "absolute -translate-y-1/2 z-20 grid place-items-center size-12 shrink-0 aspect-square text-blue-500 hover:text-blue-600 active:text-blue-700 transition-colors disabled:text-foreground/25 disabled:pointer-events-none",
         isLeft ? "-left-2" : "-right-2",
       )}
     >
