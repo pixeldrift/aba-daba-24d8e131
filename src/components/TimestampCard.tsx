@@ -438,7 +438,7 @@ export function TimestampCard({
     >
       <div className="px-5 pt-2 pb-4 flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
-          <div className="text-sm font-semibold tabular-nums">{intervalLabel(viewIdx, intervalMin)}</div>
+          <div className="text-sm font-semibold tabular-nums">{intervalRange(viewIdx, intervalMin)}</div>
           {locked ? (
             <span
               aria-label="Locked to session time"
@@ -487,7 +487,6 @@ export function TimestampCard({
           />
           <IntervalTimeline
             intervalCount={displayIntervalCount}
-            intervalMin={intervalMin}
             elapsedMs={elapsed}
             intervalMs={intervalMs}
             currentIndex={currentIndex}
@@ -539,13 +538,9 @@ const BAR_H = 10;
 // the bubble row specifically, rather than the timeline's full height
 // (bubbles + bar + chevron).
 const BUBBLE = 24;
-// Space reserved above each bubble for its time-range label (e.g. "0-30m"),
-// which replaced the bubble's old internal ordinal number.
-const LABEL_H = 14;
 // Matches IntervalTimeline's own leading `pt-1` before the bubble row.
 const BUBBLE_ROW_TOP_PX = 4;
-// Centers the nav arrows on the bubble itself, not the label sitting above it.
-const NAV_CENTER_PX = BUBBLE_ROW_TOP_PX + LABEL_H + BUBBLE / 2;
+const NAV_CENTER_PX = BUBBLE_ROW_TOP_PX + BUBBLE / 2;
 // The "now" chevron's own half-width, roughly, once rotated on its side —
 // without this the leading edge of the track (elapsed time near 0) clips
 // half the chevron shape against the viewport's own left edge. Widening the
@@ -569,7 +564,6 @@ const HORIZONTAL_FADE_MASK = {
 
 function IntervalTimeline({
   intervalCount,
-  intervalMin,
   elapsedMs,
   intervalMs,
   currentIndex,
@@ -577,7 +571,6 @@ function IntervalTimeline({
   statuses,
 }: {
   intervalCount: number;
-  intervalMin: number;
   elapsedMs: number;
   intervalMs: number;
   currentIndex: number;
@@ -603,14 +596,14 @@ function IntervalTimeline({
       {/* Period bubbles — parked in place above their own segment (not a
           draggable/swipeable strip like Percent Correct's trial bubbles),
           all the same size (equal-length intervals), gray until scored
-          then colored to match the button that scored it. Each one's time
-          range is labeled above it rather than an ordinal number inside it,
-          since the CardShell header already gives the viewed interval's own
-          "N: range" callout. */}
-      <div className="relative overflow-hidden" style={{ height: LABEL_H + BUBBLE, ...HORIZONTAL_FADE_MASK }}>
+          then colored to match the button that scored it. The interval's
+          time range itself only shows once, above the whole strip (see the
+          standard view's own header), the same way Task Analysis shows its
+          current step's text just once rather than repeating it per dot. */}
+      <div className="relative overflow-hidden" style={{ height: BUBBLE, ...HORIZONTAL_FADE_MASK }}>
         <motion.div
           className="absolute left-0 top-0"
-          style={{ height: LABEL_H + BUBBLE }}
+          style={{ height: BUBBLE }}
           animate={{ x: trackOffsetPx }}
           transition={SPRING_TRANSITION}
         >
@@ -618,23 +611,19 @@ function IntervalTimeline({
             const recency = recencyOf(i, viewIdx);
             const { bg, text, fade } = statusColors(statuses[i], recency);
             return (
-              <div
-                key={i}
-                className="absolute bottom-0 -translate-x-1/2 flex flex-col items-center gap-0.5"
-                style={{ left: i * SEG_W + SEG_W / 2 }}
-              >
-                <span className={cn("text-[9px] font-semibold tabular-nums leading-none whitespace-nowrap", text, fade)}>
-                  {intervalRange(i, intervalMin)}
-                </span>
+              <div key={i} className="absolute bottom-0 -translate-x-1/2" style={{ left: i * SEG_W + SEG_W / 2 }}>
                 <div
                   className={cn(
-                    "rounded-full transition-all duration-200",
+                    "rounded-full flex items-center justify-center font-display font-bold tabular-nums text-[11px] transition-all duration-200",
                     recency === "current" ? "border-2" : "border",
                     bg,
+                    text,
                     fade,
                   )}
                   style={{ width: BUBBLE, height: BUBBLE }}
-                />
+                >
+                  {i + 1}
+                </div>
               </div>
             );
           })}
