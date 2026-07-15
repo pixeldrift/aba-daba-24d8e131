@@ -478,7 +478,7 @@ export function TimestampCard({
           )}
         </div>
 
-        <div className="relative px-2">
+        <div className="relative px-10">
           <TriangleNav direction="left" onClick={() => goTo(viewIdx - 1)} disabled={viewIdx <= 0} />
           <TriangleNav
             direction="right"
