@@ -437,8 +437,7 @@ export function TimestampCard({
       }
     >
       <div className="px-5 pt-2 pb-4 flex flex-col gap-1">
-        <div className="flex items-center justify-between gap-2">
-          <div className="text-sm font-semibold tabular-nums">{intervalRange(viewIdx, intervalMin)}</div>
+        <div className="flex items-center justify-end gap-2">
           {locked ? (
             <span
               aria-label="Locked to session time"
@@ -487,6 +486,7 @@ export function TimestampCard({
           />
           <IntervalTimeline
             intervalCount={displayIntervalCount}
+            intervalMin={intervalMin}
             elapsedMs={elapsed}
             intervalMs={intervalMs}
             currentIndex={currentIndex}
@@ -538,32 +538,28 @@ const BAR_H = 10;
 // the bubble row specifically, rather than the timeline's full height
 // (bubbles + bar + chevron).
 const BUBBLE = 24;
-// Matches IntervalTimeline's own leading `pt-1` before the bubble row.
+// Height reserved for the current interval's time-range label, centered
+// above the bubble row — same split as Task Analysis's own current-step
+// text sitting above its dot strip.
+const LABEL_ROW_H = 20;
+// Matches IntervalTimeline's own leading `pt-1` before the label row.
 const BUBBLE_ROW_TOP_PX = 4;
-const NAV_CENTER_PX = BUBBLE_ROW_TOP_PX + BUBBLE / 2;
+const NAV_CENTER_PX = BUBBLE_ROW_TOP_PX + LABEL_ROW_H + BUBBLE / 2;
 // The "now" chevron's own half-width, roughly, once rotated on its side —
-// without this the leading edge of the track (elapsed time near 0) clips
-// half the chevron shape against the viewport's own left edge. Widening the
-// viewport by this much on both sides (via a negative margin) gives it room
-// to render in full at either extreme.
+// extra room so it can render in full even parked right at a track edge.
 const CHEVRON_EDGE_BUFFER = 10;
-// How many segments comfortably fit before scrolling kicks in — while
-// `viewIdx` is still within this first window, the track stays flush at
-// its own start (division 0 sitting at the viewport's own left edge, no
-// wider/empty lead-in before it); only once browsing moves past this does
-// the window start sliding forward, one interval at a time.
-const VISIBLE_SEGMENTS = 5;
 const SPRING_TRANSITION = { type: "spring", stiffness: 300, damping: 32 } as const;
-// Fades only the trailing edge — the leading edge is either the track's
-// own true start (nothing to fade into) or already-scrolled-past content
-// that's still fully part of the visible window, so it stays fully opaque.
+// Fades both edges — like Percent Correct's own trial-bubble strip, the
+// viewed interval sits centered in the viewport with past/future segments
+// trailing off on either side, so both directions need to fade out.
 const HORIZONTAL_FADE_MASK = {
-  WebkitMaskImage: "linear-gradient(to right, black 0%, black 88%, transparent 100%)",
-  maskImage: "linear-gradient(to right, black 0%, black 88%, transparent 100%)",
+  WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%)",
+  maskImage: "linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%)",
 } as const;
 
 function IntervalTimeline({
   intervalCount,
+  intervalMin,
   elapsedMs,
   intervalMs,
   currentIndex,
@@ -571,6 +567,7 @@ function IntervalTimeline({
   statuses,
 }: {
   intervalCount: number;
+  intervalMin: number;
   elapsedMs: number;
   intervalMs: number;
   currentIndex: number;
@@ -589,20 +586,29 @@ function IntervalTimeline({
   // session clock, independent of whatever interval is being browsed.
   const segFillFrac = Math.min(1, Math.max(0, (elapsedMs - currentIndex * intervalMs) / intervalMs));
   const fillPx = currentIndex * SEG_W + segFillFrac * SEG_W;
-  const trackOffsetPx = -Math.max(0, viewIdx - (VISIBLE_SEGMENTS - 1)) * SEG_W;
+  // Continuous centering, the same idiom as Percent Correct's own
+  // trial-bubble strip: the viewed interval's own segment always sits
+  // dead-center in the viewport (the track's left edge is pinned to the
+  // viewport's horizontal midpoint, then shifted back by exactly how far
+  // that segment's center sits from the track's own start).
+  const trackOffsetPx = -(viewIdx * SEG_W + SEG_W / 2);
 
   return (
     <div className="pt-1">
+      {/* The viewed interval's own time range, centered over its bubble —
+          which is always dead-center in the viewport below. Shows just
+          once (not per bubble), the same way Task Analysis shows its
+          current step's text just once rather than repeating it per dot. */}
+      <div className="text-center text-sm font-semibold tabular-nums" style={{ height: LABEL_ROW_H }}>
+        {intervalRange(viewIdx, intervalMin)}
+      </div>
       {/* Period bubbles — parked in place above their own segment (not a
           draggable/swipeable strip like Percent Correct's trial bubbles),
           all the same size (equal-length intervals), gray until scored
-          then colored to match the button that scored it. The interval's
-          time range itself only shows once, above the whole strip (see the
-          standard view's own header), the same way Task Analysis shows its
-          current step's text just once rather than repeating it per dot. */}
+          then colored to match the button that scored it. */}
       <div className="relative overflow-hidden" style={{ height: BUBBLE, ...HORIZONTAL_FADE_MASK }}>
         <motion.div
-          className="absolute left-0 top-0"
+          className="absolute left-1/2 top-0"
           style={{ height: BUBBLE }}
           animate={{ x: trackOffsetPx }}
           transition={SPRING_TRANSITION}
@@ -638,7 +644,7 @@ function IntervalTimeline({
         style={{ height: BAR_H, ...HORIZONTAL_FADE_MASK }}
       >
         <motion.div
-          className="absolute left-0 top-0"
+          className="absolute left-1/2 top-0"
           animate={{ x: trackOffsetPx }}
           transition={SPRING_TRANSITION}
         >
@@ -667,7 +673,7 @@ function IntervalTimeline({
         aria-hidden
       >
         <motion.div
-          className="absolute left-0 top-0"
+          className="absolute left-1/2 top-0"
           animate={{ x: trackOffsetPx }}
           transition={SPRING_TRANSITION}
         >
