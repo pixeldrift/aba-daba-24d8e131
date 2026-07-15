@@ -124,17 +124,19 @@ function recencyOf(index: number, viewIdx: number): Recency {
 
 // Bubble/badge coloring shared by the timeline's own numbers and the
 // expanded view's per-row badges — gray until an interval has actually been
-// scored, then the same green/red as its button. The current (viewed)
-// interval reads solid/full-opacity; anything already passed fades out;
-// anything still ahead stays flat gray regardless of status, since it
-// hasn't come up yet.
+// scored, then the same green/red as its button, REGARDLESS of whether its
+// own time has actually been reached yet (a pre-scored future interval —
+// e.g. scored ahead of time in the expanded view — has to show that score
+// immediately, not silently hold it until the clock catches up). The
+// current (viewed) interval reads solid/full-opacity; anything already
+// passed fades out; only a still-unscored future interval stays flat gray.
 function statusColors(status: IntervalStatus, recency: Recency) {
-  if (recency === "future") {
-    return { bg: "bg-foreground/5 border-foreground/10", text: "text-foreground/30", fade: "" };
-  }
   const fade = recency === "past" ? "opacity-60" : "";
   if (status === "correct") return { bg: "bg-green-50 border-green-300", text: "text-green-700", fade };
   if (status === "incorrect") return { bg: "bg-red-50 border-red-300", text: "text-red-700", fade };
+  if (recency === "future") {
+    return { bg: "bg-foreground/5 border-foreground/10", text: "text-foreground/30", fade: "" };
+  }
   return recency === "current"
     ? { bg: "bg-card border-foreground/30", text: "text-foreground", fade: "" }
     : { bg: "bg-foreground/5 border-foreground/10", text: "text-foreground/30", fade };
@@ -585,7 +587,7 @@ export function TimestampCard({
         />
       }
     >
-      <div className="px-5 pt-2 pb-4 flex flex-col gap-1">
+      <div className="px-5 pt-2 pb-4 flex flex-col gap-0">
         <div className="text-center text-sm font-semibold tabular-nums">
           {intervalEndLabel(viewIdx, intervalMin)}
         </div>
@@ -631,10 +633,11 @@ export function TimestampCard({
 }
 
 // The "now" chevron is the Schedule tab's own arrow (see ScheduleView.tsx),
-// which points RIGHT to cross a vertical list from its left edge — rotated
-// -90° for the horizontal timeline (below) so it instead points UP,
-// crossing that bar from underneath; used un-rotated for the expanded
-// view's own vertical bar, where it already points the right way as-is.
+// same path and 16x20 aspect ratio — an established style reused as-is
+// rather than reshaped, and rotated -90° for the horizontal timeline
+// (below) so it instead points UP, crossing that bar from underneath;
+// used un-rotated for the expanded view's own vertical bar, where it
+// already points the right way as-is.
 const NOW_CHEVRON_PATH = "M3 2 Q1 2 1 4 V16 Q1 18 3 18 L13 11.5 Q15 10 13 8.5 Z";
 
 // Fixed px per interval segment (both timelines) — keeps each interval a
@@ -657,16 +660,24 @@ const BUBBLE = 24;
 // dot on other cards' quick-glance strips) — so it needs its own row height
 // tall enough to fit without clipping (bubbles are bottom-anchored, so the
 // bigger one simply grows upward).
-const BUBBLE_CURRENT = 32;
+const BUBBLE_CURRENT = 40;
 const BUBBLE_ROW_H = BUBBLE_CURRENT;
-// Matches IntervalTimeline's own leading `pt-1` before the bubble row.
-const BUBBLE_ROW_TOP_PX = 4;
+// Matches IntervalTimeline's own leading `pt-0.5` before the bubble row —
+// trimmed down from the interval label above so the bigger current bubble
+// doesn't need to float as far below it.
+const BUBBLE_ROW_TOP_PX = 2;
 const NAV_CENTER_PX = BUBBLE_ROW_TOP_PX + BUBBLE_ROW_H / 2;
 // The "now" chevron's own half-width, roughly, once rotated on its side —
 // extra room so it can render in full even parked right at a track edge.
-// Chevron height (its rotated SVG) + a small gap + the timer pill's own
-// height (h-5) stacked underneath it, following the same x position.
-const CHEVRON_ROW_H = 18 + 4 + 20;
+// Chevron width (its rotated SVG footprint, unrotated height 20) + a small
+// gap + the timer pill's own height (h-5) stacked underneath it, following
+// the same x position.
+const CHEVRON_ROW_H = 20 + 4 + 20;
+// How far the chevron's own tip pokes up into the bar above it (standard
+// view) / right into the bar beside it (expanded view) — about half the
+// bar's own thickness, so the tip visually meets the bar rather than
+// pointing at a gap underneath/beside it.
+const CHEVRON_OVERLAP_PX = 5;
 const SPRING_TRANSITION = { type: "spring", stiffness: 300, damping: 32 } as const;
 // Fades both edges — like Percent Correct's own trial-bubble strip, the
 // viewed interval sits centered in the viewport with past/future segments
@@ -715,7 +726,7 @@ function IntervalTimeline({
   const trackOffsetPx = -((viewIdx + 1) * SEG_W);
 
   return (
-    <div className="pt-1">
+    <div className="pt-0.5">
       {/* Period bubbles — parked in place above their own segment (not a
           draggable/swipeable strip like Percent Correct's trial bubbles),
           gray until scored then colored to match the button that scored
@@ -785,29 +796,57 @@ function IntervalTimeline({
               aria-hidden
             />
           ))}
+          {/* A colored top-border stripe spanning exactly a scored
+              interval's own timespan, running right up to its bubble above —
+              the bar segment itself reads as "this whole stretch of time is
+              what that bubble covers," not just the single point where the
+              bubble sits. */}
+          {Array.from({ length: intervalCount }, (_, i) => {
+            const status = statuses[i];
+            if (status == null) return null;
+            return (
+              <div
+                key={`seg-${i}`}
+                className={cn("absolute top-0 h-[3px] rounded-full", status === "correct" ? "bg-green-500" : "bg-red-500")}
+                style={{ left: i * SEG_W, width: SEG_W }}
+                aria-hidden
+              />
+            );
+          })}
         </motion.div>
       </div>
       {/* The "now" chevron and the mini timer pill follow the same real
           elapsed-time position, the pill stacked directly underneath the
           chevron it belongs to rather than living in the card's own
-          header. */}
-      <div className="relative overflow-hidden" style={{ height: CHEVRON_ROW_H, ...HORIZONTAL_FADE_MASK }}>
+          header — pulled up (negative margin) so the chevron's own tip
+          overlaps into the bar above it instead of just pointing at a gap
+          underneath it. */}
+      <div
+        className="relative overflow-hidden"
+        style={{ height: CHEVRON_ROW_H, marginTop: -CHEVRON_OVERLAP_PX, ...HORIZONTAL_FADE_MASK }}
+      >
         <motion.div
           className="absolute left-1/2 top-0"
           animate={{ x: trackOffsetPx }}
           transition={SPRING_TRANSITION}
         >
-          <div className="absolute top-0 -translate-x-1/2 flex flex-col items-center gap-1" style={{ left: fillPx }}>
+          <div className="absolute top-0 -translate-x-1/2 flex flex-col items-center gap-0" style={{ left: fillPx }}>
             <svg
-              width="14"
-              height="18"
+              width="16"
+              height="20"
               viewBox="0 0 16 20"
               style={{ transform: "rotate(-90deg)", filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.25))" }}
               aria-hidden
             >
               <path d={NOW_CHEVRON_PATH} fill="#2563eb" />
             </svg>
-            {timerPill}
+            {/* Rotating a non-square box like this one leaves it centered in
+                its own unrotated (16x20) footprint, so the visually-rotated
+                chevron (now 20 wide x 16 tall) sits with a couple of px of
+                empty space below it before the box's own reserved height
+                ends — pulled up to close that gap without touching the
+                chevron's own established shape. */}
+            <div style={{ marginTop: -4 }}>{timerPill}</div>
           </div>
         </motion.div>
       </div>
@@ -822,6 +861,12 @@ const ROW_H = 28; // matches h-7 row buttons
 const ROW_GAP = 12;
 const ROW_SLOT = ROW_H + ROW_GAP;
 const VISIBLE_ROWS = 4; // how many intervals fit in the scrollable viewport at once
+// Headroom above/below the scrollable viewport so the "now" chevron's own
+// -translate-y-1/2 centering never pokes it past the viewport's own
+// overflow-hidden edge when it's parked near the very top or bottom of the
+// whole track (i.e. the first or last interval) — without this, the
+// chevron's own tip gets silently clipped off exactly there.
+const CHEVRON_PAD_Y = 10;
 
 /** Twirl-down alternative to the standard view's horizontal timeline — same
  *  progress fill and "now" indicator, just running vertically alongside a
@@ -862,27 +907,52 @@ function TimestampExpandedView({
   const segFillFrac = Math.min(1, Math.max(0, (elapsedMs - currentIndex * intervalMs) / intervalMs));
   const fillPx = currentIndex * ROW_SLOT + segFillFrac * ROW_H;
   const trackOffsetPx = -Math.max(0, viewIdx - (VISIBLE_ROWS - 1)) * ROW_SLOT;
-  const viewportHeight = VISIBLE_ROWS * ROW_H + (VISIBLE_ROWS - 1) * ROW_GAP;
+  // The extra CHEVRON_PAD_Y headroom top/bottom (see its own comment) rides
+  // along as a constant part of the same offset — the auto-scroll math
+  // itself is unaffected since it's applied uniformly regardless of scroll
+  // position, just shifting the whole track down to leave clipping-free
+  // room above the topmost visible pixel and, symmetrically, below the
+  // bottom-most one.
+  const viewportHeight = VISIBLE_ROWS * ROW_H + (VISIBLE_ROWS - 1) * ROW_GAP + 2 * CHEVRON_PAD_Y;
   const totalTrackHeight = intervalCount * ROW_SLOT;
 
   return (
     <div className="px-5 pt-1 pb-4">
-      <div className="flex justify-center mb-2">{timerPill}</div>
+      {/* The timer pill stays put here, above the whole track — unlike the
+          standard view's own horizontal chevron, this one doesn't attach to
+          it: the chevron still slides continuously along the vertical bar
+          below, but pairing a moving pill with it down there reads as too
+          unstable for a value that's otherwise always anchored in place.
+          Anchored over the vertical progress bar itself (chevron gutter
+          width + the row's own gap-3 + half the bar's own width) rather
+          than centered on the whole card, so it reads as belonging to the
+          bar right underneath it. */}
+      <div className="relative mb-2" style={{ height: 20 }}>
+        <div className="absolute top-0 -translate-x-1/2" style={{ left: 16 + 12 + 5 }}>
+          {timerPill}
+        </div>
+      </div>
       <div
         className="relative overflow-hidden"
         style={{ height: viewportHeight }}
       >
         <motion.div
           className="absolute left-0 top-0 w-full flex gap-3"
-          animate={{ y: trackOffsetPx }}
+          animate={{ y: trackOffsetPx + CHEVRON_PAD_Y }}
           transition={SPRING_TRANSITION}
         >
-          {/* Current-time arrow — to the left of the bar, pointing right at
-              it (the Schedule tab's own chevron, used as-is here since it
-              already points the right way for a vertical list). */}
-          <div className="relative shrink-0" style={{ width: 14 }}>
-            <div className="absolute -translate-y-1/2 right-0" style={{ top: fillPx }} aria-hidden>
-              <svg width="14" height="18" viewBox="0 0 16 20" style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.25))" }}>
+          {/* Current-time arrow, its own tip overlapping into the bar to its
+              right. Fixed width on the gutter itself since its only child is
+              absolutely positioned (for the vertical follow) and so can't
+              otherwise size its own parent — without this the column
+              collapses to zero width and pushes the chevron off the left
+              edge of the card. */}
+          <div className="relative shrink-0" style={{ width: 16 }}>
+            <div
+              className="absolute -translate-y-1/2"
+              style={{ top: fillPx, right: -CHEVRON_OVERLAP_PX }}
+            >
+              <svg width="16" height="20" viewBox="0 0 16 20" style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.25))" }} aria-hidden>
                 <path d={NOW_CHEVRON_PATH} fill="#2563eb" />
               </svg>
             </div>
@@ -904,8 +974,24 @@ function TimestampExpandedView({
                 aria-hidden
               />
             ))}
+            {/* A colored right-border stripe spanning exactly a scored
+                interval's own timespan, running right up to its badge —
+                the vertical counterpart of the standard view's own top-
+                border stripe (see IntervalTimeline). */}
+            {Array.from({ length: intervalCount }, (_, i) => {
+              const status = statuses[i];
+              if (status == null) return null;
+              return (
+                <div
+                  key={`seg-${i}`}
+                  className={cn("absolute right-0 w-[3px] rounded-full", status === "correct" ? "bg-green-500" : "bg-red-500")}
+                  style={{ top: i * ROW_SLOT, height: ROW_SLOT }}
+                  aria-hidden
+                />
+              );
+            })}
           </div>
-          <div className="relative flex-1 min-w-0">
+          <div className="relative flex-1 min-w-0" style={{ height: totalTrackHeight }}>
             {Array.from({ length: intervalCount }, (_, i) => {
               const status = statuses[i];
               const recency = recencyOf(i, viewIdx);
@@ -914,7 +1000,13 @@ function TimestampExpandedView({
                 <div
                   key={i}
                   className="absolute left-0 right-0 flex items-center gap-2"
-                  style={{ top: i * ROW_SLOT, height: ROW_H }}
+                  // Centered on `(i + 1) * ROW_SLOT` — the divider marking
+                  // this interval's own END (or the track's own bottom edge
+                  // for the last interval) — instead of this row's own
+                  // slot-center, so the badge (and the label/buttons
+                  // following along with it) reads as "this is what just
+                  // finished," matching the standard view's own bubbles.
+                  style={{ top: (i + 1) * ROW_SLOT - ROW_H / 2, height: ROW_H }}
                 >
                   <span
                     className={cn(
