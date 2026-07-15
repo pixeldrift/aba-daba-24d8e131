@@ -81,6 +81,16 @@
   --gradient-primary: linear-gradient(135deg, oklch(0.60 0.22 264), oklch(0.50 0.22 264));
   --shadow-soft: 0 1px 2px oklch(0.3 0.04 60 / 0.04), 0 8px 24px -8px oklch(0.3 0.04 60 / 0.12);
   --shadow-lift: 0 2px 4px oklch(0.3 0.04 60 / 0.06), 0 24px 48px -16px oklch(0.3 0.04 60 / 0.18);
+
+  /* Named constants for the SVG `fill` props that can't take a Tailwind
+     class and so need a literal color value — kept in hex, not oklch,
+     specifically so they stay visually diffable against the exact Tailwind
+     shade each one is pinned to. (StatusBar's own hardcoded hex, used as
+     Framer Motion color-interpolation targets, can't reference a CSS custom
+     property the same way — Motion needs a literal string to tween between;
+     see src/lib/actionColors.ts for those instead.) */
+  --color-now-chevron: #2563eb; /* blue-600 — TimestampCard/ScheduleView "now" marker */
+  --color-now-chevron-muted: #a8a29e; /* stone-400 — same marker, outside-hours/grayed state */
 }
 
 .dark {
