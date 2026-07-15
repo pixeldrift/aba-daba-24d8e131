@@ -188,10 +188,21 @@ export function TimestampCard({
   // rather than a hard total that either runs out or gets cramped thinner
   // and thinner the longer the session runs.
   const defaultWindowIntervalCount = Math.max(1, Math.ceil((defaultWindowHours * 60) / intervalMin));
-  const uncappedIndex = Math.floor(elapsed / intervalMs);
+  // The interval boundary that has actually, really just passed — used to
+  // grow the display window and to detect exactly when the "time to check"
+  // alert should fire (see below). Kept distinct from `currentIndex`
+  // (below), which intentionally lags behind this by up to half an interval.
+  const rawIndex = Math.floor(elapsed / intervalMs);
   const displayIntervalCount =
-    intervalCount !== undefined ? intervalCount : Math.max(defaultWindowIntervalCount, uncappedIndex + 2);
-  const currentIndex = intervalCount !== undefined ? Math.min(intervalCount - 1, uncappedIndex) : uncappedIndex;
+    intervalCount !== undefined ? intervalCount : Math.max(defaultWindowIntervalCount, rawIndex + 2);
+  // The interval that's actually "current" — for scoring, highlighting, and
+  // the view/nav auto-follow below — stays on the one that just finished
+  // (and triggered the alert) until half of the FOLLOWING interval has also
+  // elapsed, rather than snapping to the next interval the instant its
+  // boundary (and the alert) fires. That gives whoever's responding to the
+  // alert a grace window to actually mark it before the card moves on.
+  const gracedIndex = Math.max(0, Math.floor((elapsed - intervalMs / 2) / intervalMs));
+  const currentIndex = intervalCount !== undefined ? Math.min(intervalCount - 1, gracedIndex) : gracedIndex;
 
   // Which interval is being browsed/scored — like Task Analysis's own
   // `current` step, navigable with the triangle arrows below, independent
@@ -203,9 +214,10 @@ export function TimestampCard({
   const prevCurrentIndexRef = useRef(currentIndex);
   // Separate from prevCurrentIndexRef above — that one drives auto-follow
   // and must update synchronously in the same effect tick; this one just
-  // guards the "time to check" alert (see below) against re-firing for an
-  // index it's already alerted for, on its own independent effect.
-  const prevAlertIndexRef = useRef(currentIndex);
+  // guards the "time to check" alert (see below) against re-firing for a
+  // boundary it's already alerted for, on its own independent effect, keyed
+  // to `rawIndex` (real time) rather than `currentIndex` (which lags).
+  const prevAlertRawIndexRef = useRef(rawIndex);
   useEffect(() => {
     if (currentIndex !== prevCurrentIndexRef.current) {
       prevCurrentIndexRef.current = currentIndex;
@@ -234,7 +246,7 @@ export function TimestampCard({
     setElapsed(0);
     setViewIdx(0);
     prevCurrentIndexRef.current = 0;
-    prevAlertIndexRef.current = 0;
+    prevAlertRawIndexRef.current = 0;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldReset]);
 
@@ -270,33 +282,46 @@ export function TimestampCard({
   // check" alert's own Now button can scroll straight back to this card.
   const cardElRef = useRef<HTMLDivElement | null>(null);
   const { push: pushNotification } = useNotifications();
-  // Pops a "time to check" alert every time a new interval becomes current
-  // (not on mount, and not while the session is paused — elapsed, and so
-  // currentIndex, only ever advances while it's running). Scoring from the
-  // alert calls this same `score` closure the card itself uses, so the
-  // bubble/button color and the alert's own highlighting both come from
-  // the identical source of truth.
+  // Pops a "time to check" alert the instant a new interval boundary is
+  // actually crossed in real time (not while the session is paused — elapsed,
+  // and so rawIndex, only ever advances while it's running; not gated by the
+  // grace period above, either — the alert IS the thing announcing the
+  // boundary, so it can't wait for it). It's about the interval that just
+  // finished and triggered it — `rawIndex - 1` — not the one that's only
+  // just starting. Scoring from the alert calls this same `score` closure
+  // the card itself uses, so the bubble/button color and the alert's own
+  // highlighting both come from the identical source of truth. Uses a fixed
+  // "chime" sound rather than the user's own Default Alarm Sound — this is a
+  // routine, repeating check, not the kind of alert that warrants the
+  // louder "alarm" style some users may have chosen as their default.
   useEffect(() => {
-    if (currentIndex === 0) return;
-    if (currentIndex === prevAlertIndexRef.current) return;
-    prevAlertIndexRef.current = currentIndex;
+    if (rawIndex === 0) return;
+    if (rawIndex === prevAlertRawIndexRef.current) return;
+    prevAlertRawIndexRef.current = rawIndex;
+    const alertedIndex = rawIndex - 1;
+    // A fixed intervalCount card has nothing left to check once its last
+    // interval has already passed — rawIndex keeps climbing for as long as
+    // the session keeps running, but there's no real interval left to alert
+    // (or score) for.
+    if (intervalCount !== undefined && alertedIndex > intervalCount - 1) return;
     pushNotification({
-      dedupeKey: `timestamp-check:${cardKey}:${currentIndex}`,
+      dedupeKey: `timestamp-check:${cardKey}:${alertedIndex}`,
       kind: "alert-now",
       title: `Check if ${positiveLabel}`,
-      body: intervalCheckRangeLabel(currentIndex, intervalMin),
+      body: intervalCheckRangeLabel(alertedIndex, intervalMin),
       icon: "bell-chime",
       allowSnooze: true,
+      soundOverride: "chime",
       timestampCheck: {
         positiveLabel,
         negativeLabel,
-        initialStatus: statuses[currentIndex] ?? null,
-        onScore: (value) => score(currentIndex, value),
+        initialStatus: statuses[alertedIndex] ?? null,
+        onScore: (value) => score(alertedIndex, value),
         onScrollToCard: () => cardElRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }),
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentIndex]);
+  }, [rawIndex]);
 
   const measurementLabelOverride = {
     positive: `Mark ${positiveLabel} if`,

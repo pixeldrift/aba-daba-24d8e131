@@ -188,10 +188,11 @@ export function NotificationBar() {
   );
   useEffect(() => {
     if (!activeAlarm) return;
-    playAlarmSound(prefs.alarmSound);
-    const id = window.setInterval(() => playAlarmSound(prefs.alarmSound), 2000);
+    const style = activeAlarm.soundOverride ?? prefs.alarmSound;
+    playAlarmSound(style);
+    const id = window.setInterval(() => playAlarmSound(style), 2000);
     return () => window.clearInterval(id);
-  }, [activeAlarm?.id, prefs.alarmSound]);
+  }, [activeAlarm?.id, activeAlarm?.soundOverride, prefs.alarmSound]);
 
   // Drives the live "In 5 minutes" / "Now" / "3 minutes ago" label next to
   // an alert's location (see formatActivityRelativeTime) — coarse enough
@@ -279,10 +280,19 @@ function NotificationRow({
   // card's own score() toggle-on-repeat-press semantics) rather than
   // re-reading the card's live state on every render.
   const [intervalStatus, setIntervalStatus] = useState(n.timestampCheck?.initialStatus ?? null);
+  const dismissTimeoutRef = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (dismissTimeoutRef.current != null) window.clearTimeout(dismissTimeoutRef.current);
+  }, []);
   const handleIntervalScore = (value: "correct" | "incorrect") => {
     if (!n.timestampCheck) return;
     setIntervalStatus((prev) => (prev === value ? null : value));
     n.timestampCheck.onScore(value);
+    // A brief pause — long enough to actually see the button fill in — then
+    // dismiss on its own, the same slide-off `commit` every other dismissal
+    // uses. Scoring from the alert is meant to fully resolve the check, not
+    // just leave it sitting there waiting for a separate manual dismiss.
+    dismissTimeoutRef.current = window.setTimeout(() => commit(-1, onDismiss), 550);
   };
   const styles = KIND_STYLES[n.kind];
   const alert = isAlert(n.kind);

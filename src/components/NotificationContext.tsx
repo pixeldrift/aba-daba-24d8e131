@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSettings, type AlarmSoundStyle } from "./SettingsContext";
-import { playAlarmSound } from "@/lib/alarmSounds";
+import { playAlarmSound, primeAlarmAudio } from "@/lib/alarmSounds";
 
 
 
@@ -46,6 +46,13 @@ export interface Notification {
   // passes, instead of a string frozen at whatever it said the moment the
   // alert fired.
   activityAt?: number;
+  // Overrides the user's own Settings-configured Default Alarm Sound for
+  // this one notification's repeating alarm (see NotificationBar's own
+  // activeAlarm effect) — for alerts where the sound needs to stay fixed
+  // regardless of what the user picked as their general default (e.g. a
+  // routine Timestamp interval check always uses a gentle "chime" rather
+  // than whatever louder style the user may have set as their default).
+  soundOverride?: AlarmSoundStyle;
   // Present only for a Timestamp card's own "time to check" alert — adds 3
   // extra buttons to the row (scroll-to-card, negative, positive) alongside
   // the standard audio/snooze/dismiss ones. The callbacks close directly
@@ -73,6 +80,7 @@ interface PushInput {
   allowSnooze?: boolean;
   sourceRef?: Notification["sourceRef"];
   activityAt?: number;
+  soundOverride?: AlarmSoundStyle;
   timestampCheck?: Notification["timestampCheck"];
 }
 
@@ -201,6 +209,24 @@ export function NotificationProvider({ children, onActivate }: { children: React
   const onActivateRef = useRef(onActivate);
   useEffect(() => { onActivateRef.current = onActivate; }, [onActivate]);
 
+  // Unlocks alarm audio the moment the user makes ANY first gesture
+  // anywhere in the app — long before a real alert has a reason to fire —
+  // rather than leaving that first unlock to whatever button happens to get
+  // pressed on the first alert itself (see primeAlarmAudio's own comment).
+  useEffect(() => {
+    const unlock = () => {
+      primeAlarmAudio();
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
+
   const activate = useCallback((n: Notification) => {
     onActivateRef.current?.(n);
     setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, state: "archived" } : x)));
@@ -283,6 +309,7 @@ export function NotificationProvider({ children, onActivate }: { children: React
       allowSnooze: input.allowSnooze,
       sourceRef: input.sourceRef,
       activityAt: input.activityAt,
+      soundOverride: input.soundOverride,
       timestampCheck: input.timestampCheck,
       state: "live",
     };
