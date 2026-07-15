@@ -317,6 +317,9 @@ export function TimestampCard({
     // the session keeps running, but there's no real interval left to alert
     // (or score) for.
     if (intervalCount !== undefined && alertedIndex > intervalCount - 1) return;
+    // Already marked (scored ahead of time on the card itself, e.g. via the
+    // expanded view's per-row buttons) — nothing left for the alert to ask.
+    if (statuses[alertedIndex] != null) return;
     pushNotification({
       dedupeKey: `timestamp-check:${cardKey}:${alertedIndex}`,
       kind: "alert-now",
