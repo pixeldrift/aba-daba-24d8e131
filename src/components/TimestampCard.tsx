@@ -487,6 +487,7 @@ export function TimestampCard({
           />
           <IntervalTimeline
             intervalCount={displayIntervalCount}
+            intervalMin={intervalMin}
             elapsedMs={elapsed}
             intervalMs={intervalMs}
             currentIndex={currentIndex}
@@ -538,9 +539,19 @@ const BAR_H = 10;
 // the bubble row specifically, rather than the timeline's full height
 // (bubbles + bar + chevron).
 const BUBBLE = 24;
+// Space reserved above each bubble for its time-range label (e.g. "0-30m"),
+// which replaced the bubble's old internal ordinal number.
+const LABEL_H = 14;
 // Matches IntervalTimeline's own leading `pt-1` before the bubble row.
 const BUBBLE_ROW_TOP_PX = 4;
-const NAV_CENTER_PX = BUBBLE_ROW_TOP_PX + BUBBLE / 2;
+// Centers the nav arrows on the bubble itself, not the label sitting above it.
+const NAV_CENTER_PX = BUBBLE_ROW_TOP_PX + LABEL_H + BUBBLE / 2;
+// The "now" chevron's own half-width, roughly, once rotated on its side —
+// without this the leading edge of the track (elapsed time near 0) clips
+// half the chevron shape against the viewport's own left edge. Widening the
+// viewport by this much on both sides (via a negative margin) gives it room
+// to render in full at either extreme.
+const CHEVRON_EDGE_BUFFER = 10;
 // How many segments comfortably fit before scrolling kicks in — while
 // `viewIdx` is still within this first window, the track stays flush at
 // its own start (division 0 sitting at the viewport's own left edge, no
@@ -558,6 +569,7 @@ const HORIZONTAL_FADE_MASK = {
 
 function IntervalTimeline({
   intervalCount,
+  intervalMin,
   elapsedMs,
   intervalMs,
   currentIndex,
@@ -565,6 +577,7 @@ function IntervalTimeline({
   statuses,
 }: {
   intervalCount: number;
+  intervalMin: number;
   elapsedMs: number;
   intervalMs: number;
   currentIndex: number;
@@ -590,11 +603,14 @@ function IntervalTimeline({
       {/* Period bubbles — parked in place above their own segment (not a
           draggable/swipeable strip like Percent Correct's trial bubbles),
           all the same size (equal-length intervals), gray until scored
-          then colored to match the button that scored it. */}
-      <div className="relative overflow-hidden" style={{ height: BUBBLE, ...HORIZONTAL_FADE_MASK }}>
+          then colored to match the button that scored it. Each one's time
+          range is labeled above it rather than an ordinal number inside it,
+          since the CardShell header already gives the viewed interval's own
+          "N: range" callout. */}
+      <div className="relative overflow-hidden" style={{ height: LABEL_H + BUBBLE, ...HORIZONTAL_FADE_MASK }}>
         <motion.div
           className="absolute left-0 top-0"
-          style={{ height: BUBBLE }}
+          style={{ height: LABEL_H + BUBBLE }}
           animate={{ x: trackOffsetPx }}
           transition={SPRING_TRANSITION}
         >
@@ -602,19 +618,23 @@ function IntervalTimeline({
             const recency = recencyOf(i, viewIdx);
             const { bg, text, fade } = statusColors(statuses[i], recency);
             return (
-              <div key={i} className="absolute bottom-0 -translate-x-1/2" style={{ left: i * SEG_W + SEG_W / 2 }}>
+              <div
+                key={i}
+                className="absolute bottom-0 -translate-x-1/2 flex flex-col items-center gap-0.5"
+                style={{ left: i * SEG_W + SEG_W / 2 }}
+              >
+                <span className={cn("text-[9px] font-semibold tabular-nums leading-none whitespace-nowrap", text, fade)}>
+                  {intervalRange(i, intervalMin)}
+                </span>
                 <div
                   className={cn(
-                    "rounded-full flex items-center justify-center font-display font-bold tabular-nums text-[11px] transition-all duration-200",
+                    "rounded-full transition-all duration-200",
                     recency === "current" ? "border-2" : "border",
                     bg,
-                    text,
                     fade,
                   )}
                   style={{ width: BUBBLE, height: BUBBLE }}
-                >
-                  {i + 1}
-                </div>
+                />
               </div>
             );
           })}
@@ -648,13 +668,21 @@ function IntervalTimeline({
           ))}
         </motion.div>
       </div>
-      <div className="relative overflow-hidden h-4" style={HORIZONTAL_FADE_MASK} aria-hidden>
+      <div
+        className="relative overflow-hidden h-4"
+        style={{
+          marginLeft: -CHEVRON_EDGE_BUFFER,
+          width: `calc(100% + ${CHEVRON_EDGE_BUFFER * 2}px)`,
+          ...HORIZONTAL_FADE_MASK,
+        }}
+        aria-hidden
+      >
         <motion.div
           className="absolute left-0 top-0"
           animate={{ x: trackOffsetPx }}
           transition={SPRING_TRANSITION}
         >
-          <div className="absolute top-0 -translate-x-1/2" style={{ left: fillPx }}>
+          <div className="absolute top-0 -translate-x-1/2" style={{ left: fillPx + CHEVRON_EDGE_BUFFER }}>
             <svg
               width="14"
               height="18"
