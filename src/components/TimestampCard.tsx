@@ -437,7 +437,15 @@ export function TimestampCard({
       }
     >
       <div className="px-5 pt-2 pb-4 flex flex-col gap-1">
-        <div className="flex items-center justify-end gap-2">
+        <div className="relative flex items-center justify-end gap-2 h-5">
+          {/* Centered over the row rather than the flex layout's own middle,
+              so it lines up with the (also centered) current bubble below
+              regardless of the pill's width — same horizontal midpoint as
+              the timeline, since both rows share the same symmetric side
+              padding. */}
+          <div className="absolute inset-0 flex items-center justify-center text-sm font-semibold tabular-nums pointer-events-none">
+            {intervalRange(viewIdx, intervalMin)}
+          </div>
           {locked ? (
             <span
               aria-label="Locked to session time"
@@ -486,7 +494,6 @@ export function TimestampCard({
           />
           <IntervalTimeline
             intervalCount={displayIntervalCount}
-            intervalMin={intervalMin}
             elapsedMs={elapsed}
             intervalMs={intervalMs}
             currentIndex={currentIndex}
@@ -538,13 +545,9 @@ const BAR_H = 10;
 // the bubble row specifically, rather than the timeline's full height
 // (bubbles + bar + chevron).
 const BUBBLE = 24;
-// Height reserved for the current interval's time-range label, centered
-// above the bubble row — same split as Task Analysis's own current-step
-// text sitting above its dot strip.
-const LABEL_ROW_H = 20;
-// Matches IntervalTimeline's own leading `pt-1` before the label row.
+// Matches IntervalTimeline's own leading `pt-1` before the bubble row.
 const BUBBLE_ROW_TOP_PX = 4;
-const NAV_CENTER_PX = BUBBLE_ROW_TOP_PX + LABEL_ROW_H + BUBBLE / 2;
+const NAV_CENTER_PX = BUBBLE_ROW_TOP_PX + BUBBLE / 2;
 // The "now" chevron's own half-width, roughly, once rotated on its side —
 // extra room so it can render in full even parked right at a track edge.
 const CHEVRON_EDGE_BUFFER = 10;
@@ -559,7 +562,6 @@ const HORIZONTAL_FADE_MASK = {
 
 function IntervalTimeline({
   intervalCount,
-  intervalMin,
   elapsedMs,
   intervalMs,
   currentIndex,
@@ -567,7 +569,6 @@ function IntervalTimeline({
   statuses,
 }: {
   intervalCount: number;
-  intervalMin: number;
   elapsedMs: number;
   intervalMs: number;
   currentIndex: number;
@@ -595,13 +596,6 @@ function IntervalTimeline({
 
   return (
     <div className="pt-1">
-      {/* The viewed interval's own time range, centered over its bubble —
-          which is always dead-center in the viewport below. Shows just
-          once (not per bubble), the same way Task Analysis shows its
-          current step's text just once rather than repeating it per dot. */}
-      <div className="text-center text-sm font-semibold tabular-nums" style={{ height: LABEL_ROW_H }}>
-        {intervalRange(viewIdx, intervalMin)}
-      </div>
       {/* Period bubbles — parked in place above their own segment (not a
           draggable/swipeable strip like Percent Correct's trial bubbles),
           all the same size (equal-length intervals), gray until scored
