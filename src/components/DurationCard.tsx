@@ -59,6 +59,8 @@ export function DurationCard({
   onPrevCard,
   onNextCard,
   slideFrom,
+  widthMode,
+  onWidthModeChange,
 }: DurationCardProps) {
   const cardKey = id ?? title;
   const [instances, setInstances] = useCardState<number[]>(cardKey, "instances", [0]);
@@ -280,6 +282,8 @@ export function DurationCard({
           onPrevCard={onPrevCard}
           onNextCard={onNextCard}
           slideFrom={slideFrom}
+          widthMode={widthMode}
+          onWidthModeChange={onWidthModeChange}
           details={
             <>
               <DrawerQuickFacts
@@ -476,6 +480,29 @@ export function DurationCard({
         onPrevCard={onPrevCard}
         onNextCard={onNextCard}
         slideFrom={slideFrom}
+        widthMode={widthMode}
+        onWidthModeChange={onWidthModeChange}
+        details={
+          <>
+            <DrawerQuickFacts
+              icon={<DurationIcon />}
+              dataTypeLabel="Frequency / Duration"
+              phase={phase}
+              stats={[
+                ...(minDurationSec !== undefined
+                  ? [{ label: "Minimum", value: `${minDurationSec}s` }]
+                  : []),
+                { label: "Instances", value: instances.length },
+                { label: "Total Time", value: formatTime(totalMs) },
+              ]}
+            />
+            {teachingProcedure && (
+              <div className="mt-4">
+                <TeachingProcedureAccordion data={teachingProcedure} kind="duration" />
+              </div>
+            )}
+          </>
+        }
         actions={
           // Badge and pill travel together — the pill's time/play-pause is
           // specific to THIS instance, so advancing to another one should
@@ -556,6 +583,8 @@ export function DurationCard({
       onPrevCard={onPrevCard}
       onNextCard={onNextCard}
       slideFrom={slideFrom}
+      widthMode={widthMode}
+      onWidthModeChange={onWidthModeChange}
       progress={null}
       isComplete={isComplete}
       expanded={expanded}

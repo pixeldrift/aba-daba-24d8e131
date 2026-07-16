@@ -476,6 +476,25 @@ export function TrialCard({
         slideFrom={slideFrom}
         widthMode={widthMode}
         onWidthModeChange={onWidthModeChange}
+        details={
+          <>
+            <DrawerQuickFacts
+              icon={<PercentCorrectIcon />}
+              dataTypeLabel={dataType}
+              phase={phase}
+              stats={[
+                { label: "Minimum", value: minTrials ?? "No Min" },
+                { label: "Maximum", value: maxTrials ?? "No Max" },
+                { label: "Correct", value: percentCorrectDisplay },
+              ]}
+            />
+            {teachingProcedure && (
+              <div className="mt-4">
+                <TeachingProcedureAccordion data={teachingProcedure} kind="trial" />
+              </div>
+            )}
+          </>
+        }
         actions={
           // The badge AND the buttons travel together here — unlike
           // Frequency/Rate's tally-and-increment (one action, repeated), each

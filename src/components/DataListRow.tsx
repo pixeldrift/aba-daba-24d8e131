@@ -25,6 +25,11 @@ export interface DataListRowProps extends CardEditAndDrawerProps {
    *  meaningful (mirrors CardShell's own `progress={null}` for those). */
   progress?: number | null;
   isComplete?: boolean;
+  /** Forwarded straight through to the shared drawer — same content each
+   *  card kind already builds for CardShell/MiniTileShell's own `details`.
+   *  Without this the drawer opens in list mode with a title but a
+   *  permanently empty body, since there'd be nothing to forward. */
+  details?: ReactNode;
 }
 
 /** The list `displayMode`'s row: a bare data-type icon then the title, no
@@ -57,6 +62,7 @@ export function DataListRow({
   slideFrom,
   widthMode,
   onWidthModeChange,
+  details,
 }: DataListRowProps) {
   const rowRef = useRef<HTMLElement | null>(null);
   const showActions = actions && !reorderEditing;
@@ -158,6 +164,7 @@ export function DataListRow({
           onOpenChange={onDetailsOpenChange ?? (() => {})}
           title={title}
           description={description}
+          details={details}
           onPrevCard={onPrevCard}
           onNextCard={onNextCard}
           slideFrom={slideFrom}

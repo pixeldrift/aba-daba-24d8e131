@@ -155,6 +155,8 @@ export function TaskAnalysisCard({
   onPrevCard,
   onNextCard,
   slideFrom,
+  widthMode,
+  onWidthModeChange,
 }: TaskAnalysisCardProps) {
   const cardKey = id ?? title;
   const [statuses, setStatuses] = useCardState<StepStatus[]>(cardKey, "statuses", () =>
@@ -321,11 +323,13 @@ export function TaskAnalysisCard({
         onPrevCard={onPrevCard}
         onNextCard={onNextCard}
         slideFrom={slideFrom}
+        widthMode={widthMode}
+        onWidthModeChange={onWidthModeChange}
         details={
           <>
             <DrawerQuickFacts
               icon={<TaskAnalysisIcon />}
-              dataTypeLabel="Task analysis (I / P / E)"
+              dataTypeLabel="Task analysis"
               phase={phase}
               stats={[
                 {
@@ -509,6 +513,31 @@ export function TaskAnalysisCard({
         onPrevCard={onPrevCard}
         onNextCard={onNextCard}
         slideFrom={slideFrom}
+        widthMode={widthMode}
+        onWidthModeChange={onWidthModeChange}
+        details={
+          <>
+            <DrawerQuickFacts
+              icon={<TaskAnalysisIcon />}
+              dataTypeLabel="Task analysis"
+              phase={phase}
+              stats={[
+                {
+                  label: "Chaining",
+                  value: chainingDirection === "backward" ? "Backward" : "Forward",
+                },
+                { label: "Steps", value: steps.length },
+                { label: "Scored", value: `${completed} / ${steps.length}` },
+                { label: "Independent", value: `${independent} / ${steps.length}` },
+              ]}
+            />
+            {teachingProcedure && (
+              <div className="mt-4">
+                <TeachingProcedureAccordion data={teachingProcedure} kind="task-analysis" />
+              </div>
+            )}
+          </>
+        }
         actions={
           // Badge and buttons slide together — each button scores THIS step
           // specifically, so advancing to the next step should read as the
@@ -572,6 +601,8 @@ export function TaskAnalysisCard({
       onPrevCard={onPrevCard}
       onNextCard={onNextCard}
       slideFrom={slideFrom}
+      widthMode={widthMode}
+      onWidthModeChange={onWidthModeChange}
       progress={progress}
       isComplete={isComplete}
       expanded={expanded}
@@ -595,7 +626,7 @@ export function TaskAnalysisCard({
         <>
           <DrawerQuickFacts
             icon={<TaskAnalysisIcon />}
-            dataTypeLabel="Task analysis (I / P / E)"
+            dataTypeLabel="Task analysis"
             phase={phase}
             stats={[
               {
