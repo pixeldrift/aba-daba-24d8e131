@@ -21,7 +21,7 @@ import { X, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-rea
 import { TimeChevronIcon } from "./icons/TimeChevronIcon";
 import { DoubleChevronIcon } from "./icons/DoubleChevronIcon";
 import { renderBreakableTitle } from "./BreakableTitle";
-import { useElementHeight } from "@/hooks/use-element-height";
+import { useElementHeight, useElementRight } from "@/hooks/use-element-height";
 import { cn } from "@/lib/utils";
 
 /** Breathing room left between a hugCardRight drawer's panel edge and the
@@ -35,6 +35,12 @@ const DRAWER_TILE_GAP_PX = 6;
  *  still-mounted outgoing instance has time to animate out before it's
  *  replaced by a freshly-mounted one for the new card. */
 const EXIT_MS = 220;
+
+/** Minimum breathing room, in px, kept between the drawer's normal-width
+ *  left edge and the toolbar's view-mode icon cluster's own right edge (see
+ *  viewModeIconsRight below) — enough to read as a clear gap, not just a
+ *  hairline. */
+const VIEW_MODE_ICONS_CLEARANCE_PX = 16;
 
 /** Shared by both the outgoing (exit) and incoming (enter) title/content
  *  slides so the two halves read as one continuous motion instead of two
@@ -92,7 +98,20 @@ const DrawerTitle = memo(function DrawerTitle({
     // to top.
     <motion.h2
       onClick={onClick}
-      className="font-display text-base leading-[1.15] flex-1 min-w-0 break-words cursor-pointer select-none text-center"
+      // The prev/next/close/expand buttons flanking this title are all
+      // size-7 (1.75rem tall) with their own icon glyph centered inside via
+      // grid place-items-center — but this title's own single line of text
+      // is only 1.15em tall (leading-[1.15]), and items-start (see the
+      // header row above) aligns everything by box TOP, not center. Left
+      // alone, that pins the (shorter) first line's own vertical center
+      // noticeably above the (taller) button's own glyph center instead of
+      // matching it. This margin nudges just the text down by exactly that
+      // gap — half the height difference between the two — so the first
+      // line's center lines up with the buttons' glyph center the same way
+      // it would if both were simply centered together, while still only
+      // ever growing the row downward as more lines wrap (this offset is a
+      // fixed amount added once, not a function of how many lines follow).
+      className="font-display text-base leading-[1.15] flex-1 min-w-0 break-words cursor-pointer select-none text-center mt-[calc((1.75rem-1.15em)/2)]"
       animate={
         exitDir
           ? { y: exitDir === "next" ? 16 : -16, opacity: 0 }
@@ -123,7 +142,15 @@ const DrawerContent = memo(function DrawerContent({
   const entered = useEnterPhase(slideFrom);
   const entering = slideFrom && !entered;
   return (
-    <div ref={contentScrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 pt-2 pb-4">
+    <div
+      ref={contentScrollRef}
+      // overscroll-contain: stops this scroll region from "bleeding through"
+      // once it hits its own top/bottom bound — without it, the underlying
+      // card list (still scrollable behind the drawer) picks up whatever
+      // scroll delta this div didn't consume, so flicking past the end of
+      // the drawer's content also visibly scrolls the pane behind it.
+      className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-2 pb-4"
+    >
       <motion.div
         animate={
           exitDir
@@ -248,6 +275,13 @@ export function DataDetailsDrawer({
   const [arrowTop, setArrowTop] = useState(0);
   const [hugWidth, setHugWidth] = useState<number | null>(null);
   const contentScrollRef = useRef<HTMLDivElement>(null);
+  // Right edge (viewport-relative px) of the toolbar's view-mode segmented
+  // control — 0 until measured, which is treated as "not yet known" below
+  // rather than clamping the drawer down to nothing on the very first
+  // render. Only bounds the plain normalWidthPxFn fallback, not hugCardRight
+  // — the two grid display modes already size themselves off a real tile's
+  // own measured edge, which never comes anywhere near this cluster.
+  const viewModeIconsRight = useElementRight("[data-view-mode-toggle]");
   // Set once the card has scrolled fully out of the visible pane (not just
   // clamped near an edge — clampedArrowTop below already handles "close to
   // the edge" by sliding the diamond to it). While this is set, the arrow —
@@ -301,7 +335,19 @@ export function DataDetailsDrawer({
   // then. Recomputed fresh every render (no memoization) so it's
   // automatically fresh, including the one triggered by the resize
   // listener below.
-  const restingWidthPx = hugCardRight && hugWidth !== null ? hugWidth : normalWidthPxFn(viewportWidth);
+  const rawRestingWidthPx = hugCardRight && hugWidth !== null ? hugWidth : normalWidthPxFn(viewportWidth);
+  // Caps the plain (non-hugCardRight) fallback width so the panel's own
+  // normal-width left edge never rests to the left of the view-mode icon
+  // cluster's right edge — otherwise, at wider default widths, list/card
+  // mode's drawer would open right on top of those buttons instead of
+  // beside them. Infinity (no cap) until the cluster's actually been
+  // measured, and hugCardRight skips this entirely — its own measured width
+  // already stops well short of the toolbar's far-left controls.
+  const maxRestingWidthPx =
+    viewModeIconsRight > 0
+      ? Math.max(0, viewportWidth - viewModeIconsRight - VIEW_MODE_ICONS_CLEARANCE_PX)
+      : Infinity;
+  const restingWidthPx = hugCardRight ? rawRestingWidthPx : Math.min(rawRestingWidthPx, maxRestingWidthPx);
 
   // Drives the panel's own horizontal position — always rendered at a full
   // viewport width (see the panel's own w-full below) and translated via x
@@ -525,10 +571,21 @@ export function DataDetailsDrawer({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeDrawer();
+      if (e.key !== "Escape") return;
+      // A Radix Dialog (e.g. DrawerQuickFacts' data-type/phase info modal)
+      // opened from inside this drawer adds its own Escape handling, but
+      // doesn't stop the event from also reaching this listener — without
+      // this guard, dismissing that modal with Escape closed the whole
+      // drawer out from under it too. Registered with `capture: true` so
+      // this runs during the capture phase, before Radix's own dismiss
+      // layer (which reacts on a plain bubble/document listener) has had a
+      // chance to react to this same keydown — checking after that point
+      // would already see the dialog mid-close and miss it.
+      if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+      closeDrawer();
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, { capture: true });
+    return () => window.removeEventListener("keydown", onKey, { capture: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -595,9 +652,20 @@ export function DataDetailsDrawer({
         // regardless of width), and left is the one that flips — flush at
         // full width (the panel's own left edge IS the viewport's left edge
         // then) but not at normal width, where it's the one real seam
-        // between the drawer and whatever's showing behind it.
+        // between the drawer and whatever's showing behind it. The
+        // now-removed pull tab used to supply its own top-left rounding at
+        // that same normal-width seam (see the old comment on the tab
+        // below); with the tab gone, the panel's own corner takes over that
+        // rounding instead so it still reads as one continuous shape rather
+        // than a flat corner where the tab used to attach. Not rounded at
+        // full width — that corner sits flush against the real viewport
+        // corner there, where a rounded cutout would just expose whatever's
+        // behind the page instead of reading as a merged shape.
         open
-          ? cn("border-blue-400/80", widthMode === "full" ? "border-t-2" : "border-t-2 border-l-2")
+          ? cn(
+              "border-blue-400/80",
+              widthMode === "full" ? "border-t-2" : "border-t-2 border-l-2 rounded-tl-lg",
+            )
           : "border border-border/70",
       )}
       style={{ x, top, bottom: 0 }}
@@ -624,12 +692,13 @@ export function DataDetailsDrawer({
           -top-0.5 shifts it up by the panel's own 2px border width, so the
           tab's outer top edge lines up with the panel's outer top edge
           instead of sitting a couple pixels below it (top-0 aligns with the
-          inside of that border, not the outside). Not rendered at full
-          width at all — the whole panel drags now (see `drag` above), so it
-          isn't needed as a handle anymore, and it'd otherwise be sitting
-          off-screen anyway once the panel's own left edge reaches the
-          viewport's own left edge. */}
-      {widthMode !== "full" && (
+          inside of that border, not the outside). Only rendered while
+          closed — once open (either width), the tab has nothing left to do:
+          the whole panel already drags as its own handle, and its own
+          expand/collapse control has moved into the sticky header below
+          (see the header's own leading button) rather than living out here
+          past the panel's own edge. */}
+      {!open && (
         <button
           type="button"
           onClick={(e) => {
@@ -642,31 +711,17 @@ export function DataDetailsDrawer({
               openToFull();
               return;
             }
-            if (open) closeDrawer();
-            else onOpenChange(true);
+            onOpenChange(true);
           }}
-          aria-label={open ? "Close details drawer" : "Open details drawer"}
-          aria-expanded={open}
-          className={cn(
-            "absolute -left-7 -top-0.5 w-7 grid place-items-center rounded-l-lg bg-background text-stone-500 hover:text-stone-800 transition-colors touch-none",
-            open ? "border-2 border-blue-400/80" : "border border-border/70",
-            "border-r-0",
-          )}
+          aria-label="Open details drawer"
+          aria-expanded={false}
+          className="absolute -left-7 -top-0.5 w-7 grid place-items-center rounded-l-lg border border-border/70 border-r-0 bg-background text-stone-500 hover:text-stone-800 transition-colors touch-none"
           style={{ height: toolbarRowHeight }}
         >
-          {open ? (
-            // Open (at normal width): the tab is draggable both ways from
-            // here — further left toward full width, right to collapse/
-            // close — so a single directional chevron would only describe
-            // half of what pressing/dragging it can do. The bidirectional
-            // icon signals both at once.
-            <DoubleChevronIcon className="size-3.5" />
-          ) : (
-            // Closed: only one direction does anything (drag/tap left to
-            // open), so the single chevron's own base-right orientation
-            // rotates to point left, toward that action.
-            <TimeChevronIcon className="size-3.5 rotate-180" />
-          )}
+          {/* Only one direction does anything from here (drag/tap left to
+              open), so the single chevron's own base-right orientation
+              rotates to point left, toward that action. */}
+          <TimeChevronIcon className="size-3.5 rotate-180" />
         </button>
       )}
 
@@ -733,7 +788,22 @@ export function DataDetailsDrawer({
         </button>
       )}
 
-      <motion.div className="flex h-full flex-col" style={{ width: contentWidth }}>
+      <motion.div
+        className={cn(
+          // overflow-hidden clips the sticky header's own square corner
+          // (its bg-background rectangle otherwise pokes past the outer
+          // panel's rounded arc, showing as a small square notch beyond the
+          // curve) to match the outer panel's own rounding below — scoped
+          // to this inner wrapper rather than the outer panel itself, since
+          // the outer panel also hosts the arrow pointer and off-screen
+          // indicator, both deliberately positioned outside its own box via
+          // a negative left offset; overflow-hidden there would clip those
+          // instead of just the header's corner.
+          "flex h-full flex-col overflow-hidden",
+          open && widthMode !== "full" && "rounded-tl-lg",
+        )}
+        style={{ width: contentWidth }}
+      >
         {/* Sticky header — stays put while the content below scrolls under
             it. bg-background keeps scrolled content from showing through;
             the border gives scrolled content a clear edge to disappear
@@ -745,7 +815,41 @@ export function DataDetailsDrawer({
           className="shrink-0 border-b border-border/70 bg-background py-1.5 px-4"
           style={{ minHeight: toolbarRowHeight }}
         >
-          <div className="flex items-center gap-1">
+          {/* items-start (not items-center) — a multi-line title grows this
+              row taller than the icons' own size-7, and centering would
+              slide every icon down to stay centered in that taller row
+              instead of holding still. Pinning to the top keeps them at
+              the same spot regardless of how many lines the title wraps
+              to, matching where they already sit in the common single-line
+              case. */}
+          <div className="flex items-start gap-1">
+            {/* Expand/collapse — replaces the pull tab's own bidirectional
+                chevron now that the tab itself only shows while closed (see
+                its own comment above). Toggles between the two open widths
+                directly; a full close still goes through the dedicated X
+                below rather than this icon doubling up on both jobs.
+                Styled like the X (plain icon, no pill chrome) rather than
+                like prev/next's bordered circles — it's a panel-level
+                control, not another step through the card list — and the
+                matching -ml-1/-mr-1 bookend the row the same way on both
+                ends. */}
+            {open && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (wasDraggingRef.current) return;
+                  setWidthMode(widthMode === "full" ? "normal" : "full");
+                }}
+                aria-label={
+                  widthMode === "full" ? "Collapse drawer to normal width" : "Expand drawer to full width"
+                }
+                aria-expanded={widthMode === "full"}
+                className="-ml-1 grid shrink-0 place-items-center size-7 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <DoubleChevronIcon className="size-3.5" />
+              </button>
+            )}
             <button
               type="button"
               onClick={(e) => {
