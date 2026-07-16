@@ -172,6 +172,8 @@ export function TimestampCard({
   onPrevCard,
   onNextCard,
   slideFrom,
+  widthMode,
+  onWidthModeChange,
 }: TimestampCardProps) {
   const cardKey = id ?? title;
   // Session-linked elapsed time — always ticking with the session (no local
@@ -432,6 +434,8 @@ export function TimestampCard({
         onPrevCard={onPrevCard}
         onNextCard={onNextCard}
         slideFrom={slideFrom}
+        widthMode={widthMode}
+        onWidthModeChange={onWidthModeChange}
         details={details}
         progress={(scoredCount / displayIntervalCount) * 100}
         isComplete={isComplete}
@@ -516,6 +520,9 @@ export function TimestampCard({
         onPrevCard={onPrevCard}
         onNextCard={onNextCard}
         slideFrom={slideFrom}
+        widthMode={widthMode}
+        onWidthModeChange={onWidthModeChange}
+        details={details}
         progress={(scoredCount / displayIntervalCount) * 100}
         isComplete={isComplete}
         actions={
@@ -567,6 +574,8 @@ export function TimestampCard({
       onPrevCard={onPrevCard}
       onNextCard={onNextCard}
       slideFrom={slideFrom}
+      widthMode={widthMode}
+      onWidthModeChange={onWidthModeChange}
       details={details}
       expanded={expanded}
       onToggleExpanded={() => setExpanded((v) => !v)}

@@ -68,6 +68,8 @@ export function RatingCard({
   onPrevCard,
   onNextCard,
   slideFrom,
+  widthMode,
+  onWidthModeChange,
 }: RatingCardProps) {
   const numStars = max - min;
   // Fed into the drawer's teaching-procedure Measurement row (as a
@@ -126,6 +128,8 @@ export function RatingCard({
         onPrevCard={onPrevCard}
         onNextCard={onNextCard}
         slideFrom={slideFrom}
+        widthMode={widthMode}
+        onWidthModeChange={onWidthModeChange}
         details={
           <>
             <DrawerQuickFacts
@@ -205,6 +209,29 @@ export function RatingCard({
         onPrevCard={onPrevCard}
         onNextCard={onNextCard}
         slideFrom={slideFrom}
+        widthMode={widthMode}
+        onWidthModeChange={onWidthModeChange}
+        details={
+          <>
+            <DrawerQuickFacts
+              icon={<Star />}
+              dataTypeLabel="Score (quality)"
+              phase={phase}
+              stats={[
+                { label: "Range", value: `${min}–${max}` },
+                { label: "Current score", value: rating > 0 ? String(rating) : "Not yet scored" },
+              ]}
+            />
+            {teachingProcedure && (
+              <div className="mt-4">
+                <TeachingProcedureAccordion
+                  data={{ ...teachingProcedure, measurement: { scale: scaleRows } }}
+                  kind="rating"
+                />
+              </div>
+            )}
+          </>
+        }
         actions={
           <ListRatingButton
             rating={rating}
@@ -241,6 +268,8 @@ export function RatingCard({
       onPrevCard={onPrevCard}
       onNextCard={onNextCard}
       slideFrom={slideFrom}
+      widthMode={widthMode}
+      onWidthModeChange={onWidthModeChange}
       progress={null}
       expanded={expanded}
       onToggleExpanded={() => setExpanded((v) => !v)}

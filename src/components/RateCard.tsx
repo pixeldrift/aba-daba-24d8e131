@@ -56,6 +56,8 @@ export function RateCard({
   onPrevCard,
   onNextCard,
   slideFrom,
+  widthMode,
+  onWidthModeChange,
 }: RateCardProps) {
   const cardKey = id ?? title;
   const [count, setCount] = useCardState(cardKey, "count", 0);
@@ -200,6 +202,8 @@ export function RateCard({
           onPrevCard={onPrevCard}
           onNextCard={onNextCard}
           slideFrom={slideFrom}
+          widthMode={widthMode}
+          onWidthModeChange={onWidthModeChange}
           details={
             <>
               <DrawerQuickFacts
@@ -331,6 +335,29 @@ export function RateCard({
         onPrevCard={onPrevCard}
         onNextCard={onNextCard}
         slideFrom={slideFrom}
+        widthMode={widthMode}
+        onWidthModeChange={onWidthModeChange}
+        details={
+          <>
+            <DrawerQuickFacts
+              icon={<RateIcon />}
+              dataTypeLabel="Rate (per minute)"
+              phase={phase}
+              stats={[
+                ...(minDurationSec !== undefined
+                  ? [{ label: "Minimum", value: `${minDurationSec}s` }]
+                  : []),
+                { label: "Count", value: count },
+                { label: "Period", value: formatTime(elapsed) },
+              ]}
+            />
+            {teachingProcedure && (
+              <div className="mt-4">
+                <TeachingProcedureAccordion data={teachingProcedure} kind="rate" />
+              </div>
+            )}
+          </>
+        }
         actions={
           <div className="flex items-center gap-1">
             <NumberKeypad
@@ -400,6 +427,8 @@ export function RateCard({
       onPrevCard={onPrevCard}
       onNextCard={onNextCard}
       slideFrom={slideFrom}
+      widthMode={widthMode}
+      onWidthModeChange={onWidthModeChange}
       progress={null}
       editing={editing}
       details={

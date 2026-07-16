@@ -50,6 +50,8 @@ export function FrequencyCard({
   onPrevCard,
   onNextCard,
   slideFrom,
+  widthMode,
+  onWidthModeChange,
 }: FrequencyCardProps) {
   const cardKey = id ?? title;
   const [count, setCount] = useCardState(cardKey, "count", 0);
@@ -126,6 +128,8 @@ export function FrequencyCard({
         onPrevCard={onPrevCard}
         onNextCard={onNextCard}
         slideFrom={slideFrom}
+        widthMode={widthMode}
+        onWidthModeChange={onWidthModeChange}
         details={
           <>
             <DrawerQuickFacts
@@ -242,6 +246,26 @@ export function FrequencyCard({
         onPrevCard={onPrevCard}
         onNextCard={onNextCard}
         slideFrom={slideFrom}
+        widthMode={widthMode}
+        onWidthModeChange={onWidthModeChange}
+        details={
+          <>
+            <DrawerQuickFacts
+              icon={<FrequencyIcon />}
+              dataTypeLabel="Frequency (count)"
+              phase={phase}
+              stats={[
+                { label: "Minimum count", value: minCount },
+                { label: "Tally", value: count },
+              ]}
+            />
+            {teachingProcedure && (
+              <div className="mt-4">
+                <TeachingProcedureAccordion data={teachingProcedure} kind="frequency" />
+              </div>
+            )}
+          </>
+        }
         actions={
           <div className="flex items-center gap-1">
             <NumberKeypad
@@ -310,6 +334,8 @@ export function FrequencyCard({
       onPrevCard={onPrevCard}
       onNextCard={onNextCard}
       slideFrom={slideFrom}
+      widthMode={widthMode}
+      onWidthModeChange={onWidthModeChange}
       progress={null}
       editing={editing}
       isComplete={isComplete}

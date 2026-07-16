@@ -371,12 +371,15 @@ export function DataDetailsDrawer({
   };
 
   // Decides which of the three resting spots (full / normal / closed) a
-  // released drag settles into. "Normal" acts as a detent, not just a third
-  // stop: releasing anywhere within STICKY_RADIUS of it snaps there even if
-  // that isn't the nearest edge, the same way a bottom sheet's middle stop
-  // catches a drag that wasn't aimed decisively past it — unless the
-  // release was a fast enough fling (FLING_PX_S) to read as deliberately
-  // skipping over it toward an edge instead.
+  // released drag settles into — modeled as a swipe-to-dismiss gesture
+  // (the Facebook/Instagram "swipe a sheet closed" idiom) rather than a
+  // plain drag-to-position: where you happen to release isn't the whole
+  // story, how fast you were moving when you let go matters just as much.
+  // Both "normal" (open) and "full" are sticky detents that resist a slow,
+  // undecided release — leaving one takes either dragging clearly past it
+  // or releasing with real speed — while a hard enough swipe from "full"
+  // can skip "normal" entirely and land on "closed" in one motion, the same
+  // way a fast flick down a stack of sheets blows past the middle stop.
   const handleDragEnd = (_e: unknown, info: PanInfo) => {
     isDraggingRef.current = false;
     const val = x.get();
@@ -385,34 +388,52 @@ export function DataDetailsDrawer({
     const xFull = 0;
     const xNormal = vw - restingWidthPx;
     const xClosed = vw;
-    const FLING_PX_S = 700;
-    // Capped at half of whichever side's own range is smaller — a flat 70px
-    // radius would swallow the *entire* gap to full width on a narrow phone
-    // (normalWidthPx is already ~88% of the viewport there, leaving well
-    // under 70px of room), making full width unreachable by anything short
-    // of a hard fling. Scaling down keeps "normal" sticky without eating
-    // the very state it's supposed to sit between.
-    const stickyRadius = Math.min(70, (xNormal - xFull) / 2, (xClosed - xNormal) / 2);
 
-    let target: number;
-    let mode = widthMode;
-    let willClose = false;
+    // Projects where the gesture would carry the panel a beat past release
+    // if its velocity kept going — a fast flick lands far past its own raw
+    // stop point, a slow deliberate drag barely moves past it at all.
+    // Picking a target off THIS projected point rather than the raw release
+    // point is what lets a hard swipe from "full" reach "closed" directly
+    // (the projection overshoots past "normal" toward "closed") while a
+    // gentler swipe covering the same on-screen distance still only
+    // reaches "normal".
+    const PROJECTION_SEC = 0.22;
+    const projected = Math.min(xClosed, Math.max(xFull, val + vx * PROJECTION_SEC));
 
-    if (Math.abs(val - xNormal) <= stickyRadius && Math.abs(vx) < FLING_PX_S) {
-      target = xNormal;
-      mode = "normal";
-    } else if (val <= xNormal) {
-      const wantsFull = val < xNormal - stickyRadius || vx < -FLING_PX_S;
-      target = wantsFull ? xFull : xNormal;
-      mode = wantsFull ? "full" : "normal";
-    } else {
-      const wantsClosed = val > xNormal + stickyRadius || vx > FLING_PX_S;
-      target = wantsClosed ? xClosed : xNormal;
-      willClose = wantsClosed;
-      mode = "normal";
+    // Each detent holds onto a gesture that started there unless the
+    // projection clears a real chunk of the gap to its neighbor — capped at
+    // half the smaller neighboring gap so the bonus can never make a detent
+    // literally unleavable on a narrow viewport (same reasoning the old
+    // flat STICKY_RADIUS needed capping for).
+    const startMode: "full" | "normal" | "closed" = !open ? "closed" : widthMode;
+    const gapFullNormal = xNormal - xFull;
+    const gapNormalClosed = xClosed - xNormal;
+    const stickyBonus = (mode: "full" | "normal" | "closed") => {
+      if (mode !== startMode) return 0;
+      if (mode === "normal") return Math.min(70, gapFullNormal / 2, gapNormalClosed / 2);
+      if (mode === "full") return Math.min(70, gapFullNormal / 2);
+      return Math.min(70, gapNormalClosed / 2);
+    };
+
+    const detents: { mode: "full" | "normal" | "closed"; x: number }[] = [
+      { mode: "full", x: xFull },
+      { mode: "normal", x: xNormal },
+      { mode: "closed", x: xClosed },
+    ];
+    let target = detents[0];
+    let bestScore = Infinity;
+    for (const d of detents) {
+      const score = Math.abs(d.x - projected) - stickyBonus(d.mode);
+      if (score < bestScore) {
+        bestScore = score;
+        target = d;
+      }
     }
 
-    animate(x, target, { type: "spring", velocity: vx, stiffness: 340, damping: 34 });
+    const willClose = target.mode === "closed";
+    const mode: "normal" | "full" = willClose ? "normal" : target.mode === "full" ? "full" : "normal";
+
+    animate(x, target.x, { type: "spring", velocity: vx, stiffness: 340, damping: 34 });
     if (mode !== widthMode || willClose) skipNextSyncRef.current = true;
     if (mode !== widthMode) setWidthMode(mode);
     if (willClose) onOpenChange(false);
