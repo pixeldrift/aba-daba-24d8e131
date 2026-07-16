@@ -9,7 +9,14 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { motion, useMotionValue, useDragControls, animate, type PanInfo } from "motion/react";
+import {
+  motion,
+  useMotionValue,
+  useTransform,
+  useDragControls,
+  animate,
+  type PanInfo,
+} from "motion/react";
 import { X, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { TimeChevronIcon } from "./icons/TimeChevronIcon";
 import { renderBreakableTitle } from "./BreakableTitle";
@@ -242,8 +249,24 @@ export function DataDetailsDrawer({
   // "normal" the moment the drawer closes so the next open always starts at
   // the usual width rather than remembering a full-width session.
   const [widthMode, setWidthMode] = useState<"normal" | "full">("normal");
+  // A double-click's two constituent single clicks each commit their own
+  // toggle (open -> closed) before the dblclick handler (openToFull) ever
+  // runs — see openToFull's own comment. That closed-transition's reset
+  // effect below is a separate queued commit, and can end up FIRING AFTER
+  // openToFull has already committed widthMode:"full", stale-stomping it
+  // back to "normal" a beat later (its closure captured `open` as false from
+  // its own commit, not whatever's true by the time it actually runs).
+  // openToFull arms this ref so that stale reset — if it hasn't already
+  // fired harmlessly as a no-op before openToFull ran — is skipped instead
+  // of clobbering the width it just set. Cleared shortly after (not
+  // instantly) so it only shields that one specific pending reset rather
+  // than suppressing a genuine later close.
+  const suppressWidthResetRef = useRef(false);
   useEffect(() => {
-    if (!open) setWidthMode("normal");
+    if (!open) {
+      if (suppressWidthResetRef.current) return;
+      setWidthMode("normal");
+    }
   }, [open]);
 
   // Guards every window.innerWidth read below — this whole block runs
@@ -273,13 +296,33 @@ export function DataDetailsDrawer({
   // whole panel — pull tab included — has slid completely off the right
   // edge); anything in between reveals exactly that many px from the right.
   const x = useMotionValue(open ? viewportWidth - restingWidthPx : viewportWidth);
+  // The shell above is always rendered at full viewport width so translating
+  // it is cheap — but that means everything INSIDE it (header, body) also
+  // defaults to that same full local width. Left unconstrained, right-flush
+  // content (the close button, the next-card arrow) ends up positioned at
+  // the shell's own right edge — which, at any x > 0, sits translated PAST
+  // the real viewport's right edge and is therefore genuinely invisible and
+  // unclickable, not just visually off. What's actually on-screen of the
+  // shell is its own LEFT portion, [0, viewportWidth - x] in the shell's
+  // local coordinates — so the content wrapper below is sized to exactly
+  // that (viewportWidth - x, derived straight from the same drag/spring
+  // value driving the shell itself, not a separate widthMode branch) so it
+  // continuously fills whatever's actually visible, mid-drag included,
+  // rather than only being correct once a drag settles.
+  const contentWidth = useTransform(x, (val) => {
+    const vw = typeof window !== "undefined" ? window.innerWidth : 0;
+    return vw - val;
+  });
   const dragControls = useDragControls();
   const isDraggingRef = useRef(false);
-  // A drag gesture still ends in a native click on the handle (pointerdown
-  // + pointerup with little movement is a click regardless of the drag
-  // machinery layered on top) — without this, every drag would also fire
-  // the tap-to-toggle below and immediately undo whatever the drag just
-  // settled on. Same idiom as NotificationBar's own swipe-vs-tap guard.
+  // A drag gesture still ends in a native click on whatever was under the
+  // pointer (pointerdown + pointerup with little movement is a click
+  // regardless of the drag machinery layered on top) — without this, every
+  // drag would also fire that element's own click handler (toggle, close,
+  // prev/next) and immediately undo whatever the drag just settled on.
+  // Same idiom as NotificationBar's own swipe-vs-tap guard, just applied to
+  // every clickable thing on the panel now that the whole surface drags,
+  // not just the pull tab.
   const wasDraggingRef = useRef(false);
   // Armed just before a drag-driven setWidthMode/onOpenChange call, so the
   // sync effect below — which would otherwise immediately re-animate `x` to
@@ -461,8 +504,30 @@ export function DataDetailsDrawer({
   // DrawerTitle's memoization below.
   const onTitleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    if (wasDraggingRef.current) return;
     contentScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
+
+  // Double-tapping the pull tab jumps straight to full width — a shortcut
+  // past "normal" for anyone who already knows that's where they're headed.
+  // The browser still fires the two ordinary single clicks that make up a
+  // double-click first (each one toggling open vs. closed on its own) before
+  // this handler runs, so it forces the end state outright rather than
+  // toggling from whatever those left behind. That's also why this can't be
+  // conditionally attached only `!open ? openToFull : undefined` the way the
+  // rest of this file gates "closed-only" affordances — by the time the
+  // actual dblclick event dispatches, the two preceding clicks have already
+  // flipped `open` to true, so a `!open`-gated prop would already have gone
+  // undefined and silently swallowed the double-click.
+  const openToFull = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    suppressWidthResetRef.current = true;
+    setWidthMode("full");
+    onOpenChange(true);
+    window.setTimeout(() => {
+      suppressWidthResetRef.current = false;
+    }, 100);
+  };
 
   if (!mounted) return null;
 
@@ -483,18 +548,22 @@ export function DataDetailsDrawer({
         // Always a full viewport width — see the `x` motion value above for
         // why position, not width, is what actually changes.
         "fixed right-0 w-full z-[62] bg-background shadow-[-8px_0_30px_-8px_rgba(0,0,0,0.25)]",
-        // Matches the active card's own border while open — same blue,
-        // same 2px weight — so the drawer visibly reads as "this card,
-        // pulled out," not a generic unrelated panel.
-        open ? "border-2 border-blue-400/80" : "border border-border/70",
+        // Matches the active card's own border while open — same blue, same
+        // 2px weight — so the drawer visibly reads as "this card, pulled
+        // out," not a generic unrelated panel. Only drawn on edges that
+        // aren't already flush against the real viewport edge: top never is
+        // (the panel starts at `top`, below the header, in both states),
+        // right and bottom always are (the panel is pinned right-0/bottom-0
+        // regardless of width), and left is the one that flips — flush at
+        // full width (the panel's own left edge IS the viewport's left edge
+        // then) but not at normal width, where it's the one real seam
+        // between the drawer and whatever's showing behind it.
+        open
+          ? cn("border-blue-400/80", widthMode === "full" ? "border-t-2" : "border-t-2 border-l-2")
+          : "border border-border/70",
       )}
       style={{ x, top, bottom: 0 }}
-      // Only the pull tab can start a drag (see its own onPointerDown) —
-      // dragListener={false} keeps a tap/scroll anywhere else on the panel
-      // (its own scrollable body, the header buttons) from being mistaken
-      // for a resize gesture.
       drag="x"
-      dragListener={false}
       dragControls={dragControls}
       dragConstraints={{ left: 0, right: window.innerWidth }}
       dragElastic={0.15}
@@ -517,52 +586,40 @@ export function DataDetailsDrawer({
           -top-0.5 shifts it up by the panel's own 2px border width, so the
           tab's outer top edge lines up with the panel's outer top edge
           instead of sitting a couple pixels below it (top-0 aligns with the
-          inside of that border, not the outside). */}
-      <button
-        type="button"
-        // Starts the panel's own drag (dragControls, not this button's) on
-        // pointerdown — the standard Framer Motion pattern for a drag
-        // handle that isn't the dragged element itself. A plain tap (little
-        // to no movement before pointerup) still fires onClick normally
-        // alongside it, so the existing tap-to-toggle keeps working.
-        onPointerDown={(e) => dragControls.start(e)}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (wasDraggingRef.current) return;
-          onOpenChange(!open);
-        }}
-        aria-label={open ? "Close details drawer" : "Open details drawer"}
-        aria-expanded={open}
-        className={cn(
-          "absolute -left-7 -top-0.5 w-7 grid place-items-center rounded-l-lg bg-background text-stone-500 hover:text-stone-800 transition-colors touch-none",
-          open ? "border-2 border-blue-400/80" : "border border-border/70",
-          "border-r-0",
-        )}
-        style={{ height: toolbarRowHeight }}
-      >
-        {/* Base orientation points right; always faces the direction the
-            drawer will slide if pressed again — left (toward opening) while
-            closed, right (toward closing) while open — and animates between
-            the two as the drawer itself slides. */}
-        <TimeChevronIcon
-          className={cn("size-3.5 transition-transform duration-300", !open && "rotate-180")}
-        />
-      </button>
-
-      {/* Edge grab strip — the pull tab above is genuinely off-screen at
-          full width (its -left-7 offset is relative to the panel's own left
-          edge, which now sits at the viewport's own left edge), so there'd
-          be nothing left to grab to drag it back. This sits right at the
-          screen edge instead, inside the panel's own visible bounds, purely
-          as a resize handle — no visible chrome of its own, so it doesn't
-          look like a second, redundant control next to the (currently
-          hidden) tab. */}
-      {widthMode === "full" && (
-        <div
-          onPointerDown={(e) => dragControls.start(e)}
-          className="absolute left-0 top-0 bottom-0 w-4 touch-none cursor-grab"
-          aria-hidden
-        />
+          inside of that border, not the outside). Not rendered at full
+          width at all — the whole panel drags now (see `drag` above), so it
+          isn't needed as a handle anymore, and it'd otherwise be sitting
+          off-screen anyway once the panel's own left edge reaches the
+          viewport's own left edge. */}
+      {widthMode !== "full" && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (wasDraggingRef.current) return;
+            onOpenChange(!open);
+          }}
+          // Always attached (not gated by `open`) — see openToFull's own
+          // comment on why a `!open`-conditional prop can't reliably tell
+          // this apart from a double-click starting in the open state.
+          onDoubleClick={openToFull}
+          aria-label={open ? "Close details drawer" : "Open details drawer"}
+          aria-expanded={open}
+          className={cn(
+            "absolute -left-7 -top-0.5 w-7 grid place-items-center rounded-l-lg bg-background text-stone-500 hover:text-stone-800 transition-colors touch-none",
+            open ? "border-2 border-blue-400/80" : "border border-border/70",
+            "border-r-0",
+          )}
+          style={{ height: toolbarRowHeight }}
+        >
+          {/* Base orientation points right; always faces the direction the
+              drawer will slide if pressed again — left (toward opening) while
+              closed, right (toward closing) while open — and animates between
+              the two as the drawer itself slides. */}
+          <TimeChevronIcon
+            className={cn("size-3.5 transition-transform duration-300", !open && "rotate-180")}
+          />
+        </button>
       )}
 
       {/* Arrow — points at the card this drawer's contents belong to. Only
@@ -601,6 +658,7 @@ export function DataDetailsDrawer({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
+            if (wasDraggingRef.current) return;
             scrollToCard();
           }}
           aria-label={
@@ -627,7 +685,7 @@ export function DataDetailsDrawer({
         </button>
       )}
 
-      <div className="flex h-full flex-col">
+      <motion.div className="flex h-full flex-col" style={{ width: contentWidth }}>
         {/* Sticky header — stays put while the content below scrolls under
             it. bg-background keeps scrolled content from showing through;
             the border gives scrolled content a clear edge to disappear
@@ -644,6 +702,7 @@ export function DataDetailsDrawer({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                if (wasDraggingRef.current) return;
                 triggerPrev();
               }}
               disabled={!onPrevCard || exitDir !== null}
@@ -662,6 +721,7 @@ export function DataDetailsDrawer({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                if (wasDraggingRef.current) return;
                 triggerNext();
               }}
               disabled={!onNextCard || exitDir !== null}
@@ -678,6 +738,7 @@ export function DataDetailsDrawer({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                if (wasDraggingRef.current) return;
                 onOpenChange(false);
               }}
               aria-label="Close"
@@ -693,7 +754,7 @@ export function DataDetailsDrawer({
           exitDir={exitDir}
           contentScrollRef={contentScrollRef}
         />
-      </div>
+      </motion.div>
     </motion.div>,
     document.body,
   );
