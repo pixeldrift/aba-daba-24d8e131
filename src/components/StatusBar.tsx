@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ComponentType } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "motion/react";
 import {
   Play,
@@ -106,8 +106,20 @@ export function StatusBar({
   // Duration only — a Rate card's own timer just clocks the observation
   // window behind a tally, not something the user manually started/stopped
   // the way a Duration instance is, so it doesn't belong in "something's
-  // running, tap to jump to it."
-  const runningTimers = activeTimers.filter((t) => t.source === "duration");
+  // running, tap to jump to it." Memoized on `activeTimers` itself (which
+  // only gets a new reference on a genuine register/unregister — see its
+  // own useState in SessionContext) rather than recomputed every render —
+  // this component also re-renders on every ~250ms session tick, and a
+  // plain `.filter()` there would hand ActiveDurationIndicator a brand-new
+  // (if equally empty) array on every one of those renders. Its own 300ms
+  // "wait to make sure this stays empty" grace window resets on any new
+  // array reference, so it never got a large enough gap between renders to
+  // actually let that timeout fire — the stopwatch indicator was staying
+  // visible indefinitely after every timer had genuinely stopped.
+  const runningTimers = useMemo(
+    () => activeTimers.filter((t) => t.source === "duration"),
+    [activeTimers],
+  );
 
   // Notifications tab badge — count of everything currently live (still
   // showing in the transient banner, whether silenced or not; matches

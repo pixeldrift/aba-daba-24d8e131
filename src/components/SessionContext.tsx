@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useIsPresent } from "motion/react";
 
 export type SessionStatus = "idle" | "running" | "paused";
 export type SaveStatus = "clean" | "dirty" | "saving";
@@ -372,8 +373,27 @@ export function useRegisterActiveTimer(args: {
   useEffect(() => {
     activateRef.current = onActivate;
   }, [onActivate]);
+  // MorphContent's own display-mode crossfade (routes/index.tsx) keeps the
+  // OLD card instance mounted for a brief exit fade via AnimatePresence
+  // mode="popLayout" while the NEW instance for the same logical card
+  // mounts immediately — so for that ~120ms window, two instances sharing
+  // the same registry `id` coexist. Each reads its own `active` from a
+  // local, mount-time-only snapshot (see useCardState's own comment on why
+  // it doesn't resubscribe to a sibling's later writes), so the exiting
+  // instance's `active` can be stale — and if it re-registers AFTER the
+  // entering instance's correct unregister (ordering between the two
+  // isn't guaranteed), a phantom "running" entry is left behind until the
+  // exiting fiber finally unmounts. useIsPresent() distinguishes the two:
+  // false exactly while AnimatePresence is playing this instance's exit,
+  // so treating a non-present instance as inactive regardless of its own
+  // (possibly stale) `active` value keeps the exiting instance from ever
+  // contesting the registry entry the entering one owns. Safe to call
+  // unconditionally — it defaults to true for any instance not nested in
+  // an AnimatePresence at all.
+  const isPresent = useIsPresent();
+  const effectiveActive = active && isPresent;
   useEffect(() => {
-    if (!active) {
+    if (!effectiveActive) {
       unregisterActiveTimer(id);
       return;
     }
@@ -387,5 +407,5 @@ export function useRegisterActiveTimer(args: {
       source,
     });
     return () => unregisterActiveTimer(id);
-  }, [active, id, label, elementRef, source, registerActiveTimer, unregisterActiveTimer]);
+  }, [effectiveActive, id, label, elementRef, source, registerActiveTimer, unregisterActiveTimer]);
 }
