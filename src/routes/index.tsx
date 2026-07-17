@@ -20,7 +20,6 @@ import { ScheduleView } from "@/components/ScheduleView";
 import {
   SessionProvider,
   useSession,
-  useSuppressSessionLayout,
   PILL_LAND_MS,
   type TransitionKind,
 } from "@/components/SessionContext";
@@ -790,13 +789,7 @@ function IndexInner() {
   // animate away from on every fresh page load.
   const initialLayoutSettled = useInitialLayoutSettled();
 
-  // Grace-extended past suppressPaneLayout's own end — see
-  // useSuppressSessionLayout's own comment: unlike the pane (read directly,
-  // in real time, below), stickyTop is debounced against the box's per-frame
-  // reflow, so its own last correction can still land a beat after
-  // suppressPaneLayout has already reverted.
-  const suppressStickyTopDebounce = useSuppressSessionLayout();
-  const stickyTop = useStickyTop(suppressStickyTopDebounce);
+  const stickyTop = useStickyTop();
   // The shared details drawer starts at stickyTop (the toolbar's own top)
   // so it slides out on top of the toolbar, not just the pane below it —
   // see DataDetailsDrawer. toolbarHeight is measured separately (rather

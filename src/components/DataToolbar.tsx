@@ -119,14 +119,56 @@ export function DataToolbar({
   const initialLayoutSettled = useInitialLayoutSettled();
   // See useSuppressSessionLayout's own comment: the session box's real
   // height `animate()` is what actually pushes this sticky toolbar's `top`
-  // (by way of `stickyTop`, which is ALSO given this same grace-extended
-  // condition as its own `immediate` flag — see useStickyTop's call site in
-  // routes/index.tsx) during a start/pause/resume/discard(-excluded)
-  // transition, on its own clock — not something this `layout="position"`
-  // FLIP (which only snapshots a target once per render) can stay in step
-  // with. Without this, the toolbar was visibly detaching from the pane and
-  // tab nav during those transitions instead of moving as one linked unit.
+  // during a start/pause/resume/discard(-excluded) transition, on its own
+  // clock — not something this `layout="position"` FLIP (which only
+  // snapshots a target once per render) can stay in step with. Without
+  // this, the toolbar was visibly detaching from the pane and tab nav
+  // during those transitions instead of moving as one linked unit.
   const suppressSessionLayout = useSuppressSessionLayout();
+
+  // `stickyTop` (the prop, from routes/index.tsx's useStickyTop) is
+  // deliberately debounced against the header's own per-frame reflow (see
+  // that hook's own comment) — during a session transition, this tracks the
+  // header's real height directly instead, isolated in LOCAL state rather
+  // than lifted into routes/index.tsx's. That isolation turned out to
+  // matter a lot: an earlier version drove this same per-frame tracking
+  // through the page-level `stickyTop` state, and every tick re-rendered
+  // the entire route (all the data cards included) — expensive enough that
+  // it started competing with the browser's own frame budget and made the
+  // tracking itself lag behind the header's real height by several frames
+  // (confirmed via Playwright, comparing this value against the header's
+  // live height frame by frame — a many-frame gap opened up specifically
+  // during the fast part of the collapse). Keeping the state local here
+  // means each tick only re-renders this toolbar's own small subtree.
+  const [immediateTop, setImmediateTop] = useState<number | null>(null);
+  useEffect(() => {
+    if (!suppressSessionLayout) return;
+    const bar = document.querySelector("[data-status-bar]") as HTMLElement | null;
+    if (!bar) return;
+    let rafId = 0;
+    const tick = () => {
+      const height = bar.getBoundingClientRect().height;
+      setImmediateTop((prev) => (prev === height ? prev : height));
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [suppressSessionLayout]);
+  // Once suppression ends, `immediateTop` stays frozen at its last real
+  // value (the effect above simply stops updating it) rather than getting
+  // reset right away — handing off to the page-level `stickyTop` the
+  // instant suppression ends would show ITS stale, not-yet-caught-up value
+  // (confirmed via Playwright: a visible jump back to the pre-transition
+  // height, then a second correction once `stickyTop` finally settled).
+  // Waiting for `stickyTop` to independently arrive at the exact same
+  // number before dropping back to it makes the hand-off invisible — both
+  // sides already agree by the time it happens.
+  useEffect(() => {
+    if (!suppressSessionLayout && immediateTop !== null && stickyTop === immediateTop) {
+      setImmediateTop(null);
+    }
+  }, [suppressSessionLayout, stickyTop, immediateTop]);
+  const effectiveStickyTop = immediateTop !== null ? immediateTop : stickyTop;
 
   // Re-centers the popover horizontally on the viewport after Radix
   // positions it (which otherwise hugs the button's own left-of-center
@@ -229,7 +271,7 @@ export function DataToolbar({
             : NOTIFICATION_AREA_TRANSITION,
       }}
       className="sticky z-[60] ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] overflow-x-hidden bg-background border-b border-border/70"
-      style={{ top: stickyTop }}
+      style={{ top: effectiveStickyTop }}
     >
       {/* Named separately from data-toolbar above — this is just the row's
        *  own box (its py-1.5/px-4 padding, not the banner below), so
