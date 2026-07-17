@@ -3,9 +3,11 @@
 ABA DaBa is a prototype front-end platform for Applied Behavioral Analysis.
 It is designed for data collection and session management, focused on user
 experience and ease of information access while working in a busy clinical
-environment. Aba DaBa includes many quality-of-life features for behavioral
+environment. ABA DaBa includes many quality-of-life features for behavioral
 technicians who need to juggle data entry while attending the needs of
-challenging clients.
+challenging clients, and is meant to teach itself — a guided, first-use
+walkthrough introduces the interface in place of separate training or
+outside documentation.
 
 
 ## Tech stack
@@ -81,6 +83,10 @@ long a client stays regulated without interfering behavior, frequency of
 aggressive behavior) so BCBAs can track trends. The handoff, revision-mode,
 and scheduling items below all need to respect that split.
 
+- [ ] Step-by-step interactive welcome tour — guided popups walking through
+      the main features and interactions, standing in for separate training
+      or external documentation. Appears on first use, with a Settings
+      toggle to turn the tour/hints on or off afterward
 - [ ] Data Revision mode: edit/update session data while the session timer
       isn't running (paused, not yet submitted) — e.g. adding tallies
       without skewing rate data by leaving the timer running
