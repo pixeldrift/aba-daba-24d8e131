@@ -11,19 +11,11 @@ import { useEffect, useRef, useState } from "react";
  *  callbacks to settle before committing means only the real, final height
  *  change reaches React.
  *
- *  `immediate` (routes/index.tsx passes `useSuppressSessionLayout()`, a
- *  grace-extended version of `suppressPaneLayout` — see that hook's own
- *  comment) lifts that debounce during a start/pause/resume/discard
- *  (-excluded) session transition — the same window where the content pane
- *  and tab nav ALSO give up `layout` tracking in favor of following the
- *  header's real reflow natively. With both of them already tracking it
- *  live, the sticky toolbar's own `top` waiting out a 60ms quiet period was
- *  the one thing left dragging behind: it'd sit frozen while the header
- *  visibly finished collapsing/expanding, then jump to the correct spot a
- *  beat later — read as the toolbar detaching from the pane. Committing
- *  every callback in real time during this window instead keeps it moving
- *  in the same frame-by-frame lockstep as its siblings. */
-export function useStickyTop(immediate: boolean) {
+ *  During an actual session transition, DataToolbar tracks the header's real
+ *  height itself instead (see its own `immediateTop` state) — see that
+ *  comment for why the frame-by-frame case needs to live there, isolated
+ *  from this hook's own (page-wide) state, rather than here. */
+export function useStickyTop() {
   // Deliberately NOT a lazy-measured initializer (unlike useElementHeight/
   // useElementRight). This hook is called once, at the top of the whole
   // page (routes/index.tsx), so — unlike those two, which back a component
@@ -41,27 +33,12 @@ export function useStickyTop(immediate: boolean) {
   // is what keeps that correction from being animated as a false move.
   const [stickyTop, setStickyTop] = useState(0);
   const debounceRef = useRef<number | null>(null);
-  // Read fresh inside the ResizeObserver callback below without having to
-  // tear down and re-observe on every flip — the callback closes over this
-  // ref, not the `immediate` param directly.
-  const immediateRef = useRef(immediate);
-  useEffect(() => {
-    immediateRef.current = immediate;
-  }, [immediate]);
 
   useEffect(() => {
     const bar = document.querySelector("[data-status-bar]") as HTMLElement | null;
     if (!bar) return;
     const commit = () => setStickyTop(bar.getBoundingClientRect().height);
     const update = () => {
-      if (immediateRef.current) {
-        if (debounceRef.current !== null) {
-          window.clearTimeout(debounceRef.current);
-          debounceRef.current = null;
-        }
-        commit();
-        return;
-      }
       if (debounceRef.current !== null) window.clearTimeout(debounceRef.current);
       debounceRef.current = window.setTimeout(commit, 60);
     };
