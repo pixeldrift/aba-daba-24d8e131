@@ -1,11 +1,30 @@
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import { AnimatePresence, motion, useMotionValue, useTransform, animate, type MotionStyle } from "motion/react";
-import { Bell, BellRing, BellOff, Target, MessageSquare, Megaphone, X, Check, Volume2, VolumeX, ArrowRight, ArrowDownToLine } from "lucide-react";
-import { useNotifications, isAlert, vibrate, type Notification, type NotificationIcon, type NotificationKind } from "./NotificationContext";
+import { Bell, BellRing, BellOff, Target, MessageSquare, Megaphone, CalendarDays, X, Check, Volume2, VolumeX, ArrowRight, ArrowDownToLine } from "lucide-react";
+import {
+  useNotifications,
+  isAlert,
+  vibrate,
+  categoryForKind,
+  NOTIFICATION_CATEGORIES,
+  type Notification,
+  type NotificationIcon,
+  type NotificationKind,
+  type NotificationCategory,
+} from "./NotificationContext";
 import { playAlarmSound } from "@/lib/alarmSounds";
 import { RequestEditIcon } from "./icons/RequestEditIcon";
 import { ApproveEditIcon } from "./icons/ApproveEditIcon";
+import { ToggleChip } from "./DataToolbar";
 import { cn } from "@/lib/utils";
+
+const CATEGORY_ICON: Record<NotificationCategory, ComponentType<{ className?: string }>> = {
+  alarms: BellRing,
+  "program-changes": Target,
+  messages: MessageSquare,
+  edits: RequestEditIcon,
+  schedule: CalendarDays,
+};
 
 // Swipe tuning — TODO: surface in user settings.
 const SWIPE_THRESHOLD_PX = 88;
@@ -616,9 +635,27 @@ function NotificationRow({
 // still just a roadmap idea (see README) — not built yet.
 export function NotificationsPane() {
   const { notifications, clear, clearAll, activate } = useNotifications();
-  const ordered = [...notifications].sort((a, b) => b.createdAt - a.createdAt);
+  // Empty set = no filter applied (show all), same convention as the Data
+  // toolbar's own kind filter — multi-select rather than a single cycling
+  // toggle, since "alarms and edits" is a perfectly reasonable combination
+  // to want at once.
+  const [categoryFilter, setCategoryFilter] = useState<Set<NotificationCategory>>(new Set());
+  const toggleCategory = (c: NotificationCategory) => {
+    setCategoryFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(c)) next.delete(c);
+      else next.add(c);
+      return next;
+    });
+  };
 
-  if (ordered.length === 0) {
+  const allOrdered = [...notifications].sort((a, b) => b.createdAt - a.createdAt);
+  const ordered =
+    categoryFilter.size === 0
+      ? allOrdered
+      : allOrdered.filter((n) => categoryFilter.has(categoryForKind(n.kind)));
+
+  if (allOrdered.length === 0) {
     return (
       <div className="max-w-md mx-auto mt-12 rounded-xl border border-dashed border-border bg-white p-8 text-center">
         <h2 className="font-display text-xl">Alerts &amp; announcements</h2>
@@ -635,13 +672,33 @@ export function NotificationsPane() {
           Clear all
         </button>
       </div>
-      <div className="space-y-2">
-        <AnimatePresence initial={false}>
-          {ordered.map((n) => (
-            <NotificationListRow key={n.id} n={n} onClear={() => clear(n.id)} onActivate={() => activate(n)} />
-          ))}
-        </AnimatePresence>
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {NOTIFICATION_CATEGORIES.map(({ category, label }) => {
+          const Icon = CATEGORY_ICON[category];
+          return (
+            <ToggleChip
+              key={category}
+              icon={<Icon className="size-3" />}
+              label={label}
+              selected={categoryFilter.has(category)}
+              onClick={() => toggleCategory(category)}
+            />
+          );
+        })}
       </div>
+      {ordered.length === 0 ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">
+          No notifications match the selected filters.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          <AnimatePresence initial={false}>
+            {ordered.map((n) => (
+              <NotificationListRow key={n.id} n={n} onClear={() => clear(n.id)} onActivate={() => activate(n)} />
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }
@@ -662,7 +719,13 @@ function NotificationListRow({
   // phrasing) rather than a bare "View" — sourceRef.type is what
   // handleNotificationActivate itself switches on to pick a tab.
   const viewLabel =
-    n.sourceRef?.type === "activity" ? "View Schedule" : n.sourceRef?.type === "info" ? "View Info" : "View";
+    n.sourceRef?.type === "activity"
+      ? "View Schedule"
+      : n.sourceRef?.type === "info"
+        ? "View Info"
+        : n.sourceRef?.type === "goal"
+          ? "View Card"
+          : "View";
 
   // Same "slide fully off, then remove" beat as the live alarm bar's own
   // Dismiss button (see NotificationRow's commit()) — x is driven entirely

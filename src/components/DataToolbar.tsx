@@ -525,7 +525,7 @@ function FilterPopoverContent({
   );
 }
 
-function ToggleChip({
+export function ToggleChip({
   icon,
   label,
   selected,

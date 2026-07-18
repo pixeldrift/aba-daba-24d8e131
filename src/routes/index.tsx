@@ -27,7 +27,7 @@ import { SettingsProvider, useSettings } from "@/components/SettingsContext";
 import { ScheduleProvider } from "@/components/ScheduleContext";
 import { SettingsPane } from "@/components/SettingsPane";
 import { StatusBar, type StatusTab } from "@/components/StatusBar";
-import { NotificationProvider } from "@/components/NotificationContext";
+import { NotificationProvider, useNotifications } from "@/components/NotificationContext";
 import { NOTIFICATION_AREA_TRANSITION, NotificationsPane } from "@/components/NotificationBar";
 import { useStickyTop } from "@/hooks/use-sticky-top";
 import { useElementHeight } from "@/hooks/use-element-height";
@@ -606,6 +606,41 @@ const DATA_SUBMIT_EXIT_DURATION_MS = 550;
 // Duration for the "Start session to record data" banner's own exit below.
 const DATA_BANNER_EXIT_MS = 400;
 
+// How long into a session before the demo fires its one illustrative
+// "goal changed" notification — long enough that it reads as something
+// that happened DURING the session rather than an artifact of starting it,
+// short enough that a live walkthrough doesn't have to wait long to show
+// it off.
+const GOAL_CHANGE_DEMO_DELAY_MS = 30_000;
+
+/** Renders nothing — just fires one illustrative goal-change notification
+ *  a fixed delay into each fresh session, so a live demo has something
+ *  concrete and well-timed to point at (see NOTIFICATION_CATEGORIES'
+ *  own comment on why this exists rather than firing at random). Mounted
+ *  inside NotificationProvider so it can push; keyed on resetSignal so it
+ *  fires once per genuinely new/continued session, not on every pause and
+ *  resume in between. */
+function GoalChangeDemoTrigger() {
+  const { push } = useNotifications();
+  const { status, resetSignal } = useSession();
+  const firedForRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (status !== "running" || firedForRef.current === resetSignal) return;
+    const id = window.setTimeout(() => {
+      firedForRef.current = resetSignal;
+      push({
+        kind: "goal-change",
+        title: 'Phase Change: "Giggles/laughs during therapist-led play" moved to Maintenance.',
+        body: "Updated by Baljeet Tjinder",
+        icon: "target",
+        sourceRef: { type: "goal", id: "giggles-laughs" },
+      });
+    }, GOAL_CHANGE_DEMO_DELAY_MS);
+    return () => window.clearTimeout(id);
+  }, [status, resetSignal, push]);
+  return null;
+}
+
 function Index() {
   return (
     <SettingsProvider>
@@ -1153,16 +1188,37 @@ function IndexInner() {
     setTab(t);
   };
 
-  // Used by the end-session review's "Did Not Meet Minimums" rows — the
-  // dialog itself closes on the same click (see StatusBar), this just
-  // needs to land on the right card once it does. Switches to the Data tab
-  // first since the card list unmounts entirely on any other tab; the
-  // existing activeId-driven scroll effect (see cardRefs above) then picks
-  // it up once it's actually mounted.
+  // Used by the end-session review's "Did Not Meet Minimums" rows and by
+  // goal-change notifications' "View Card" — lands on the right card once
+  // the Data tab is showing. The card list unmounts entirely on any other
+  // tab, so switching to it from elsewhere (Notifications, say) is a real
+  // mount, not just a activeId change on an already-settled list — Motion's
+  // own layout-projection system measures the whole fresh tree as it
+  // enters (same mechanism CARD_MORPH_TRANSITION's own callers below wait
+  // out), and that measurement pass briefly forces window.scrollTo(0, 0)
+  // itself. Calling scrollBy for the target card any earlier just gets
+  // silently overwritten a few ms later by that. Deferring past the same
+  // settle window already used elsewhere in this file for post-morph
+  // scroll corrections avoids the race. Already being on the Data tab (the
+  // review dialog's own case, no fresh mount involved) skips the wait.
+  const pendingCardNavRef = useRef<string | null>(null);
   const handleNavigateToCard = (id: string) => {
+    if (tab === "data") {
+      setActiveId(id);
+      return;
+    }
+    pendingCardNavRef.current = id;
     setTab("data");
-    setActiveId(id);
   };
+  useEffect(() => {
+    if (tab !== "data" || pendingCardNavRef.current === null) return;
+    const id = window.setTimeout(() => {
+      if (pendingCardNavRef.current === null) return;
+      setActiveId(pendingCardNavRef.current);
+      pendingCardNavRef.current = null;
+    }, CARD_MORPH_TRANSITION.duration * 1000 + 50);
+    return () => window.clearTimeout(id);
+  }, [tab]);
 
   const handleNotificationActivate = (n: { sourceRef?: { type: string; id: string } }) => {
     if (n.sourceRef?.type === "activity") {
@@ -1170,6 +1226,8 @@ function IndexInner() {
       setScheduleScrollId(n.sourceRef.id);
     } else if (n.sourceRef?.type === "info") {
       setTab("info");
+    } else if (n.sourceRef?.type === "goal") {
+      handleNavigateToCard(n.sourceRef.id);
     } else {
       setTab("notifications");
     }
@@ -1177,6 +1235,7 @@ function IndexInner() {
 
   return (
     <NotificationProvider onActivate={handleNotificationActivate}>
+      <GoalChangeDemoTrigger />
       <main className="min-h-screen bg-background">
         {/* Shared across StatusBar's tab nav and this section's panel so their
           `layout="position"` FLIPs are batched into one coordinated motion

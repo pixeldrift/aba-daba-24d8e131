@@ -141,9 +141,6 @@ and scheduling items below all need to respect that split.
 - [ ] Targets that persist progress across sessions without needing to be
       graphed out first — pick up where you left off, with an icon/symbol
       denoting a persisted target
-- [ ] Notifications when a goal changes phase, a learner graduates from a
-      goal, or a supervisor updates a program — so technicians aren't
-      surprised to find cards missing or new ones appearing without warning
 - [ ] Settings: an "add a new goal" section at the top of the page — guided
       workflow to pick a data-collection type and fill in its details (TA
       steps; correct/incorrect/no-response/prompt-level options; min/max for

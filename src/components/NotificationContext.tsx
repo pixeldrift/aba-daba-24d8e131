@@ -122,6 +122,41 @@ export function isAlert(kind: NotificationKind) {
   return kind === "alert-now" || kind === "alert-priming";
 }
 
+// Coarser grouping than NotificationKind itself — used by the Notifications
+// tab's own filter chips (see NotificationBar's NotificationsPane), where
+// nine individual kinds would read as too many buttons but the four-ish
+// categories a technician actually thinks in (alarms, program changes,
+// messages, edits) — plus schedule, to give appointment kinds a home too —
+// read cleanly.
+export type NotificationCategory = "alarms" | "program-changes" | "messages" | "edits" | "schedule";
+
+export const NOTIFICATION_CATEGORIES: { category: NotificationCategory; label: string }[] = [
+  { category: "alarms", label: "Alarms" },
+  { category: "program-changes", label: "Program Changes" },
+  { category: "messages", label: "Messages" },
+  { category: "edits", label: "Edits" },
+  { category: "schedule", label: "Schedule" },
+];
+
+export function categoryForKind(kind: NotificationKind): NotificationCategory {
+  switch (kind) {
+    case "alert-now":
+    case "alert-priming":
+      return "alarms";
+    case "goal-change":
+      return "program-changes";
+    case "message":
+    case "announcement":
+      return "messages";
+    case "edit-request":
+    case "edit-approved":
+      return "edits";
+    case "appointment-new":
+    case "appointment-cancelled":
+      return "schedule";
+  }
+}
+
 export function vibrate(pattern: number | number[]) {
   try {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
@@ -195,6 +230,36 @@ function seedNotifications(): Notification[] {
       title: "Changes: New goal added to Phineas Flynn's treatment plan by Baljeet Tjinder.",
       icon: "target",
       createdAt: now - 48 * HOUR_MS,
+      state: "archived",
+    },
+    {
+      id: "seed-goal-phase-change",
+      kind: "goal-change",
+      title: 'Phase Change: "Requests preferred item" moved from Baseline to Intervention.',
+      body: "Updated by Baljeet Tjinder",
+      icon: "target",
+      createdAt: now - 20 * HOUR_MS,
+      sourceRef: { type: "goal", id: "requests-preferred-item" },
+      state: "archived",
+    },
+    {
+      id: "seed-goal-graduated",
+      kind: "goal-change",
+      title: 'Graduated: Phineas has met criteria and graduated from "Follows one-step direction."',
+      body: "Marked by Heinz Doofenshmirtz",
+      icon: "target",
+      createdAt: now - 30 * HOUR_MS,
+      sourceRef: { type: "goal", id: "follows-one-step-direction" },
+      state: "archived",
+    },
+    {
+      id: "seed-goal-program-update",
+      kind: "goal-change",
+      title: 'Program Updated: The teaching procedure for "Washing hands" was revised.',
+      body: "Updated by Heinz Doofenshmirtz",
+      icon: "target",
+      createdAt: now - 6 * HOUR_MS,
+      sourceRef: { type: "goal", id: "washing-hands" },
       state: "archived",
     },
   ];
