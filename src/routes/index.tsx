@@ -1153,6 +1153,17 @@ function IndexInner() {
     setTab(t);
   };
 
+  // Used by the end-session review's "Did Not Meet Minimums" rows — the
+  // dialog itself closes on the same click (see StatusBar), this just
+  // needs to land on the right card once it does. Switches to the Data tab
+  // first since the card list unmounts entirely on any other tab; the
+  // existing activeId-driven scroll effect (see cardRefs above) then picks
+  // it up once it's actually mounted.
+  const handleNavigateToCard = (id: string) => {
+    setTab("data");
+    setActiveId(id);
+  };
+
   const handleNotificationActivate = (n: { sourceRef?: { type: string; id: string } }) => {
     if (n.sourceRef?.type === "activity") {
       setTab("schedule");
@@ -1177,6 +1188,7 @@ function IndexInner() {
             activeTab={tab}
             onTabChange={handleTabChange}
             suppressNavLayout={suppressCardLayout}
+            onNavigateToCard={handleNavigateToCard}
             dataToolbar={
               tab === "data" && (
                 <DataToolbar availableKinds={availableKinds} availablePhases={availablePhases}>
