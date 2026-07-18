@@ -110,7 +110,17 @@ export function RateCard({
   // No minimum window means every instance already counts — ready to graph
   // as soon as there's any data, rather than gated behind a threshold.
   const isComplete = minDurationSec !== undefined ? elapsed / 1000 >= minDurationSec : count > 0 || elapsed > 0;
-  useReportCardStatus(cardKey, count > 0 || elapsed > 0, isComplete);
+  // The clock (elapsed) ticks the moment a session starts regardless of
+  // whether anyone's tallied anything — it's the denominator a rate needs
+  // — so a summary of instance count alone would read as "0 instances"
+  // even on a card that's genuinely been collecting data the whole time.
+  useReportCardStatus(
+    cardKey,
+    count > 0 || elapsed > 0,
+    isComplete,
+    title,
+    `${count} instance${count === 1 ? "" : "s"} over ${formatTime(elapsed)}`,
+  );
 
   useEffect(() => {
     if (!ticking) return;

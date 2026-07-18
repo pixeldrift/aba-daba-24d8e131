@@ -180,7 +180,11 @@ export function TrialCard({
     : "Min not met";
 
   const { markDirty, resetSignal, sessionRunning } = useCardSession();
-  useReportCardStatus(cardKey, completedCount > 0, isComplete);
+  const summary =
+    target > 0
+      ? `${completedCount}/${target} trials, ${percentCorrectDisplay} correct`
+      : `${completedCount} trials, ${percentCorrectDisplay} correct`;
+  useReportCardStatus(cardKey, completedCount > 0, isComplete, title, summary);
   const [shouldReset, markResetHandled] = useResetGuard(cardKey, resetSignal);
 
   useEffect(() => {

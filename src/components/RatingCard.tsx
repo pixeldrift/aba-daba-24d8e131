@@ -90,7 +90,7 @@ export function RatingCard({
   const [rating, setRating] = useCardState(cardKey, "rating", 0);
   const [expanded, setExpanded] = useState(false);
   const { markDirty, resetSignal, sessionRunning } = useCardSession();
-  useReportCardStatus(cardKey, rating > 0, rating > 0);
+  useReportCardStatus(cardKey, rating > 0, rating > 0, title, rating > 0 ? `Score: ${rating}/${max}` : "Not scored");
   const [shouldReset, markResetHandled] = useResetGuard(cardKey, resetSignal);
 
   useEffect(() => {

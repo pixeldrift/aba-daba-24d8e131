@@ -144,9 +144,6 @@ and scheduling items below all need to respect that split.
 - [ ] Notifications when a goal changes phase, a learner graduates from a
       goal, or a supervisor updates a program — so technicians aren't
       surprised to find cards missing or new ones appearing without warning
-- [ ] Pre-submission data review: a summary screen before submitting a
-      session, warning about incomplete trials or unmet minimums, with end
-      totals shown in a human-readable way
 - [ ] Settings: an "add a new goal" section at the top of the page — guided
       workflow to pick a data-collection type and fill in its details (TA
       steps; correct/incorrect/no-response/prompt-level options; min/max for

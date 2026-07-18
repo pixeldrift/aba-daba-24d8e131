@@ -73,7 +73,7 @@ export function FrequencyCard({
   }, [shouldReset]);
 
   const isComplete = count >= minCount;
-  useReportCardStatus(cardKey, count > 0, isComplete);
+  useReportCardStatus(cardKey, count > 0, isComplete, title, `${count} instance${count === 1 ? "" : "s"}`);
   const remaining = Math.max(0, minCount - count);
 
   const triggerFlash = () => {

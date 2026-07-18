@@ -15,6 +15,8 @@ import {
   ArrowRight,
   Upload,
   Settings as SettingsIcon,
+  TriangleAlert,
+  CheckCircle2,
 } from "lucide-react";
 import { InfoIcon } from "./icons/InfoIcon";
 import { PersonPill } from "./StaffDirectory";
@@ -42,6 +44,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { playSoundEffect } from "@/lib/soundEffects";
+import { useDataToolbar } from "@/components/DataToolbarContext";
 import { NotificationBar, NOTIFICATION_AREA_TRANSITION } from "@/components/NotificationBar";
 import { useNotifications } from "@/components/NotificationContext";
 import {
@@ -210,6 +213,27 @@ export function StatusBar({
 
   const [discardOpen, setDiscardOpen] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
+  // Every mounted card reports its own title/summary/completion here
+  // (see useReportCardStatus) — read fresh each time the end-session
+  // dialog opens, so its review list always reflects this session's actual
+  // results rather than a stale snapshot from when StatusBar first mounted.
+  const { hasData: cardHasData, completion: cardCompletion, cardMeta } = useDataToolbar();
+  const allReviewCards = Object.keys(cardMeta).map((id) => ({
+    id,
+    title: cardMeta[id].title,
+    summary: cardMeta[id].summary,
+    hasData: cardHasData[id] ?? false,
+    isComplete: cardCompletion[id] ?? false,
+  }));
+  // Cards that never got any data this session are left out of the itemized
+  // list (nothing was attempted, so there's nothing to warn about missing)
+  // but still counted below, so a tech can see at a glance that a target
+  // was skipped entirely rather than just quietly disappearing.
+  const reviewCards = allReviewCards
+    .filter((c) => c.hasData)
+    .sort((a, b) => Number(a.isComplete) - Number(b.isComplete) || a.title.localeCompare(b.title));
+  const incompleteCount = reviewCards.filter((c) => !c.isComplete).length;
+  const untouchedCount = allReviewCards.length - reviewCards.length;
   const [showCommitSha, setShowCommitSha] = useState(false);
   // Stage 1 (old stuff exiting) dims the box's own text/buttons; stage 2 is
   // when the box collapses — except for discard, where the box was already
@@ -768,13 +792,49 @@ export function StatusBar({
         </DialogContent>
       </Dialog>
       <Dialog open={endOpen} onOpenChange={setEndOpen}>
-        <DialogContent className="w-[calc(100%-2rem)] max-w-xs border-2 border-green-400/80 ring-2 ring-inset ring-green-400/80 rounded-xl">
+        <DialogContent className="w-[calc(100%-2rem)] max-w-sm border-2 border-green-400/80 ring-2 ring-inset ring-green-400/80 rounded-xl">
           <DialogHeader className="text-left sm:text-left">
             <DialogTitle className="text-green-600">End Session & Graph Data</DialogTitle>
             <DialogDescription className="text-left">
-              Are you sure? This will end the current session and submit collected data for graphing? Targets that have not met their minimums will not be graphed.
+              {reviewCards.length > 0
+                ? "Review what's been recorded before submitting."
+                : "Are you sure? This will end the current session and submit collected data for graphing."}
             </DialogDescription>
           </DialogHeader>
+          {reviewCards.length > 0 && (
+            <>
+              {/* Scrolls on its own, capped height — the summary paragraph
+                  below is a sibling, not a child, specifically so it's
+                  never clipped by this box's own scroll bounds regardless
+                  of how many cards are in the list. */}
+              <div className="max-h-56 overflow-y-auto -mx-1 px-1">
+                <ul className="flex flex-col gap-1.5">
+                  {reviewCards.map((c) => (
+                    <li key={c.id} className="flex items-start gap-2 rounded-lg bg-stone-50 px-2.5 py-2">
+                      {c.isComplete ? (
+                        <CheckCircle2 className="size-4 shrink-0 mt-0.5 text-green-600" />
+                      ) : (
+                        <TriangleAlert className="size-4 shrink-0 mt-0.5 text-amber-500" />
+                      )}
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-foreground truncate">{c.title}</div>
+                        <div className="text-xs text-muted-foreground">{c.summary}</div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              {(incompleteCount > 0 || untouchedCount > 0) && (
+                <p className="text-xs text-muted-foreground">
+                  {incompleteCount > 0 &&
+                    `${incompleteCount} target${incompleteCount === 1 ? "" : "s"} above ${incompleteCount === 1 ? "hasn't met its" : "haven't met their"} minimum and won't be graphed.`}
+                  {incompleteCount > 0 && untouchedCount > 0 && " "}
+                  {untouchedCount > 0 &&
+                    `${untouchedCount} more target${untouchedCount === 1 ? "" : "s"} ${untouchedCount === 1 ? "has" : "have"} no data recorded.`}
+                </p>
+              )}
+            </>
+          )}
           <DialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0 items-stretch">
             <button
               onClick={() => {

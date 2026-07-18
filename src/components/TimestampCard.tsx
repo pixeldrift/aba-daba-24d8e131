@@ -268,7 +268,13 @@ export function TimestampCard({
   const viewStatus = statuses[viewIdx];
   const scoredCount = statuses.filter((s) => s !== null).length;
   const isComplete = scoredCount === displayIntervalCount;
-  useReportCardStatus(cardKey, scoredCount > 0, isComplete);
+  useReportCardStatus(
+    cardKey,
+    scoredCount > 0,
+    isComplete,
+    title,
+    `${scoredCount}/${displayIntervalCount} intervals marked`,
+  );
 
   const goTo = (idx: number) => {
     setViewIdx(Math.max(0, Math.min(idx, displayIntervalCount - 1)));
