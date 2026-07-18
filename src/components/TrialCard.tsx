@@ -25,6 +25,7 @@ import { type CardEditAndDrawerProps } from "./CardShell";
 import { useCardSession } from "./SessionContext";
 import { useReportCardStatus } from "./DataToolbarContext";
 import { renderBreakableTitle } from "./BreakableTitle";
+import { playSoundEffect } from "@/lib/soundEffects";
 import { cn } from "@/lib/utils";
 
 export type TrialResult = "correct" | "incorrect" | "no-response" | null;
@@ -179,7 +180,12 @@ export function TrialCard({
     : "Min not met";
 
   const { markDirty, resetSignal, sessionRunning } = useCardSession();
-  useReportCardStatus(cardKey, completedCount > 0, isComplete);
+  useReportCardStatus(cardKey, completedCount > 0, isComplete, {
+    title,
+    kind: "trial",
+    value: percentCorrectReady ? percentCorrectDisplay : `${completedCount}/${target || "–"}`,
+    unit: percentCorrectReady ? "% Correct" : "Trials",
+  });
   const [shouldReset, markResetHandled] = useResetGuard(cardKey, resetSignal);
 
   useEffect(() => {
@@ -201,6 +207,9 @@ export function TrialCard({
     markDirty();
     if (isMaxReached && trials[idx] === null) return;
     const isToggleOff = trials[idx] === value;
+    if (!isToggleOff) {
+      playSoundEffect(value === "correct" ? "correct" : value === "incorrect" ? "error" : "noResponse");
+    }
     setTrials((prev) => {
       const next = [...prev];
       next[idx] = isToggleOff ? null : value;
@@ -572,6 +581,7 @@ export function TrialCard({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
+              if (!expanded) playSoundEffect("twirldown");
               setExpanded((v) => !v);
             }}
             aria-expanded={expanded}

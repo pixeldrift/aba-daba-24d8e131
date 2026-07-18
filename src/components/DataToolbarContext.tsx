@@ -4,6 +4,7 @@ import { CardViewIcon } from "@/components/icons/CardViewIcon";
 import { GridViewIcon } from "@/components/icons/GridViewIcon";
 import { SmallGridViewIcon } from "@/components/icons/SmallGridViewIcon";
 import { useSettings } from "./SettingsContext";
+import { playSoundEffect } from "@/lib/soundEffects";
 
 export type CardKind = "trial" | "frequency" | "rate" | "duration" | "task-analysis" | "rating" | "timestamp";
 
@@ -108,7 +109,25 @@ interface DataToolbarContextValue {
    *  session state. */
   hasData: Record<string, boolean>;
   completion: Record<string, boolean>;
-  reportCardStatus: (id: string, status: { hasData: boolean; isComplete: boolean }) => void;
+  /** Each card's own title, kind, and its single key figure — a value
+   *  (e.g. "75%", "3", "1.2") plus the unit describing it (e.g.
+   *  "% Correct", "Total Count", "Times per Minute") — same reporting path
+   *  as hasData/completion above, for the pre-submission review screen
+   *  (see StatusBar's endOpen dialog). Kept as a value/unit pair rather
+   *  than one pre-joined string so the review screen can style the number
+   *  distinctly (large/bold) from its label. */
+  cardMeta: Record<string, { title: string; kind: CardKind; value: string; unit: string }>;
+  reportCardStatus: (
+    id: string,
+    status: {
+      hasData: boolean;
+      isComplete: boolean;
+      title: string;
+      kind: CardKind;
+      value: string;
+      unit: string;
+    },
+  ) => void;
 }
 
 const DataToolbarContext = createContext<DataToolbarContextValue | null>(null);
@@ -143,6 +162,9 @@ export function DataToolbarProvider({ children }: { children: ReactNode }) {
   const [order, setOrderState] = useState<string[]>([]);
   const [hasData, setHasData] = useState<Record<string, boolean>>({});
   const [completion, setCompletion] = useState<Record<string, boolean>>({});
+  const [cardMeta, setCardMeta] = useState<
+    Record<string, { title: string; kind: CardKind; value: string; unit: string }>
+  >({});
 
   useEffect(() => {
     const stored = loadPersisted();
@@ -226,10 +248,34 @@ export function DataToolbarProvider({ children }: { children: ReactNode }) {
 
   const setOrder = useCallback((ids: string[]) => setOrderState(ids), []);
 
-  const reportCardStatus = useCallback((id: string, status: { hasData: boolean; isComplete: boolean }) => {
-    setHasData((prev) => (prev[id] === status.hasData ? prev : { ...prev, [id]: status.hasData }));
-    setCompletion((prev) => (prev[id] === status.isComplete ? prev : { ...prev, [id]: status.isComplete }));
-  }, []);
+  const reportCardStatus = useCallback(
+    (
+      id: string,
+      status: {
+        hasData: boolean;
+        isComplete: boolean;
+        title: string;
+        kind: CardKind;
+        value: string;
+        unit: string;
+      },
+    ) => {
+      setHasData((prev) => (prev[id] === status.hasData ? prev : { ...prev, [id]: status.hasData }));
+      setCompletion((prev) => (prev[id] === status.isComplete ? prev : { ...prev, [id]: status.isComplete }));
+      setCardMeta((prev) => {
+        const existing = prev[id];
+        if (
+          existing?.title === status.title &&
+          existing?.kind === status.kind &&
+          existing?.value === status.value &&
+          existing?.unit === status.unit
+        )
+          return prev;
+        return { ...prev, [id]: { title: status.title, kind: status.kind, value: status.value, unit: status.unit } };
+      });
+    },
+    [],
+  );
 
   const value = useMemo<DataToolbarContextValue>(
     () => ({
@@ -256,13 +302,14 @@ export function DataToolbarProvider({ children }: { children: ReactNode }) {
       setOrder,
       hasData,
       completion,
+      cardMeta,
       reportCardStatus,
     }),
     [
       displayMode, editMode, setEditMode, searchQuery, filters,
       toggleKindFilter, togglePhaseFilter, cycleDataFilter, cycleCompletionFilter,
       setFavoritesOnly, setShowHidden, cycleBehaviorFilter, clearFilters,
-      favorites, toggleFavorite, hidden, toggleHidden, order, setOrder, hasData, completion, reportCardStatus,
+      favorites, toggleFavorite, hidden, toggleHidden, order, setOrder, hasData, completion, cardMeta, reportCardStatus,
     ],
   );
 
@@ -270,12 +317,29 @@ export function DataToolbarProvider({ children }: { children: ReactNode }) {
 }
 
 /** Cards call this with their own live "has any data been recorded" /
- *  "has this met its own minimum" booleans so the toolbar's dataFilter and
- *  completionFilter have something to read — only the card itself knows
- *  what counts as "data" or "complete" for its own type. */
-export function useReportCardStatus(id: string, hasData: boolean, isComplete: boolean) {
+ *  "has this met its own minimum" booleans, plus a title/kind and their
+ *  single key figure as a value/unit pair (e.g. value "75", unit
+ *  "% Correct") so the toolbar's dataFilter/completionFilter and the
+ *  pre-submission review screen (StatusBar's endOpen dialog) have
+ *  something to read — only the card itself knows what counts as "data" or
+ *  "complete" for its own type, and which figure is the meaningful one to
+ *  headline for its kind. */
+export function useReportCardStatus(
+  id: string,
+  hasData: boolean,
+  isComplete: boolean,
+  info: { title: string; kind: CardKind; value: string; unit: string },
+) {
   const { reportCardStatus } = useDataToolbar();
+  const { title, kind, value, unit } = info;
+  // Chimes once per genuine incomplete -> complete transition, never on
+  // mount (a card that loads already complete, e.g. resuming a previous
+  // session, shouldn't announce it) and never on the reverse edge (a reset
+  // or an edit that un-completes a card isn't a "success").
+  const wasCompleteRef = useRef(isComplete);
   useEffect(() => {
-    reportCardStatus(id, { hasData, isComplete });
-  }, [id, hasData, isComplete, reportCardStatus]);
+    reportCardStatus(id, { hasData, isComplete, title, kind, value, unit });
+    if (isComplete && !wasCompleteRef.current) playSoundEffect("success");
+    wasCompleteRef.current = isComplete;
+  }, [id, hasData, isComplete, title, kind, value, unit, reportCardStatus]);
 }

@@ -25,6 +25,10 @@ export interface DurationCardProps extends CardEditAndDrawerProps {
   /** Minimum cumulative duration, in seconds — omit for interfering
    *  behaviors, which have no minimum and log every instance regardless. */
   minDurationSec?: number;
+  /** Interfering behaviors with no minDurationSec get zero counted as real,
+   *  complete data the moment the session has actually run — see
+   *  zeroCountsAsData below. */
+  behaviorRole?: "interfering";
   isActive?: boolean;
   onActivate?: () => void;
 }
@@ -40,6 +44,7 @@ export function DurationCard({
   phase = "Intervention",
   description,
   minDurationSec,
+  behaviorRole,
   isActive = true,
   onActivate,
   reorderEditing,
@@ -71,7 +76,7 @@ export function DurationCard({
   const [expanded, setExpanded] = useState(false);
   const cardRef = useRef<HTMLElement | null>(null);
   const { sessionRunning, getElapsedMsNow, subscribeTick } = useSession();
-  const { markDirty, resetSignal } = useCardSession();
+  const { markDirty, resetSignal, hasElapsedTime } = useCardSession();
   useRegisterActiveTimer({
     id: `duration:${title}`,
     label: title,
@@ -143,11 +148,23 @@ export function DurationCard({
   const totalMs = instances.reduce((a, b) => a + b, 0) + (running ? liveMs : 0);
   const totalSec = totalMs / 1000;
   // No minimum means every instance already counts — ready to graph as soon
-  // as there's any data, rather than gated behind a threshold.
-  const isComplete = minDurationSec !== undefined ? totalSec >= minDurationSec : totalMs > 0;
+  // as there's any data, rather than gated behind a threshold. For a
+  // reduction goal (no minDurationSec, behaviorRole "interfering"), zero
+  // duration once the session has actually run is itself the desired
+  // outcome, not "nothing happened here" — same as Rate's own
+  // interfering-behavior cards already treat any elapsed clock time.
+  const zeroCountsAsData =
+    minDurationSec === undefined && behaviorRole === "interfering" && hasElapsedTime;
+  const isComplete =
+    minDurationSec !== undefined ? totalSec >= minDurationSec : totalMs > 0 || zeroCountsAsData;
   const remaining =
     minDurationSec !== undefined ? Math.max(0, Math.ceil(minDurationSec - totalSec)) : 0;
-  useReportCardStatus(cardKey, totalMs > 0, isComplete);
+  useReportCardStatus(cardKey, totalMs > 0 || zeroCountsAsData, isComplete, {
+    title,
+    kind: "duration",
+    value: formatTime(totalMs),
+    unit: "Total Time",
+  });
 
   const flushLive = () => {
     if (running && runningIdx !== null) {

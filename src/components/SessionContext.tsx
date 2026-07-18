@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useIsPresent } from "motion/react";
+import { playSoundEffect } from "@/lib/soundEffects";
 
 export type SessionStatus = "idle" | "running" | "paused";
 export type SaveStatus = "clean" | "dirty" | "saving";
@@ -127,6 +128,16 @@ interface CardSessionValue {
   // reading it here doesn't cost cards the render-storm subscribing to the
   // full context (with its every-250ms elapsedMs) would.
   sessionRunning: boolean;
+  // Flips true the moment the session has actually accrued any real time
+  // (or was continued from a previous session that already had some) and
+  // stays true until the next fresh start — a stable boolean, not a ticking
+  // number, so reading it here doesn't cost the render-storm elapsedMs
+  // itself would. Lets a card with no timer of its own (Frequency,
+  // Duration) tell "genuinely zero, observed for real" apart from "never
+  // touched" — see FrequencyCard/DurationCard's own use for interfering
+  // behaviors, where zero is itself the desired outcome and still counts
+  // as real, gradeable data once there was actually time to observe it.
+  hasElapsedTime: boolean;
 }
 
 const CardSessionContext = createContext<CardSessionValue | null>(null);
@@ -141,6 +152,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<SessionStatus>("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [hasElapsedTime, setHasElapsedTime] = useState(false);
   const startRef = useRef<number | null>(null);
   const baseRef = useRef(0);
 
@@ -166,6 +178,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (startRef.current !== null) {
         setElapsedMs(baseRef.current + (now - startRef.current));
       }
+      setHasElapsedTime(true);
       tickListenersRef.current.forEach((cb) => cb(delta));
     }, 250);
     return () => window.clearInterval(id);
@@ -209,6 +222,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     baseRef.current = initialMs;
     setElapsedMs(initialMs);
     setStatus("running");
+    // A brand-new session hasn't accrued anything yet (the tick effect
+    // above flips this once it actually does); continuing a previous one
+    // with real initialMs already has, before its own first tick lands.
+    setHasElapsedTime(initialMs > 0);
     const now = new Date();
     setLastUpdated(now);
     // Starting a session resets the saved baseline — no unsaved data yet.
@@ -222,6 +239,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const startFresh = useCallback(() => {
     setResetSignal((n) => n + 1);
     start(0);
+    playSoundEffect("sessionStart");
   }, [start]);
 
 
@@ -229,21 +247,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     baseRef.current = elapsedMs;
     setStatus("paused");
     setLastUpdated(new Date());
+    playSoundEffect("sessionPause");
   }, [elapsedMs]);
   const resume = useCallback(() => {
     setStatus("running");
     setLastUpdated(new Date());
+    playSoundEffect("sessionResume");
   }, []);
   const endAndSubmit = useCallback(() => {
     setStatus("idle");
     setElapsedMs(0);
     baseRef.current = 0;
     setLastUpdated(new Date());
+    playSoundEffect("submit");
   }, []);
   const clearAndDiscard = useCallback(() => {
     setStatus("idle");
     setElapsedMs(0);
     baseRef.current = 0;
+    playSoundEffect("sessionDiscard");
   }, []);
 
   // Shared 3-stage transition orchestration (see CARD_EXIT_MS et al. above).
@@ -296,7 +318,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [runStagedTransition, startFresh],
   );
   const requestContinuePrevious = useCallback(
-    (initialMs: number) => runStagedTransition("start-previous", () => start(initialMs)),
+    (initialMs: number) =>
+      runStagedTransition("start-previous", () => {
+        start(initialMs);
+        playSoundEffect("sessionResume");
+      }),
     [runStagedTransition, start],
   );
   const requestResume = useCallback(
@@ -499,8 +525,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const cardValue = useMemo(
-    () => ({ markDirty, resetSignal, sessionRunning }),
-    [markDirty, resetSignal, sessionRunning],
+    () => ({ markDirty, resetSignal, sessionRunning, hasElapsedTime }),
+    [markDirty, resetSignal, sessionRunning, hasElapsedTime],
   );
 
   return (

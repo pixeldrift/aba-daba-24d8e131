@@ -14,6 +14,7 @@ import { TeachingProcedureAccordion } from "./TeachingProcedureAccordion";
 import { DrawerQuickFacts } from "./DrawerQuickFacts";
 import { useCardSession, useRegisterActiveTimer, useSession } from "./SessionContext";
 import { useReportCardStatus } from "./DataToolbarContext";
+import { playSoundEffect } from "@/lib/soundEffects";
 import { cn } from "@/lib/utils";
 
 export interface RateCardProps extends CardEditAndDrawerProps {
@@ -109,7 +110,17 @@ export function RateCard({
   // No minimum window means every instance already counts — ready to graph
   // as soon as there's any data, rather than gated behind a threshold.
   const isComplete = minDurationSec !== undefined ? elapsed / 1000 >= minDurationSec : count > 0 || elapsed > 0;
-  useReportCardStatus(cardKey, count > 0 || elapsed > 0, isComplete);
+  // The clock (elapsed) ticks the moment a session starts regardless of
+  // whether anyone's tallied anything — it's the denominator a rate needs
+  // — so hasData is true (there's a real clock running) well before any
+  // instance is tallied, and the rate itself is 0 rather than undefined.
+  const ratePerMin = elapsed > 0 ? count / (elapsed / 60_000) : 0;
+  useReportCardStatus(cardKey, count > 0 || elapsed > 0, isComplete, {
+    title,
+    kind: "rate",
+    value: `${count}`,
+    unit: `${ratePerMin.toFixed(1)} per minute`,
+  });
 
   useEffect(() => {
     if (!ticking) return;
@@ -161,6 +172,7 @@ export function RateCard({
     setBumpKey((k) => k + 1);
     triggerFlash();
     markDirty();
+    playSoundEffect("tallyUp");
   };
   const dec = () => {
     setDir(-1);
@@ -168,6 +180,7 @@ export function RateCard({
     setBumpKey((k) => k + 1);
     triggerFlash();
     markDirty();
+    playSoundEffect("tallyDown");
   };
 
   const commit = (next: number) => {

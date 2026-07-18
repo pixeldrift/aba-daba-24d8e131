@@ -15,6 +15,10 @@ import {
   ArrowRight,
   Upload,
   Settings as SettingsIcon,
+  TriangleAlert,
+  CheckCircle2,
+  ChevronDown,
+  Ban,
 } from "lucide-react";
 import { InfoIcon } from "./icons/InfoIcon";
 import { PersonPill } from "./StaffDirectory";
@@ -41,6 +45,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { playSoundEffect } from "@/lib/soundEffects";
+import { useDataToolbar } from "@/components/DataToolbarContext";
+import { DATA_TYPE_INFO } from "@/lib/dataTypeInfo";
 import { NotificationBar, NOTIFICATION_AREA_TRANSITION } from "@/components/NotificationBar";
 import { useNotifications } from "@/components/NotificationContext";
 import {
@@ -63,6 +70,11 @@ interface StatusBarProps {
    *  sticky container — see that outer wrapper's own comment below for why.
    *  `undefined`/`false` on every other tab. */
   dataToolbar?: React.ReactNode;
+  /** Jumps to a specific card by id (switching to the Data tab first if
+   *  needed) — used by the end-session review's "Did Not Meet Minimums"
+   *  rows so tapping one takes you straight to it instead of just naming
+   *  it. */
+  onNavigateToCard?: (id: string) => void;
 }
 
 const TABS: { id: StatusTab; label: string; icon: ComponentType<{ className?: string }> }[] = [
@@ -85,12 +97,98 @@ const SESSION_MORPH_EASE = NOTIFICATION_AREA_TRANSITION.ease;
 // ease-out than the rest of the header's snappier, mechanical transitions.
 const PILL_TRAVEL_EASE = [0.22, 1, 0.36, 1] as const;
 
+/** One collapsible group in the end-session review (Did Not Meet Minimums /
+ *  Good Data / No Data) — a colored icon + label + count as the summary
+ *  line, same twirldown chevron as AccordionRow (About Me's notes, the
+ *  teaching-procedure accordion in card detail drawers), with its list
+ *  indented underneath so it reads as the summary's children rather than a
+ *  sibling. Each section scrolls on its own past a capped height — there's
+ *  no fixed limit on how large a caseload might be. */
+function ReviewSection({
+  icon,
+  label,
+  count,
+  subtitle,
+  open,
+  onToggle,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  count: number;
+  /** Small, faded secondary line under the label — what actually happens
+   *  to this group's data on submit (graphed, discarded, or never logged
+   *  at all). */
+  subtitle: string;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => {
+          if (!open) playSoundEffect("twirldown");
+          onToggle();
+        }}
+        aria-expanded={open}
+        aria-label={`${open ? "Hide" : "Show"} ${label}`}
+        className="flex w-full items-center gap-1.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+      >
+        <ChevronDown
+          className={cn(
+            "size-3.5 shrink-0 transition-transform duration-200",
+            !open && "-rotate-90",
+          )}
+        />
+        {icon}
+        <span className="flex-1 normal-case tracking-normal">
+          {label} <span className="font-bold text-foreground">({count})</span>
+        </span>
+      </button>
+      <p className="pl-[22px] text-[11px] normal-case tracking-normal text-muted-foreground/70">
+        {subtitle}
+      </p>
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows] duration-200 ease-out",
+          open ? "grid-rows-[1fr] mt-1.5" : "grid-rows-[0fr]",
+        )}
+      >
+        <div className="overflow-hidden">
+          <ul className="max-h-56 overflow-y-auto flex flex-col gap-1.5 pl-[22px] pr-1 -mr-1">
+            {children}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** A review row's content — title left (wraps rather than truncating, so a
+ *  long goal name is never cut off), key figure right: large/bold value
+ *  with its unit as a small label underneath, rather than one sentence
+ *  folding both together. */
+function ReviewFigure({ title, value, unit }: { title: string; value: string; unit: string }) {
+  return (
+    <>
+      <div className="min-w-0 flex-1 text-sm font-medium text-foreground break-words">{title}</div>
+      <div className="shrink-0 text-right">
+        <div className="text-xl font-bold leading-none text-foreground tabular-nums">{value}</div>
+        <div className="text-[10px] uppercase tracking-wide text-muted-foreground mt-0.5">{unit}</div>
+      </div>
+    </>
+  );
+}
+
 export function StatusBar({
   activeTab,
   onTabChange,
   title = "Phineas Flynn's Data Sheet",
   suppressNavLayout = false,
   dataToolbar,
+  onNavigateToCard,
 }: StatusBarProps) {
   const {
     status,
@@ -209,6 +307,28 @@ export function StatusBar({
 
   const [discardOpen, setDiscardOpen] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
+  const [incompleteOpen, setIncompleteOpen] = useState(true);
+  const [completeOpen, setCompleteOpen] = useState(true);
+  const [untouchedOpen, setUntouchedOpen] = useState(true);
+  // Every mounted card reports its own title/kind/key-figure here (see
+  // useReportCardStatus) — read fresh each time the end-session dialog
+  // opens, so its review list always reflects this session's actual
+  // results rather than a stale snapshot from when StatusBar first mounted.
+  const { hasData: cardHasData, completion: cardCompletion, cardMeta } = useDataToolbar();
+  const allReviewCards = Object.keys(cardMeta).map((id) => ({
+    id,
+    title: cardMeta[id].title,
+    kind: cardMeta[id].kind,
+    value: cardMeta[id].value,
+    unit: cardMeta[id].unit,
+    hasData: cardHasData[id] ?? false,
+    isComplete: cardCompletion[id] ?? false,
+  }));
+  const byTitle = (a: { title: string }, b: { title: string }) => a.title.localeCompare(b.title);
+  const incompleteCards = allReviewCards.filter((c) => c.hasData && !c.isComplete).sort(byTitle);
+  const completeCards = allReviewCards.filter((c) => c.hasData && c.isComplete).sort(byTitle);
+  const untouchedCards = allReviewCards.filter((c) => !c.hasData).sort(byTitle);
+  const hasAnyReviewData = incompleteCards.length + completeCards.length + untouchedCards.length > 0;
   const [showCommitSha, setShowCommitSha] = useState(false);
   // Stage 1 (old stuff exiting) dims the box's own text/buttons; stage 2 is
   // when the box collapses — except for discard, where the box was already
@@ -526,8 +646,14 @@ export function StatusBar({
                   startingNew={dimmed && transitionKind === "start-new"}
                   onPlay={requestPlay}
                   onStartNew={requestStartNew}
-                  onEnd={() => setEndOpen(true)}
-                  onRequestDiscard={() => setDiscardOpen(true)}
+                  onEnd={() => {
+                    playSoundEffect("question");
+                    setEndOpen(true);
+                  }}
+                  onRequestDiscard={() => {
+                    playSoundEffect("warning");
+                    setDiscardOpen(true);
+                  }}
                 />
               </div>
             </motion.div>
@@ -760,15 +886,98 @@ export function StatusBar({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog open={endOpen} onOpenChange={setEndOpen}>
-        <DialogContent className="w-[calc(100%-2rem)] max-w-xs border-2 border-green-400/80 ring-2 ring-inset ring-green-400/80 rounded-xl">
-          <DialogHeader className="text-left sm:text-left">
+      <Dialog
+        open={endOpen}
+        onOpenChange={(open) => {
+          setEndOpen(open);
+          if (!open) {
+            setIncompleteOpen(true);
+            setCompleteOpen(true);
+            setUntouchedOpen(true);
+          }
+        }}
+      >
+        {/* Fixed height (not just a max) — same 2rem-total margin
+            convention the width already uses (see w-[calc(100%-2rem)]),
+            applied on every side, so the dialog consistently fills most of
+            the viewport instead of shrink-wrapping to content and forcing
+            more scrolling than it needs to. flex-col + the scroll area's
+            own flex-1 min-h-0 keeps the title and buttons pinned in place
+            while only the middle content scrolls; the border-b/border-t on
+            the header/footer read as a divider marking that boundary
+            instead of content just getting clipped with no explanation.
+            Each section's own list still caps and scrolls independently on
+            top of that (see ReviewSection). */}
+        <DialogContent className="w-[calc(100%-2rem)] max-w-sm h-[calc(100vh-2rem)] flex flex-col overflow-hidden border-2 border-green-400/80 ring-2 ring-inset ring-green-400/80 rounded-xl">
+          <DialogHeader className="text-left sm:text-left shrink-0 border-b border-border pb-4">
             <DialogTitle className="text-green-600">End Session & Graph Data</DialogTitle>
             <DialogDescription className="text-left">
-              Are you sure? This will end the current session and submit collected data for graphing? Targets that have not met their minimums will not be graphed.
+              {hasAnyReviewData
+                ? "Review what's been recorded before submitting."
+                : "Are you sure? This will end the current session and submit collected data for graphing."}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0 items-stretch">
+          <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3">
+            {incompleteCards.length > 0 && (
+              <ReviewSection
+                icon={<TriangleAlert className="size-4 text-amber-500" />}
+                label="Did Not Meet Minimums"
+                count={incompleteCards.length}
+                subtitle="and will be discarded/not graphed"
+                open={incompleteOpen}
+                onToggle={() => setIncompleteOpen((v) => !v)}
+              >
+                {incompleteCards.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEndOpen(false);
+                        onNavigateToCard?.(c.id);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg bg-stone-50 hover:bg-stone-100 active:bg-stone-100 px-2.5 py-2 text-left transition-colors"
+                    >
+                      <ReviewFigure title={c.title} value={c.value} unit={c.unit} />
+                    </button>
+                  </li>
+                ))}
+              </ReviewSection>
+            )}
+            {completeCards.length > 0 && (
+              <ReviewSection
+                icon={<CheckCircle2 className="size-4 text-green-600" />}
+                label="Good Data"
+                count={completeCards.length}
+                subtitle="and will be graphed."
+                open={completeOpen}
+                onToggle={() => setCompleteOpen((v) => !v)}
+              >
+                {completeCards.map((c) => (
+                  <li key={c.id} className="flex items-center gap-2 rounded-lg bg-stone-50 px-2.5 py-2">
+                    <ReviewFigure title={c.title} value={c.value} unit={c.unit} />
+                  </li>
+                ))}
+              </ReviewSection>
+            )}
+            {untouchedCards.length > 0 && (
+              <ReviewSection
+                icon={<Ban className="size-4 text-red-500" />}
+                label="No Data"
+                count={untouchedCards.length}
+                subtitle="and will not be logged."
+                open={untouchedOpen}
+                onToggle={() => setUntouchedOpen((v) => !v)}
+              >
+                {untouchedCards.map((c) => (
+                  <li key={c.id} className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
+                    <span className="shrink-0 [&>svg]:size-3.5">{DATA_TYPE_INFO[c.kind].icon}</span>
+                    <span className="break-words">{c.title}</span>
+                  </li>
+                ))}
+              </ReviewSection>
+            )}
+          </div>
+          <DialogFooter className="shrink-0 border-t border-border pt-4 flex-col gap-2 sm:flex-col sm:space-x-0 items-stretch">
             <button
               onClick={() => {
                 endAndSubmit();

@@ -42,6 +42,7 @@ import {
 } from "@/components/DataToolbarContext";
 import { CardDataStoreProvider } from "@/components/CardDataStore";
 import type { TeachingProcedure } from "@/components/TeachingProcedureAccordion";
+import { playSoundEffect } from "@/lib/soundEffects";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -748,6 +749,18 @@ function IndexInner() {
   const [tab, setTab] = useState<StatusTab>("data");
   const [scheduleScrollId, setScheduleScrollId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Every drawer-open call site funnels through this one state var
+  // regardless of which card/display mode triggered it, so this single
+  // effect covers the "drawer slide" sound for all of them.
+  useEffect(() => {
+    if (drawerOpen) playSoundEffect("drawerSlide");
+  }, [drawerOpen]);
+  // Plays once on load — before any gesture exists, so stricter autoplay
+  // policies are free to silently block it; that's an acceptable no-op
+  // here, not an error (see playSoundEffect's own comment).
+  useEffect(() => {
+    playSoundEffect("startup");
+  }, []);
   // Which of the drawer's two open widths is showing — lifted up here
   // (rather than left as DataDetailsDrawer's own local state) so it
   // survives a prev/next card switch, which remounts a fresh drawer
@@ -1140,6 +1153,17 @@ function IndexInner() {
     setTab(t);
   };
 
+  // Used by the end-session review's "Did Not Meet Minimums" rows — the
+  // dialog itself closes on the same click (see StatusBar), this just
+  // needs to land on the right card once it does. Switches to the Data tab
+  // first since the card list unmounts entirely on any other tab; the
+  // existing activeId-driven scroll effect (see cardRefs above) then picks
+  // it up once it's actually mounted.
+  const handleNavigateToCard = (id: string) => {
+    setTab("data");
+    setActiveId(id);
+  };
+
   const handleNotificationActivate = (n: { sourceRef?: { type: string; id: string } }) => {
     if (n.sourceRef?.type === "activity") {
       setTab("schedule");
@@ -1164,6 +1188,7 @@ function IndexInner() {
             activeTab={tab}
             onTabChange={handleTabChange}
             suppressNavLayout={suppressCardLayout}
+            onNavigateToCard={handleNavigateToCard}
             dataToolbar={
               tab === "data" && (
                 <DataToolbar availableKinds={availableKinds} availablePhases={availablePhases}>
@@ -1404,6 +1429,7 @@ function renderCard(
           phase={card.phase}
           description={card.description}
           minCount={card.minCount}
+          behaviorRole={card.behaviorRole}
           {...common}
         />
       );
@@ -1425,6 +1451,7 @@ function renderCard(
           phase={card.phase}
           description={card.description}
           minDurationSec={card.minDurationSec}
+          behaviorRole={card.behaviorRole}
           {...common}
         />
       );
