@@ -108,6 +108,7 @@ function ReviewSection({
   icon,
   label,
   count,
+  subtitle,
   open,
   onToggle,
   children,
@@ -115,6 +116,10 @@ function ReviewSection({
   icon: React.ReactNode;
   label: string;
   count: number;
+  /** Small, faded secondary line under the label — what actually happens
+   *  to this group's data on submit (graphed, discarded, or never logged
+   *  at all). */
+  subtitle: string;
   open: boolean;
   onToggle: () => void;
   children: React.ReactNode;
@@ -142,6 +147,9 @@ function ReviewSection({
           {label} <span className="font-bold text-foreground">({count})</span>
         </span>
       </button>
+      <p className="pl-[22px] text-[11px] normal-case tracking-normal text-muted-foreground/70">
+        {subtitle}
+      </p>
       <div
         className={cn(
           "grid transition-[grid-template-rows] duration-200 ease-out",
@@ -299,9 +307,7 @@ export function StatusBar({
 
   const [discardOpen, setDiscardOpen] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
-  // "Did Not Meet Minimums" starts collapsed (it's the one a tech least
-  // wants front-and-center every time); the other two start open.
-  const [incompleteOpen, setIncompleteOpen] = useState(false);
+  const [incompleteOpen, setIncompleteOpen] = useState(true);
   const [completeOpen, setCompleteOpen] = useState(true);
   const [untouchedOpen, setUntouchedOpen] = useState(true);
   // Every mounted card reports its own title/kind/key-figure here (see
@@ -885,7 +891,7 @@ export function StatusBar({
         onOpenChange={(open) => {
           setEndOpen(open);
           if (!open) {
-            setIncompleteOpen(false);
+            setIncompleteOpen(true);
             setCompleteOpen(true);
             setUntouchedOpen(true);
           }
@@ -906,6 +912,7 @@ export function StatusBar({
                 icon={<TriangleAlert className="size-4 text-amber-500" />}
                 label="Did Not Meet Minimums"
                 count={incompleteCards.length}
+                subtitle="and will be discarded/not graphed"
                 open={incompleteOpen}
                 onToggle={() => setIncompleteOpen((v) => !v)}
               >
@@ -930,6 +937,7 @@ export function StatusBar({
                 icon={<CheckCircle2 className="size-4 text-green-600" />}
                 label="Good Data"
                 count={completeCards.length}
+                subtitle="and will be graphed."
                 open={completeOpen}
                 onToggle={() => setCompleteOpen((v) => !v)}
               >
@@ -942,9 +950,10 @@ export function StatusBar({
             )}
             {untouchedCards.length > 0 && (
               <ReviewSection
-                icon={<Ban className="size-4 text-stone-400" />}
+                icon={<Ban className="size-4 text-red-500" />}
                 label="No Data"
                 count={untouchedCards.length}
+                subtitle="and will not be logged."
                 open={untouchedOpen}
                 onToggle={() => setUntouchedOpen((v) => !v)}
               >

@@ -22,6 +22,11 @@ export interface FrequencyCardProps extends CardEditAndDrawerProps {
   phase?: string;
   description?: string;
   minCount?: number;
+  /** Interfering behaviors get zero counted as real, complete data the
+   *  moment the session has actually run — see zeroCountsAsData below —
+   *  since fewer (down to none) is the whole point of a reduction goal,
+   *  unlike an acquisition target's minCount. */
+  behaviorRole?: "interfering";
   isActive?: boolean;
   onActivate?: () => void;
 }
@@ -32,6 +37,7 @@ export function FrequencyCard({
   phase = "Intervention",
   description,
   minCount = 5,
+  behaviorRole,
   isActive = true,
   onActivate,
   reorderEditing,
@@ -60,7 +66,7 @@ export function FrequencyCard({
   const [dir, setDir] = useState<1 | -1>(1);
   const [flash, setFlash] = useState(false);
   const [editing, setEditing] = useState(false);
-  const { markDirty, resetSignal, sessionRunning } = useCardSession();
+  const { markDirty, resetSignal, sessionRunning, hasElapsedTime } = useCardSession();
   const [shouldReset, markResetHandled] = useResetGuard(cardKey, resetSignal);
 
   useEffect(() => {
@@ -72,8 +78,14 @@ export function FrequencyCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldReset]);
 
-  const isComplete = count >= minCount;
-  useReportCardStatus(cardKey, count > 0, isComplete, {
+  // For a reduction goal, zero is the desired outcome, not "nothing
+  // happened here" — once there was real session time to observe it in,
+  // a still-zero tally is complete, gradeable data in its own right,
+  // same as Rate's own interfering-behavior cards already treat any
+  // elapsed clock time (see RateCard's isComplete comment).
+  const zeroCountsAsData = behaviorRole === "interfering" && hasElapsedTime;
+  const isComplete = count >= minCount || zeroCountsAsData;
+  useReportCardStatus(cardKey, count > 0 || zeroCountsAsData, isComplete, {
     title,
     kind: "frequency",
     value: `${count}`,

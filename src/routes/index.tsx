@@ -1429,6 +1429,7 @@ function renderCard(
           phase={card.phase}
           description={card.description}
           minCount={card.minCount}
+          behaviorRole={card.behaviorRole}
           {...common}
         />
       );
@@ -1450,6 +1451,7 @@ function renderCard(
           phase={card.phase}
           description={card.description}
           minDurationSec={card.minDurationSec}
+          behaviorRole={card.behaviorRole}
           {...common}
         />
       );
