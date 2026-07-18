@@ -17,9 +17,10 @@ import {
   Settings as SettingsIcon,
   TriangleAlert,
   CheckCircle2,
+  ChevronDown,
+  Ban,
 } from "lucide-react";
 import { InfoIcon } from "./icons/InfoIcon";
-import { TimeChevronIcon } from "./icons/TimeChevronIcon";
 import { PersonPill } from "./StaffDirectory";
 import { markInitialLayoutSettled, useInitialLayoutSettled } from "@/hooks/use-initial-layout-settle";
 import {
@@ -821,13 +822,15 @@ export function StatusBar({
             <div className="max-h-64 overflow-y-auto -mx-1 px-1">
               <ul className="flex flex-col gap-1.5">
                 {reviewCards.map((c) => (
-                  <li key={c.id} className="flex items-center gap-2 rounded-lg bg-stone-50 px-2.5 py-2">
+                  <li key={c.id} className="flex items-start gap-2 rounded-lg bg-stone-50 px-2.5 py-2">
                     {c.isComplete ? (
-                      <CheckCircle2 className="size-4 shrink-0 text-green-600" />
+                      <CheckCircle2 className="size-4 shrink-0 mt-0.5 text-green-600" />
                     ) : (
-                      <TriangleAlert className="size-4 shrink-0 text-amber-500" />
+                      <TriangleAlert className="size-4 shrink-0 mt-0.5 text-amber-500" />
                     )}
-                    <div className="min-w-0 flex-1 text-sm font-medium text-foreground truncate">{c.title}</div>
+                    <div className="min-w-0 flex-1 text-sm font-medium text-foreground break-words">
+                      {c.title}
+                    </div>
                     {/* The number is the thing a tech actually scans for —
                         large/bold and right-aligned, with its unit as a
                         small label underneath rather than folded into one
@@ -855,18 +858,22 @@ export function StatusBar({
                 aria-label={
                   untouchedOpen ? "Hide targets with no data" : "Show targets with no data"
                 }
-                className="flex w-full items-center justify-between gap-2 text-xs text-muted-foreground"
+                className="flex w-full items-center gap-1.5 text-left text-xs text-muted-foreground"
               >
-                <span>
-                  {untouchedCards.length} target{untouchedCards.length === 1 ? "" : "s"}{" "}
-                  {untouchedCards.length === 1 ? "has" : "have"} no data recorded.
-                </span>
-                <TimeChevronIcon
+                {/* Same chevron the info page and details drawer's own
+                    twirldowns use (see AccordionRow) — down when expanded,
+                    rotated to point at the row when collapsed. */}
+                <ChevronDown
                   className={cn(
                     "size-3.5 shrink-0 transition-transform duration-200",
-                    untouchedOpen && "translate-y-0.5 rotate-90",
+                    !untouchedOpen && "-rotate-90",
                   )}
                 />
+                <Ban className="size-3.5 shrink-0" />
+                <span className="flex-1">
+                  <span className="font-bold text-foreground">{untouchedCards.length}</span>{" "}
+                  {`target${untouchedCards.length === 1 ? "" : "s"} did not log any data and will not be recorded.`}
+                </span>
               </button>
               {/* Same twirldown idiom as TrialCard/TaskAnalysisCard's own
                   "show all" toggle — animated height via grid-template-rows
@@ -880,11 +887,11 @@ export function StatusBar({
                 <div className="overflow-hidden">
                   <ul className="max-h-40 overflow-y-auto flex flex-col gap-1 -mx-1 px-1">
                     {untouchedCards.map((c) => (
-                      <li key={c.id} className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
-                        <span className="shrink-0 [&>svg]:size-3.5">
+                      <li key={c.id} className="flex items-start gap-2 py-1 text-xs text-muted-foreground">
+                        <span className="shrink-0 mt-0.5 [&>svg]:size-3.5">
                           {DATA_TYPE_INFO[c.kind].icon}
                         </span>
-                        <span className="truncate">{c.title}</span>
+                        <span className="break-words">{c.title}</span>
                       </li>
                     ))}
                   </ul>

@@ -118,8 +118,8 @@ export function RateCard({
   useReportCardStatus(cardKey, count > 0 || elapsed > 0, isComplete, {
     title,
     kind: "rate",
-    value: ratePerMin.toFixed(1),
-    unit: "Times per Minute",
+    value: `${count}`,
+    unit: `${ratePerMin.toFixed(1)} per minute`,
   });
 
   useEffect(() => {
