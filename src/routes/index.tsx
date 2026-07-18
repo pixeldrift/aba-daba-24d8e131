@@ -42,6 +42,7 @@ import {
 } from "@/components/DataToolbarContext";
 import { CardDataStoreProvider } from "@/components/CardDataStore";
 import type { TeachingProcedure } from "@/components/TeachingProcedureAccordion";
+import { playSoundEffect } from "@/lib/soundEffects";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -748,6 +749,18 @@ function IndexInner() {
   const [tab, setTab] = useState<StatusTab>("data");
   const [scheduleScrollId, setScheduleScrollId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Every drawer-open call site funnels through this one state var
+  // regardless of which card/display mode triggered it, so this single
+  // effect covers the "drawer slide" sound for all of them.
+  useEffect(() => {
+    if (drawerOpen) playSoundEffect("drawerSlide");
+  }, [drawerOpen]);
+  // Plays once on load — before any gesture exists, so stricter autoplay
+  // policies are free to silently block it; that's an acceptable no-op
+  // here, not an error (see playSoundEffect's own comment).
+  useEffect(() => {
+    playSoundEffect("startup");
+  }, []);
   // Which of the drawer's two open widths is showing — lifted up here
   // (rather than left as DataDetailsDrawer's own local state) so it
   // survives a prev/next card switch, which remounts a fresh drawer

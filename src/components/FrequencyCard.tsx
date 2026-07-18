@@ -13,6 +13,7 @@ import { TeachingProcedureAccordion } from "./TeachingProcedureAccordion";
 import { DrawerQuickFacts } from "./DrawerQuickFacts";
 import { useCardSession } from "./SessionContext";
 import { useReportCardStatus } from "./DataToolbarContext";
+import { playSoundEffect } from "@/lib/soundEffects";
 import { cn } from "@/lib/utils";
 
 export interface FrequencyCardProps extends CardEditAndDrawerProps {
@@ -86,6 +87,7 @@ export function FrequencyCard({
     setBumpKey((k) => k + 1);
     triggerFlash();
     markDirty();
+    playSoundEffect("tallyUp");
   };
   const dec = () => {
     setDir(-1);
@@ -93,6 +95,7 @@ export function FrequencyCard({
     setBumpKey((k) => k + 1);
     triggerFlash();
     markDirty();
+    playSoundEffect("tallyDown");
   };
 
 

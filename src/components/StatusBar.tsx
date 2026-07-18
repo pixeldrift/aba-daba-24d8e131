@@ -41,6 +41,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { playSoundEffect } from "@/lib/soundEffects";
 import { NotificationBar, NOTIFICATION_AREA_TRANSITION } from "@/components/NotificationBar";
 import { useNotifications } from "@/components/NotificationContext";
 import {
@@ -526,8 +527,14 @@ export function StatusBar({
                   startingNew={dimmed && transitionKind === "start-new"}
                   onPlay={requestPlay}
                   onStartNew={requestStartNew}
-                  onEnd={() => setEndOpen(true)}
-                  onRequestDiscard={() => setDiscardOpen(true)}
+                  onEnd={() => {
+                    playSoundEffect("question");
+                    setEndOpen(true);
+                  }}
+                  onRequestDiscard={() => {
+                    playSoundEffect("warning");
+                    setDiscardOpen(true);
+                  }}
                 />
               </div>
             </motion.div>

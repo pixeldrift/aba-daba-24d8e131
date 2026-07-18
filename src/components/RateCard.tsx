@@ -14,6 +14,7 @@ import { TeachingProcedureAccordion } from "./TeachingProcedureAccordion";
 import { DrawerQuickFacts } from "./DrawerQuickFacts";
 import { useCardSession, useRegisterActiveTimer, useSession } from "./SessionContext";
 import { useReportCardStatus } from "./DataToolbarContext";
+import { playSoundEffect } from "@/lib/soundEffects";
 import { cn } from "@/lib/utils";
 
 export interface RateCardProps extends CardEditAndDrawerProps {
@@ -161,6 +162,7 @@ export function RateCard({
     setBumpKey((k) => k + 1);
     triggerFlash();
     markDirty();
+    playSoundEffect("tallyUp");
   };
   const dec = () => {
     setDir(-1);
@@ -168,6 +170,7 @@ export function RateCard({
     setBumpKey((k) => k + 1);
     triggerFlash();
     markDirty();
+    playSoundEffect("tallyDown");
   };
 
   const commit = (next: number) => {

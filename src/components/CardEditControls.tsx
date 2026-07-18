@@ -1,5 +1,6 @@
 import { GripVertical, Heart, EyeOff } from "lucide-react";
 import type { DragControls } from "motion/react";
+import { playSoundEffect } from "@/lib/soundEffects";
 import { cn } from "@/lib/utils";
 
 export interface CardEditControlsProps {
@@ -28,7 +29,10 @@ export function CardEditControls({
       <div className="flex items-center gap-0.5">
         <button
           type="button"
-          onClick={onToggleFavorite}
+          onClick={() => {
+            playSoundEffect("click");
+            onToggleFavorite();
+          }}
           aria-pressed={favorited}
           aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
           className={cn(
@@ -40,7 +44,10 @@ export function CardEditControls({
         </button>
         <button
           type="button"
-          onClick={onToggleHidden}
+          onClick={() => {
+            playSoundEffect("click");
+            onToggleHidden();
+          }}
           aria-pressed={cardHidden}
           aria-label={cardHidden ? "Unhide card" : "Hide card"}
           className={cn(

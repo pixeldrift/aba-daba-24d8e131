@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useIsPresent } from "motion/react";
+import { playSoundEffect } from "@/lib/soundEffects";
 
 export type SessionStatus = "idle" | "running" | "paused";
 export type SaveStatus = "clean" | "dirty" | "saving";
@@ -222,6 +223,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const startFresh = useCallback(() => {
     setResetSignal((n) => n + 1);
     start(0);
+    playSoundEffect("sessionStart");
   }, [start]);
 
 
@@ -229,21 +231,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     baseRef.current = elapsedMs;
     setStatus("paused");
     setLastUpdated(new Date());
+    playSoundEffect("sessionPause");
   }, [elapsedMs]);
   const resume = useCallback(() => {
     setStatus("running");
     setLastUpdated(new Date());
+    playSoundEffect("sessionResume");
   }, []);
   const endAndSubmit = useCallback(() => {
     setStatus("idle");
     setElapsedMs(0);
     baseRef.current = 0;
     setLastUpdated(new Date());
+    playSoundEffect("submit");
   }, []);
   const clearAndDiscard = useCallback(() => {
     setStatus("idle");
     setElapsedMs(0);
     baseRef.current = 0;
+    playSoundEffect("sessionDiscard");
   }, []);
 
   // Shared 3-stage transition orchestration (see CARD_EXIT_MS et al. above).
@@ -296,7 +302,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [runStagedTransition, startFresh],
   );
   const requestContinuePrevious = useCallback(
-    (initialMs: number) => runStagedTransition("start-previous", () => start(initialMs)),
+    (initialMs: number) =>
+      runStagedTransition("start-previous", () => {
+        start(initialMs);
+        playSoundEffect("sessionResume");
+      }),
     [runStagedTransition, start],
   );
   const requestResume = useCallback(

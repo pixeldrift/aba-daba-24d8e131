@@ -4,6 +4,7 @@ import { CardViewIcon } from "@/components/icons/CardViewIcon";
 import { GridViewIcon } from "@/components/icons/GridViewIcon";
 import { SmallGridViewIcon } from "@/components/icons/SmallGridViewIcon";
 import { useSettings } from "./SettingsContext";
+import { playSoundEffect } from "@/lib/soundEffects";
 
 export type CardKind = "trial" | "frequency" | "rate" | "duration" | "task-analysis" | "rating" | "timestamp";
 
@@ -275,7 +276,14 @@ export function DataToolbarProvider({ children }: { children: ReactNode }) {
  *  what counts as "data" or "complete" for its own type. */
 export function useReportCardStatus(id: string, hasData: boolean, isComplete: boolean) {
   const { reportCardStatus } = useDataToolbar();
+  // Chimes once per genuine incomplete -> complete transition, never on
+  // mount (a card that loads already complete, e.g. resuming a previous
+  // session, shouldn't announce it) and never on the reverse edge (a reset
+  // or an edit that un-completes a card isn't a "success").
+  const wasCompleteRef = useRef(isComplete);
   useEffect(() => {
     reportCardStatus(id, { hasData, isComplete });
+    if (isComplete && !wasCompleteRef.current) playSoundEffect("success");
+    wasCompleteRef.current = isComplete;
   }, [id, hasData, isComplete, reportCardStatus]);
 }

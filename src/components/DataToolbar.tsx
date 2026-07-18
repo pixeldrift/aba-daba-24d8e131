@@ -23,6 +23,7 @@ import { TaskAnalysisIcon } from "@/components/icons/TaskAnalysisIcon";
 import { TimestampIcon } from "@/components/icons/TimestampIcon";
 import { FilterIcon } from "@/components/icons/FilterIcon";
 import { useDataToolbar, DISPLAY_MODES, type CardKind } from "./DataToolbarContext";
+import { playSoundEffect } from "@/lib/soundEffects";
 import { cn } from "@/lib/utils";
 
 const KIND_META: Record<
@@ -191,7 +192,13 @@ export function DataToolbar({
           </div>
 
           {/* Filter */}
-          <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+          <Popover
+            open={filterOpen}
+            onOpenChange={(open) => {
+              setFilterOpen(open);
+              if (open) playSoundEffect("popup");
+            }}
+          >
             <PopoverTrigger asChild>
               <button
                 ref={filterBtnRef}

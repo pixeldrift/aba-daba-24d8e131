@@ -18,6 +18,7 @@ import { useSlidingArrowOffset } from "@/hooks/useSlidingArrowOffset";
 import { UNSPECIFIED_LEVEL, PROMPT_LEVEL_ICONS } from "@/lib/promptLevels";
 import { useCardSession } from "./SessionContext";
 import { useReportCardStatus } from "./DataToolbarContext";
+import { playSoundEffect } from "@/lib/soundEffects";
 import { cn } from "@/lib/utils";
 
 export type StepStatus = "independent" | "prompted" | "error" | null;
@@ -210,6 +211,9 @@ export function TaskAnalysisCard({
   const setStep = (idx: number, value: Exclude<StepStatus, null>, advance = false) => {
     markDirty();
     const isToggleOff = statuses[idx] === value;
+    if (!isToggleOff) {
+      playSoundEffect(value === "independent" ? "correct" : value === "error" ? "error" : "prompted");
+    }
     setStatuses((prev) => {
       const next = [...prev];
       next[idx] = isToggleOff ? null : value;
@@ -610,7 +614,10 @@ export function TaskAnalysisCard({
       progress={progress}
       isComplete={isComplete}
       expanded={expanded}
-      onToggleExpanded={() => setExpanded((v) => !v)}
+      onToggleExpanded={() => {
+        if (!expanded) playSoundEffect("twirldown");
+        setExpanded((v) => !v);
+      }}
       helperText={
         isComplete ? (
           <span>
