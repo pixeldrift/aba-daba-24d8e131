@@ -101,12 +101,6 @@ complexity (🟢 Easy · 🟡 Medium · 🔴 Complex). "Later" items are backlog
 features, not sized yet. Completed requests are dropped from this list
 rather than kept checked off — see git history for what's already shipped.
 
-### 🐛 Bugs
-
-- [ ] Stray chime (sometimes more than one) plays when resuming or starting
-      a session — likely an audio-playback or notification-system timing
-      issue, root cause not yet confirmed
-
 ### ⚙️ Functionality / Features
 
 - [ ] 🔴 Left-side target/goal list/tree view mirroring Info Drawer — titles
@@ -163,4 +157,4 @@ and scheduling items below all need to respect that split.
       handling yet, so every submission behaves the same regardless of who's
       submitting it.
 
-*Roadmap last updated: 2026-07-17*
+*Roadmap last updated: 2026-07-19*
