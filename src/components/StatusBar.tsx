@@ -15,10 +15,10 @@ import {
   ArrowRight,
   Upload,
   Settings as SettingsIcon,
-  TriangleAlert,
   CheckCircle2,
   ChevronDown,
   Ban,
+  CircleSlash2,
 } from "lucide-react";
 import { InfoIcon } from "./icons/InfoIcon";
 import { PersonPill } from "./StaffDirectory";
@@ -97,13 +97,14 @@ const SESSION_MORPH_EASE = NOTIFICATION_AREA_TRANSITION.ease;
 // ease-out than the rest of the header's snappier, mechanical transitions.
 const PILL_TRAVEL_EASE = [0.22, 1, 0.36, 1] as const;
 
-/** One collapsible group in the end-session review (Did Not Meet Minimums /
- *  Good Data / No Data) — a colored icon + label + count as the summary
- *  line, same twirldown chevron as AccordionRow (About Me's notes, the
- *  teaching-procedure accordion in card detail drawers), with its list
- *  indented underneath so it reads as the summary's children rather than a
- *  sibling. Each section scrolls on its own past a capped height — there's
- *  no fixed limit on how large a caseload might be. */
+/** One collapsible group in the end-session review (Minimums Not Met /
+ *  Good Data / No Data) — a colored icon + label + count and its subtitle
+ *  on one header line, same twirldown chevron as AccordionRow (About Me's
+ *  notes, the teaching-procedure accordion in card detail drawers), with
+ *  its list indented underneath so it reads as the summary's children
+ *  rather than a sibling. No scroll of its own — the dialog's single
+ *  outer scroll area is what moves, so opening several sections at once
+ *  doesn't nest one scrollbar inside another. */
 function ReviewSection({
   icon,
   label,
@@ -116,7 +117,7 @@ function ReviewSection({
   icon: React.ReactNode;
   label: string;
   count: number;
-  /** Small, faded secondary line under the label — what actually happens
+  /** Short, faded continuation of the header line — what actually happens
    *  to this group's data on submit (graphed, discarded, or never logged
    *  at all). */
   subtitle: string;
@@ -144,12 +145,10 @@ function ReviewSection({
         />
         {icon}
         <span className="flex-1 normal-case tracking-normal">
-          {label} <span className="font-bold text-foreground">({count})</span>
+          {label} <span className="font-bold text-foreground">({count})</span>{" "}
+          <span className="font-normal text-muted-foreground/70">{subtitle}</span>
         </span>
       </button>
-      <p className="pl-[22px] text-[11px] normal-case tracking-normal text-muted-foreground/70">
-        {subtitle}
-      </p>
       <div
         className={cn(
           "grid transition-[grid-template-rows] duration-200 ease-out",
@@ -157,9 +156,7 @@ function ReviewSection({
         )}
       >
         <div className="overflow-hidden">
-          <ul className="max-h-56 overflow-y-auto flex flex-col gap-1.5 pl-[22px] pr-1 -mr-1">
-            {children}
-          </ul>
+          <ul className="flex flex-col gap-1.5 pl-[22px]">{children}</ul>
         </div>
       </div>
     </div>
@@ -897,18 +894,28 @@ export function StatusBar({
           }
         }}
       >
-        {/* Fixed height (not just a max) — same 2rem-total margin
-            convention the width already uses (see w-[calc(100%-2rem)]),
-            applied on every side, so the dialog consistently fills most of
-            the viewport instead of shrink-wrapping to content and forcing
-            more scrolling than it needs to. flex-col + the scroll area's
+        {/* Fixed height (not just a max) — a wider vertical margin than the
+            width's own 2rem-total (see w-[calc(100%-2rem)]) because mobile
+            Safari's collapsing address/tab bar means the visible viewport
+            shrinks after load; 100dvh (not 100vh) already tracks that, but
+            the extra rem of slack on top keeps the dialog from reading as
+            clipped in the brief window before/if that chrome re-expands.
+            So the dialog consistently fills most of the viewport instead
+            of shrink-wrapping to content and forcing more scrolling than
+            it needs to. flex-col + the scroll area's
             own flex-1 min-h-0 keeps the title and buttons pinned in place
-            while only the middle content scrolls; the border-b/border-t on
-            the header/footer read as a divider marking that boundary
-            instead of content just getting clipped with no explanation.
-            Each section's own list still caps and scrolls independently on
-            top of that (see ReviewSection). */}
-        <DialogContent className="w-[calc(100%-2rem)] max-w-sm h-[calc(100vh-2rem)] flex flex-col overflow-hidden border-2 border-green-400/80 ring-2 ring-inset ring-green-400/80 rounded-xl">
+            while only the middle content scrolls — one scrollbar for the
+            whole list, not one per section (see ReviewSection). Header
+            keeps its default gap-4 down to the scroll area (its own
+            border-b already reads as a clear boundary there), but the
+            gap down to the footer is zeroed (gap-0 below) and remade on
+            the header side only via the scroll area's own mt-4 — so the
+            scroll area's bottom edge butts straight up against the
+            footer's border-t with nothing in between. Otherwise a plain
+            gap of matching background sat between wherever the list
+            happened to clip and that divider line, reading as an
+            unexplained dead zone rather than a real boundary. */}
+        <DialogContent className="w-[calc(100%-2rem)] max-w-sm h-[calc(100dvh-4rem)] flex flex-col gap-0 overflow-hidden border-2 border-green-400/80 ring-2 ring-inset ring-green-400/80 rounded-xl">
           <DialogHeader className="text-left sm:text-left shrink-0 border-b border-border pb-4">
             <DialogTitle className="text-green-600">End Session & Graph Data</DialogTitle>
             <DialogDescription className="text-left">
@@ -917,13 +924,13 @@ export function StatusBar({
                 : "Are you sure? This will end the current session and submit collected data for graphing."}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3">
+          <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 mt-4">
             {incompleteCards.length > 0 && (
               <ReviewSection
-                icon={<TriangleAlert className="size-4 text-amber-500" />}
-                label="Did Not Meet Minimums"
+                icon={<Ban className="size-4 text-red-500" />}
+                label="Minimums Not Met"
                 count={incompleteCards.length}
-                subtitle="and will be discarded/not graphed"
+                subtitle="will not graph"
                 open={incompleteOpen}
                 onToggle={() => setIncompleteOpen((v) => !v)}
               >
@@ -961,7 +968,7 @@ export function StatusBar({
             )}
             {untouchedCards.length > 0 && (
               <ReviewSection
-                icon={<Ban className="size-4 text-red-500" />}
+                icon={<CircleSlash2 className="size-4 text-amber-500" />}
                 label="No Data"
                 count={untouchedCards.length}
                 subtitle="and will not be logged."
