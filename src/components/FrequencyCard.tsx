@@ -115,7 +115,6 @@ export function FrequencyCard({
     playSoundEffect("tallyDown");
   };
 
-
   const commit = (next: number) => {
     setDir(next >= count ? 1 : -1);
     setCount(next);
@@ -123,7 +122,6 @@ export function FrequencyCard({
     triggerFlash();
     markDirty();
   };
-
 
   if (tileDensity) {
     const large = tileDensity === "large";
@@ -410,7 +408,7 @@ export function FrequencyCard({
           onOpenChange={setEditing}
         >
           {({ isEditing, open }) => (
-              <button
+            <button
               type="button"
               onClick={open}
               disabled={!sessionRunning}
@@ -436,7 +434,10 @@ export function FrequencyCard({
                   </motion.span>
                 </AnimatePresence>
                 {isEditing && (
-                  <span className="pointer-events-none absolute inset-0 rounded-lg border-2 border-blue-400/80" aria-hidden />
+                  <span
+                    className="pointer-events-none absolute inset-0 rounded-lg border-2 border-blue-400/80"
+                    aria-hidden
+                  />
                 )}
                 <NumberPadIcon
                   className={cn(

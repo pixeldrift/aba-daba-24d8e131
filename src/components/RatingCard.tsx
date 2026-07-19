@@ -181,7 +181,9 @@ export function RatingCard({
                 <Star
                   className={cn(
                     large ? "size-[26px]" : "size-[19px]",
-                    filled ? "fill-blue-500 stroke-blue-600" : "fill-foreground/10 stroke-foreground/25",
+                    filled
+                      ? "fill-blue-500 stroke-blue-600"
+                      : "fill-foreground/10 stroke-foreground/25",
                   )}
                   strokeWidth={1.5}
                 />
@@ -322,7 +324,12 @@ export function RatingCard({
                   disabled={!sessionRunning}
                   onClick={() => pick(value)}
                 />
-                <span className={cn("flex-1 text-sm leading-tight", isTop ? "text-foreground" : "text-foreground/70")}>
+                <span
+                  className={cn(
+                    "flex-1 text-sm leading-tight",
+                    isTop ? "text-foreground" : "text-foreground/70",
+                  )}
+                >
                   {desc}
                 </span>
               </li>
@@ -356,7 +363,8 @@ export function RatingCard({
         <span className="text-xs text-muted-foreground">
           {rating > 0 ? (
             <>
-              Scored <strong className="font-semibold text-foreground">{rating}</strong> out of {max}.
+              Scored <strong className="font-semibold text-foreground">{rating}</strong> out of{" "}
+              {max}.
             </>
           ) : (
             "Tap a star to score."
@@ -504,7 +512,9 @@ function ListRatingButton({
                 <Star
                   className={cn(
                     "size-7",
-                    filled ? "fill-blue-500 stroke-blue-600" : "fill-foreground/10 stroke-foreground/25",
+                    filled
+                      ? "fill-blue-500 stroke-blue-600"
+                      : "fill-foreground/10 stroke-foreground/25",
                   )}
                   strokeWidth={1.5}
                 />
@@ -596,12 +606,12 @@ function RatingStar({
             ? "fill-blue-500 stroke-blue-600"
             : filled
               ? "fill-blue-100 stroke-blue-300"
-              // Fill and stroke now matched in weight to the number sitting
-              // on top of it (both foreground/25) — previously the fill was
-              // far fainter than the number, so an unrated star read as a
-              // gray digit floating with barely a star shape under it rather
-              // than one uniformly grayed-out unit.
-              : "fill-foreground/10 stroke-foreground/25",
+              : // Fill and stroke now matched in weight to the number sitting
+                // on top of it (both foreground/25) — previously the fill was
+                // far fainter than the number, so an unrated star read as a
+                // gray digit floating with barely a star shape under it rather
+                // than one uniformly grayed-out unit.
+                "fill-foreground/10 stroke-foreground/25",
         )}
       >
         <path

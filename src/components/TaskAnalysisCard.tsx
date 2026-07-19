@@ -212,7 +212,9 @@ export function TaskAnalysisCard({
     markDirty();
     const isToggleOff = statuses[idx] === value;
     if (!isToggleOff) {
-      playSoundEffect(value === "independent" ? "correct" : value === "error" ? "error" : "prompted");
+      playSoundEffect(
+        value === "independent" ? "correct" : value === "error" ? "error" : "prompted",
+      );
     }
     setStatuses((prev) => {
       const next = [...prev];

@@ -208,7 +208,9 @@ export function TrialCard({
     if (isMaxReached && trials[idx] === null) return;
     const isToggleOff = trials[idx] === value;
     if (!isToggleOff) {
-      playSoundEffect(value === "correct" ? "correct" : value === "incorrect" ? "error" : "noResponse");
+      playSoundEffect(
+        value === "correct" ? "correct" : value === "incorrect" ? "error" : "noResponse",
+      );
     }
     setTrials((prev) => {
       const next = [...prev];

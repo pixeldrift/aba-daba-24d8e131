@@ -21,7 +21,9 @@ export function ListActionBadge({
     <span
       className={cn(
         "grid shrink-0 place-items-center min-w-[1.25rem] h-7 tabular-nums",
-        weight === "bold" ? "text-[15px] font-bold text-foreground" : "text-[11px] font-semibold text-foreground/60",
+        weight === "bold"
+          ? "text-[15px] font-bold text-foreground"
+          : "text-[11px] font-semibold text-foreground/60",
       )}
     >
       {/* The colon reads as "position N, of the data that follows" — only
